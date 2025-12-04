@@ -107,7 +107,7 @@ user_problem_statement: "Aplicación de quiniela de fútbol Liga MX con dos moda
 backend:
   - task: "Sistema de autenticación (registro, login, recuperación)"
     implemented: true
-    working: false
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
@@ -119,6 +119,9 @@ backend:
         - working: false
           agent: "testing"
           comment: "CRITICAL BUG: JWT token validation failing with 500 error instead of 401. Issue in decode_token() function line 96: 'jwt.JWTError' does not exist in PyJWT library. Should be 'jwt.InvalidTokenError' or 'jwt.PyJWTError'. Basic auth flows work (register, login, valid token validation) but invalid token handling is broken."
+        - working: true
+          agent: "main"
+          comment: "FIXED: Cambiado 'jwt.JWTError' a 'jwt.InvalidTokenError' en línea 96. Probado con token inválido, ahora retorna 401 correctamente. Todos los endpoints de autenticación funcionando."
   
   - task: "Modelos de MongoDB para usuarios, equipos, jornadas, partidos"
     implemented: true
