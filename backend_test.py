@@ -8,9 +8,47 @@ import requests
 import json
 import sys
 from datetime import datetime
+import asyncio
+from motor.motor_asyncio import AsyncIOMotorClient
+import os
+from dotenv import load_dotenv
 
 # Base URL from frontend .env
 BASE_URL = "https://futbolpredict-3.preview.emergentagent.com/api"
+
+# Load environment for database access
+load_dotenv('/app/backend/.env')
+
+def clear_test_user():
+    """Clear test user from database"""
+    try:
+        async def clear_user():
+            mongo_url = os.environ['MONGO_URL']
+            client = AsyncIOMotorClient(mongo_url)
+            db = client[os.environ.get('DB_NAME', 'quiniela_db')]
+            await db.users.delete_many({"email": "testuser@ligamx.com"})
+            client.close()
+        
+        asyncio.run(clear_user())
+    except Exception as e:
+        print(f"Warning: Could not clear test user: {e}")
+
+def clear_all_data():
+    """Clear all test data from database"""
+    try:
+        async def clear_data():
+            mongo_url = os.environ['MONGO_URL']
+            client = AsyncIOMotorClient(mongo_url)
+            db = client[os.environ.get('DB_NAME', 'quiniela_db')]
+            await db.teams.delete_many({})
+            await db.jornadas.delete_many({})
+            await db.matches.delete_many({})
+            await db.users.delete_many({"email": "testuser@ligamx.com"})
+            client.close()
+        
+        asyncio.run(clear_data())
+    except Exception as e:
+        print(f"Warning: Could not clear data: {e}")
 
 class Colors:
     GREEN = '\033[92m'
