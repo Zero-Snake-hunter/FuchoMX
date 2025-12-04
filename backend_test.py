@@ -29,6 +29,9 @@ def test_auth_register():
     """Test user registration"""
     print(f"\n{Colors.BLUE}=== TESTING AUTH REGISTRATION ==={Colors.END}")
     
+    # Clear existing user first
+    clear_test_user()
+    
     # Test valid registration
     test_user = {
         "email": "testuser@ligamx.com",
