@@ -271,8 +271,6 @@ metadata:
 test_plan:
   current_focus:
     - "Sistema de autenticación (registro, login, recuperación)"
-    - "Seed de datos mock (equipos Liga MX y jornada)"
-    - "Endpoint obtener jornada actual con partidos"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -280,3 +278,5 @@ test_plan:
 agent_communication:
     - agent: "main"
       message: "FASE 1 completada. Implementado sistema completo de autenticación, navegación con tabs, y pantallas básicas. Backend con JWT, bcrypt, MongoDB. Frontend con expo-router, AuthContext, pantallas de auth y tabs. Datos mock de Liga MX seeded. Necesito testing completo del backend primero (todos los endpoints de auth y admin). NO TESTING DE FRONTEND AÚN."
+    - agent: "testing"
+      message: "BACKEND TESTING COMPLETADO. RESULTADOS: ✅ Seed endpoints funcionando perfectamente (teams, jornada). ✅ MongoDB models y relaciones correctas. ✅ Autenticación básica funciona (register, login, valid tokens). ❌ CRITICAL BUG: JWT error handling roto - usa 'jwt.JWTError' que no existe en PyJWT. Debe ser 'jwt.InvalidTokenError'. Tokens inválidos causan 500 en lugar de 401. REQUIERE FIX INMEDIATO en server.py línea 96."
