@@ -355,6 +355,10 @@ def main():
     print(f"Base URL: {BASE_URL}")
     print(f"{'='*60}{Colors.END}")
     
+    # Clear all data first to ensure clean state
+    print(f"{Colors.YELLOW}Clearing test data...{Colors.END}")
+    clear_all_data()
+    
     # Test API root
     test_api_root()
     
@@ -374,7 +378,8 @@ def main():
     test_auth_me_no_token()
     test_auth_recover_password()
     
-    # Test admin/seed endpoints
+    # Test admin/seed endpoints in correct order
+    print(f"{Colors.YELLOW}Testing admin/seed endpoints...{Colors.END}")
     teams_created = test_admin_seed_teams()
     if teams_created:
         test_get_teams()
