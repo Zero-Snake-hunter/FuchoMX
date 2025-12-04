@@ -107,51 +107,63 @@ user_problem_statement: "Aplicación de quiniela de fútbol Liga MX con dos moda
 backend:
   - task: "Sistema de autenticación (registro, login, recuperación)"
     implemented: true
-    working: "NA"
+    working: false
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: "NA"
           agent: "main"
           comment: "Implementado sistema completo de autenticación con JWT, bcrypt para hashing de contraseñas. Endpoints: /api/auth/register, /api/auth/login, /api/auth/me, /api/auth/recover-password"
+        - working: false
+          agent: "testing"
+          comment: "CRITICAL BUG: JWT token validation failing with 500 error instead of 401. Issue in decode_token() function line 96: 'jwt.JWTError' does not exist in PyJWT library. Should be 'jwt.InvalidTokenError' or 'jwt.PyJWTError'. Basic auth flows work (register, login, valid token validation) but invalid token handling is broken."
   
   - task: "Modelos de MongoDB para usuarios, equipos, jornadas, partidos"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: "NA"
           agent: "main"
           comment: "Creados modelos de datos para usuarios, teams, jornadas, matches, players. Implementados con Motor (async MongoDB)"
+        - working: true
+          agent: "testing"
+          comment: "MongoDB models working correctly. User registration/login creates proper user documents. Teams and matches are properly structured with ObjectIds and relationships work correctly."
   
   - task: "Seed de datos mock (equipos Liga MX y jornada)"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: "NA"
           agent: "main"
           comment: "Endpoints admin para poblar BD: /api/admin/seed-teams (18 equipos), /api/admin/seed-jornada (crear jornada con 9 partidos). Probado manualmente con curl y funciona."
+        - working: true
+          agent: "testing"
+          comment: "Seed endpoints working perfectly. /api/admin/seed-teams creates 18 Liga MX teams with proper structure. /api/admin/seed-jornada creates jornada with 9 matches. Proper error handling when trying to create jornada without teams (returns 400). Data sequencing works correctly when teams are seeded first."
   
   - task: "Endpoint obtener jornada actual con partidos"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: "NA"
           agent: "main"
           comment: "Endpoint GET /api/jornadas/current retorna jornada activa con todos sus partidos y datos de equipos. Probado con curl, respuesta correcta."
+        - working: true
+          agent: "testing"
+          comment: "Endpoint working correctly. Returns current jornada with complete match data including team details (name, short_name, shield_url). Proper error handling when no jornada exists (404). Match structure includes home_team and away_team objects with full team data."
 
 frontend:
   - task: "Sistema de navegación con expo-router"
