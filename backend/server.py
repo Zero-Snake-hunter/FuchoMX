@@ -666,6 +666,390 @@ async def calculate_jornada_points(jornada_id: str):
         "total_points_awarded": total_points_awarded
     }
 
+# ============ FANTASY ROUTES ============
+
+class FantasyTeamCreate(BaseModel):
+    name: str
+
+@api_router.post("/fantasy/team")
+async def create_or_update_fantasy_team(
+    team_data: FantasyTeamCreate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Create or update user's fantasy team name"""
+    # Check if user already has a team
+    existing_team = await db.fantasy_teams.find_one({"user_id": current_user["_id"]})
+    
+    if existing_team:
+        # Update name
+        await db.fantasy_teams.update_one(
+            {"_id": existing_team["_id"]},
+            {"$set": {"name": team_data.name}}
+        )
+        return {
+            "message": "Nombre de equipo actualizado",
+            "team_id": str(existing_team["_id"]),
+            "name": team_data.name
+        }
+    else:
+        # Create new team
+        team_doc = {
+            "user_id": current_user["_id"],
+            "name": team_data.name,
+            "created_at": datetime.utcnow()
+        }
+        result = await db.fantasy_teams.insert_one(team_doc)
+        
+        logger.info(f"User {current_user['email']} created fantasy team: {team_data.name}")
+        
+        return {
+            "message": "Equipo fantasy creado",
+            "team_id": str(result.inserted_id),
+            "name": team_data.name
+        }
+
+@api_router.get("/fantasy/my-team")
+async def get_my_fantasy_team(current_user: dict = Depends(get_current_user)):
+    """Get user's fantasy team"""
+    team = await db.fantasy_teams.find_one({"user_id": current_user["_id"]})
+    
+    if not team:
+        # Return default name
+        default_name = f"{current_user['display_name']} - FC"
+        return {
+            "exists": False,
+            "default_name": default_name
+        }
+    
+    return {
+        "exists": True,
+        "team_id": str(team["_id"]),
+        "name": team["name"],
+        "created_at": team["created_at"]
+    }
+
+@api_router.get("/players")
+async def get_players(
+    position: Optional[str] = None,
+    team_id: Optional[str] = None
+):
+    """Get players filtered by position and/or team"""
+    query = {}
+    
+    if position:
+        query["position"] = position
+    
+    if team_id:
+        query["team_id"] = ObjectId(team_id)
+    
+    players = await db.players.find(query).to_list(1000)
+    
+    # Format response
+    formatted_players = []
+    for player in players:
+        team = await db.teams.find_one({"_id": player["team_id"]})
+        formatted_players.append({
+            "id": str(player["_id"]),
+            "name": player["name"],
+            "number": player.get("number", 0),
+            "position": player["position"],
+            "team": {
+                "id": str(team["_id"]),
+                "name": team["name"],
+                "short_name": team["short_name"],
+                "shield_url": team["shield_url"]
+            } if team else None,
+            "stats": player.get("stats", {})
+        })
+    
+    return {"players": formatted_players}
+
+class FantasyLineupSubmit(BaseModel):
+    jornada_id: str
+    players: List[dict]  # [{player_id, position_slot}]
+    dt_team_id: Optional[str] = None  # Director Técnico
+
+@api_router.post("/fantasy/lineup")
+async def submit_fantasy_lineup(
+    lineup: FantasyLineupSubmit,
+    current_user: dict = Depends(get_current_user)
+):
+    """Submit fantasy lineup for a jornada"""
+    # Get user's fantasy team
+    team = await db.fantasy_teams.find_one({"user_id": current_user["_id"]})
+    if not team:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Primero debes crear tu equipo fantasy"
+        )
+    
+    jornada_id = ObjectId(lineup.jornada_id)
+    
+    # Check if lineup already exists
+    existing = await db.fantasy_lineups.find_one({
+        "fantasy_team_id": team["_id"],
+        "jornada_id": jornada_id
+    })
+    
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Ya enviaste tu alineación para esta jornada"
+        )
+    
+    # Validate 11 players + optional DT
+    if len(lineup.players) != 11:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Debes seleccionar exactamente 11 jugadores"
+        )
+    
+    # Save lineup
+    lineup_docs = []
+    for player_data in lineup.players:
+        lineup_docs.append({
+            "fantasy_team_id": team["_id"],
+            "jornada_id": jornada_id,
+            "player_id": ObjectId(player_data["player_id"]),
+            "position_slot": player_data["position_slot"],
+            "is_dt": False,
+            "created_at": datetime.utcnow()
+        })
+    
+    # Add DT if provided
+    if lineup.dt_team_id:
+        lineup_docs.append({
+            "fantasy_team_id": team["_id"],
+            "jornada_id": jornada_id,
+            "dt_team_id": ObjectId(lineup.dt_team_id),
+            "position_slot": "DT",
+            "is_dt": True,
+            "created_at": datetime.utcnow()
+        })
+    
+    await db.fantasy_lineups.insert_many(lineup_docs)
+    
+    logger.info(f"User {current_user['email']} submitted fantasy lineup for jornada {lineup.jornada_id}")
+    
+    return {
+        "message": "Alineación guardada exitosamente",
+        "jornada_id": lineup.jornada_id,
+        "players_count": len(lineup_docs)
+    }
+
+@api_router.get("/fantasy/lineup/{jornada_id}")
+async def get_fantasy_lineup(
+    jornada_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get user's fantasy lineup for a jornada"""
+    team = await db.fantasy_teams.find_one({"user_id": current_user["_id"]})
+    if not team:
+        return {"submitted": False, "lineup": []}
+    
+    jornada_obj_id = ObjectId(jornada_id)
+    
+    lineup = await db.fantasy_lineups.find({
+        "fantasy_team_id": team["_id"],
+        "jornada_id": jornada_obj_id
+    }).to_list(100)
+    
+    if not lineup:
+        return {"submitted": False, "lineup": []}
+    
+    # Format lineup with player details
+    formatted_lineup = []
+    for item in lineup:
+        if item.get("is_dt"):
+            # DT item
+            dt_team = await db.teams.find_one({"_id": item.get("dt_team_id")})
+            formatted_lineup.append({
+                "position_slot": "DT",
+                "is_dt": True,
+                "team": {
+                    "id": str(dt_team["_id"]),
+                    "name": dt_team["name"],
+                    "short_name": dt_team["short_name"],
+                    "shield_url": dt_team["shield_url"]
+                } if dt_team else None
+            })
+        else:
+            # Player item
+            player = await db.players.find_one({"_id": item["player_id"]})
+            if player:
+                player_team = await db.teams.find_one({"_id": player["team_id"]})
+                formatted_lineup.append({
+                    "position_slot": item["position_slot"],
+                    "is_dt": False,
+                    "player": {
+                        "id": str(player["_id"]),
+                        "name": player["name"],
+                        "number": player.get("number", 0),
+                        "position": player["position"],
+                        "team": {
+                            "id": str(player_team["_id"]),
+                            "name": player_team["name"],
+                            "short_name": player_team["short_name"],
+                            "shield_url": player_team["shield_url"]
+                        } if player_team else None
+                    }
+                })
+    
+    return {
+        "submitted": True,
+        "lineup": formatted_lineup
+    }
+
+@api_router.get("/fantasy/rankings")
+async def get_fantasy_rankings():
+    """Get fantasy rankings"""
+    # Get all fantasy teams with their users
+    teams = await db.fantasy_teams.find().to_list(1000)
+    
+    rankings = []
+    for team in teams:
+        user = await db.users.find_one({"_id": team["user_id"]})
+        if user:
+            # Get total fantasy points
+            points = await db.points_log.find({
+                "user_id": user["_id"],
+                "source": "FANTASY"
+            }).to_list(1000)
+            
+            total_points = sum(p["points"] for p in points)
+            
+            rankings.append({
+                "user_id": str(user["_id"]),
+                "team_name": team["name"],
+                "display_name": user["display_name"],
+                "points": total_points
+            })
+    
+    # Sort by points
+    rankings.sort(key=lambda x: x["points"], reverse=True)
+    
+    # Add positions
+    for idx, ranking in enumerate(rankings, 1):
+        ranking["position"] = idx
+    
+    return {"rankings": rankings}
+
+# ============ ADMIN ROUTES FOR FANTASY ============
+
+@api_router.post("/admin/seed-players")
+async def seed_players():
+    """Seed players for all teams"""
+    teams = await db.teams.find().to_list(100)
+    
+    if len(teams) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Primero debes crear los equipos"
+        )
+    
+    # Clear existing players
+    await db.players.delete_many({})
+    
+    positions = ["POR", "DEF", "MED", "DEL"]
+    position_names = {
+        "POR": ["Portero", "Arquero"],
+        "DEF": ["Defensa Central", "Lateral Derecho", "Lateral Izquierdo"],
+        "MED": ["Mediocampista", "Volante", "Medio Centro"],
+        "DEL": ["Delantero", "Extremo", "Punta"]
+    }
+    
+    players_created = 0
+    
+    for team in teams:
+        # Create players for each position
+        # Porteros (2)
+        for i in range(2):
+            player = {
+                "name": f"{position_names['POR'][i % len(position_names['POR'])]} {i+1}",
+                "team_id": team["_id"],
+                "position": "POR",
+                "number": i + 1,
+                "stats": {
+                    "minutes_played": 0,
+                    "goals": 0,
+                    "assists": 0,
+                    "saves": 0,
+                    "clean_sheets": 0,
+                    "defensive_actions": 0
+                },
+                "created_at": datetime.utcnow()
+            }
+            await db.players.insert_one(player)
+            players_created += 1
+        
+        # Defensas (6)
+        for i in range(6):
+            player = {
+                "name": f"{position_names['DEF'][i % len(position_names['DEF'])]} {i+1}",
+                "team_id": team["_id"],
+                "position": "DEF",
+                "number": i + 3,
+                "stats": {
+                    "minutes_played": 0,
+                    "goals": 0,
+                    "assists": 0,
+                    "saves": 0,
+                    "clean_sheets": 0,
+                    "defensive_actions": 0
+                },
+                "created_at": datetime.utcnow()
+            }
+            await db.players.insert_one(player)
+            players_created += 1
+        
+        # Mediocampistas (8)
+        for i in range(8):
+            player = {
+                "name": f"{position_names['MED'][i % len(position_names['MED'])]} {i+1}",
+                "team_id": team["_id"],
+                "position": "MED",
+                "number": i + 9,
+                "stats": {
+                    "minutes_played": 0,
+                    "goals": 0,
+                    "assists": 0,
+                    "saves": 0,
+                    "clean_sheets": 0,
+                    "defensive_actions": 0
+                },
+                "created_at": datetime.utcnow()
+            }
+            await db.players.insert_one(player)
+            players_created += 1
+        
+        # Delanteros (5)
+        for i in range(5):
+            player = {
+                "name": f"{position_names['DEL'][i % len(position_names['DEL'])]} {i+1}",
+                "team_id": team["_id"],
+                "position": "DEL",
+                "number": i + 17,
+                "stats": {
+                    "minutes_played": 0,
+                    "goals": 0,
+                    "assists": 0,
+                    "saves": 0,
+                    "clean_sheets": 0,
+                    "defensive_actions": 0
+                },
+                "created_at": datetime.utcnow()
+            }
+            await db.players.insert_one(player)
+            players_created += 1
+    
+    logger.info(f"Seeded {players_created} players for {len(teams)} teams")
+    
+    return {
+        "message": f"Se crearon {players_created} jugadores para {len(teams)} equipos",
+        "players_count": players_created,
+        "teams_count": len(teams)
+    }
+
 # ============ ROOT ============
 
 @api_router.get("/")
@@ -678,6 +1062,8 @@ async def root():
             "teams": "/api/teams",
             "jornadas": "/api/jornadas/*",
             "quiniela": "/api/quiniela/*",
+            "fantasy": "/api/fantasy/*",
+            "players": "/api/players",
             "admin": "/api/admin/*"
         }
     }
