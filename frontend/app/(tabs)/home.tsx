@@ -67,7 +67,7 @@ export default function HomeScreen() {
             <View style={[styles.cardIconContainer, { backgroundColor: '#0047AB' }]}>
               <Ionicons name="people" size={48} color="#FFFFFF" />
             </View>
-            <Text style={styles.cardTitle}>FANTASY{' \n'}FOOTBALL</Text>
+            <Text style={styles.cardTitle}>FANTASY{' \n'}FÚTBOL</Text>
             <Text style={styles.cardDescription}>
               Arma tu equipo ideal y compite con otros managers
             </Text>
