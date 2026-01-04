@@ -42,10 +42,7 @@ export default function HomeScreen() {
           <TouchableOpacity
             style={styles.modeCard}
             activeOpacity={0.8}
-            onPress={() => {
-              // TODO: Navigate to quiniela mode
-              alert('Quiniela Tradicional - Próximamente');
-            }}
+            onPress={() => router.push('/quiniela')}
           >
             <View style={[styles.cardIconContainer, { backgroundColor: '#DC143C' }]}>
               <Ionicons name="checkmark-circle" size={48} color="#FFFFFF" />
