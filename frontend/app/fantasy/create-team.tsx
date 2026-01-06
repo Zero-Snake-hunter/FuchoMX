@@ -72,20 +72,12 @@ export default function CreateTeamScreen() {
       
       if (isEditing) {
         // Si está editando, solo muestra mensaje y regresa
-        Alert.alert('¡Éxito!', 'Nombre actualizado', [
-          { text: 'OK', onPress: () => router.back() },
-        ]);
+        Alert.alert('¡Éxito!', 'Nombre actualizado');
+        router.back();
       } else {
-        // Si es nuevo equipo, navega a lineup
-        Alert.alert('¡Equipo Creado!', '¡Ahora arma tu alineación!', [
-          {
-            text: 'Continuar',
-            onPress: () => {
-              console.log('Navigating to lineup...');
-              router.push('/fantasy/lineup');
-            },
-          },
-        ]);
+        // Si es nuevo equipo, navega a lineup inmediatamente
+        console.log('Team created! Navigating to lineup...');
+        router.push('/fantasy/lineup');
       }
     } catch (error: any) {
       console.error('Error saving team:', error);
