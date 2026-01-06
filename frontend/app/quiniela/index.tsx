@@ -234,6 +234,14 @@ export default function QuinielaScreen() {
         <View style={styles.quickActions}>
           <TouchableOpacity
             style={styles.actionButton}
+            onPress={() => router.push('/quiniela/leagues')}
+          >
+            <Ionicons name="people-outline" size={20} color=\"#0047AB\" />
+            <Text style={styles.actionText}>Mis Ligas</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionButton}
             onPress={() => router.push('/quiniela/history')}
           >
             <Ionicons name="time-outline" size={20} color="#0047AB" />
