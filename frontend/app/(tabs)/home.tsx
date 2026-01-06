@@ -11,7 +11,6 @@ import {
 import { useRouter } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 
 const { width } = Dimensions.get('window');
 
@@ -59,10 +58,7 @@ export default function HomeScreen() {
           <TouchableOpacity
             style={styles.modeCard}
             activeOpacity={0.8}
-            onPress={() => {
-              // TODO: Navigate to fantasy mode
-              alert('Fantasy Football - Próximamente');
-            }}
+            onPress={() => router.push('/fantasy')}
           >
             <View style={[styles.cardIconContainer, { backgroundColor: '#0047AB' }]}>
               <Ionicons name="people" size={48} color="#FFFFFF" />

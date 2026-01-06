@@ -14,27 +14,32 @@ import axios from 'axios';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
-export default function FantasyScreen() {
+export default function FantasyDashboardScreen() {
   const router = useRouter();
   const { user, token } = useAuth();
   const [loading, setLoading] = useState(true);
   const [team, setTeam] = useState<any>(null);
+  const [jornada, setJornada] = useState<any>(null);
 
   useEffect(() => {
-    loadTeam();
+    loadData();
   }, []);
 
-  const loadTeam = async () => {
+  const loadData = async () => {
     if (!token) return;
 
     try {
-      const response = await axios.get(`${BACKEND_URL}/api/fantasy/my-team`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const [teamRes, jornadaRes] = await Promise.all([
+        axios.get(`${BACKEND_URL}/api/fantasy/my-team`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        axios.get(`${BACKEND_URL}/api/jornadas/current`),
+      ]);
 
-      setTeam(response.data);
+      setTeam(teamRes.data);
+      setJornada(jornadaRes.data.jornada);
     } catch (error: any) {
-      Alert.alert('Error', 'Error al cargar tu equipo');
+      console.error('Error loading data:', error);
     } finally {
       setLoading(false);
     }
@@ -42,7 +47,7 @@ export default function FantasyScreen() {
 
   const handleCreateTeam = () => {
     if (team?.exists) {
-      router.push('/fantasy/lineup');
+      router.push('/fantasy/field');
     } else {
       router.push('/fantasy/create-team');
     }
@@ -61,9 +66,7 @@ export default function FantasyScreen() {
       <View style={styles.header}>
         <Ionicons name="people" size={80} color="#0047AB" />
         <Text style={styles.title}>FANTASY FÚTBOL</Text>
-        <Text style={styles.subtitle}>
-          Arma tu equipo ideal de la Liga MX
-        </Text>
+        <Text style={styles.subtitle}>Arma tu equipo ideal de la Liga MX</Text>
       </View>
 
       <View style={styles.content}>
@@ -77,10 +80,25 @@ export default function FantasyScreen() {
               </View>
             </View>
 
-            <TouchableOpacity
-              style={styles.primaryButton}
-              onPress={() => router.push('/fantasy/lineup')}
-            >
+            {jornada && (
+              <View style={styles.jornadaInfo}>
+                <Text style={styles.jornadaLabel}>Jornada {jornada.week_number}</Text>
+                <View
+                  style={[
+                    styles.statusBadge,
+                    jornada.status === 'upcoming'
+                      ? styles.statusOpen
+                      : styles.statusClosed,
+                  ]}
+                >
+                  <Text style={styles.statusText}>
+                    {jornada.status === 'upcoming' ? 'Abierta' : 'Cerrada'}
+                  </Text>
+                </View>
+              </View>
+            )}
+
+            <TouchableOpacity style={styles.primaryButton} onPress={() => router.push('/fantasy/field')}>
               <Ionicons name="create-outline" size={24} color="#FFFFFF" />
               <Text style={styles.primaryButtonText}>ARMAR ALINEACIÓN</Text>
             </TouchableOpacity>
@@ -109,14 +127,9 @@ export default function FantasyScreen() {
             <Text style={styles.welcomeText}>
               Crea tu equipo fantasy para comenzar a competir
             </Text>
-            <Text style={styles.welcomeDefault}>
-              Nombre sugerido: {team?.default_name}
-            </Text>
+            <Text style={styles.welcomeDefault}>Nombre sugerido: {team?.default_name}</Text>
 
-            <TouchableOpacity
-              style={styles.primaryButton}
-              onPress={handleCreateTeam}
-            >
+            <TouchableOpacity style={styles.primaryButton} onPress={handleCreateTeam}>
               <Ionicons name="add-circle-outline" size={24} color="#FFFFFF" />
               <Text style={styles.primaryButtonText}>CREAR MI EQUIPO</Text>
             </TouchableOpacity>
@@ -178,7 +191,7 @@ const styles = StyleSheet.create({
   teamHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 16,
   },
   teamInfo: {
     marginLeft: 16,
@@ -193,6 +206,37 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#999',
     marginTop: 4,
+  },
+  jornadaInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#0a0a0a',
+    borderRadius: 8,
+  },
+  jornadaLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  statusOpen: {
+    backgroundColor: '#00A551',
+  },
+  statusClosed: {
+    backgroundColor: '#DC143C',
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
   },
   welcomeCard: {
     backgroundColor: '#1a1a1a',
