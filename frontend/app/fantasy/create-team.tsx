@@ -32,10 +32,12 @@ export default function CreateTeamScreen() {
     if (!token) return;
 
     try {
+      console.log('Loading team...');
       const response = await axios.get(`${BACKEND_URL}/api/fantasy/my-team`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
+      console.log('Team response:', response.data);
       if (response.data.exists) {
         setTeamName(response.data.name);
         setIsEditing(true);
@@ -48,6 +50,10 @@ export default function CreateTeamScreen() {
   };
 
   const handleSave = async () => {
+    console.log('handleSave called');
+    console.log('Team name:', teamName);
+    console.log('Token:', token ? 'exists' : 'missing');
+
     if (!teamName.trim()) {
       Alert.alert('Error', 'Por favor ingresa un nombre para tu equipo');
       return;
@@ -55,23 +61,30 @@ export default function CreateTeamScreen() {
 
     setLoading(true);
     try {
-      await axios.post(
+      console.log('Sending request to backend...');
+      const response = await axios.post(
         `${BACKEND_URL}/api/fantasy/team`,
         { name: teamName.trim() },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
+      console.log('Response:', response.data);
       Alert.alert(
         '¡Éxito!',
         isEditing ? 'Nombre actualizado' : 'Equipo creado',
         [
           {
             text: 'OK',
-            onPress: () => router.back(),
+            onPress: () => {
+              console.log('Navigating back...');
+              router.back();
+            },
           },
         ]
       );
     } catch (error: any) {
+      console.error('Error saving team:', error);
+      console.error('Error response:', error.response?.data);
       Alert.alert('Error', error.response?.data?.detail || 'Error al guardar');
     } finally {
       setLoading(false);
@@ -116,6 +129,7 @@ export default function CreateTeamScreen() {
             style={[styles.saveButton, loading && styles.buttonDisabled]}
             onPress={handleSave}
             disabled={loading}
+            activeOpacity={0.7}
           >
             {loading ? (
               <ActivityIndicator color="#FFFFFF" />
