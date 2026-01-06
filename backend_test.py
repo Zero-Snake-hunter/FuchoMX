@@ -14,7 +14,7 @@ import os
 from dotenv import load_dotenv
 
 # Base URL from frontend .env
-BASE_URL = "https://futbolpredict-3.preview.emergentagent.com/api"
+BASE_URL = "https://pool-predictor-2.preview.emergentagent.com/api"
 
 # Load environment for database access
 load_dotenv('/app/backend/.env')
