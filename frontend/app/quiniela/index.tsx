@@ -236,7 +236,7 @@ export default function QuinielaScreen() {
             style={styles.actionButton}
             onPress={() => router.push('/quiniela/leagues')}
           >
-            <Ionicons name="people-outline" size={20} color=\"#0047AB\" />
+            <Ionicons name="people-outline" size={20} color="#0047AB" />
             <Text style={styles.actionText}>Mis Ligas</Text>
           </TouchableOpacity>
 
