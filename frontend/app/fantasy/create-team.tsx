@@ -69,23 +69,28 @@ export default function CreateTeamScreen() {
       );
 
       console.log('Response:', response.data);
-      Alert.alert(
-        '¡Éxito!',
-        isEditing ? 'Nombre actualizado' : 'Equipo creado',
-        [
+      
+      if (isEditing) {
+        // Si está editando, solo muestra mensaje y regresa
+        Alert.alert('¡Éxito!', 'Nombre actualizado', [
+          { text: 'OK', onPress: () => router.back() },
+        ]);
+      } else {
+        // Si es nuevo equipo, navega a lineup
+        Alert.alert('¡Equipo Creado!', '¡Ahora arma tu alineación!', [
           {
-            text: 'OK',
+            text: 'Continuar',
             onPress: () => {
-              console.log('Navigating back...');
-              router.back();
+              console.log('Navigating to lineup...');
+              router.push('/fantasy/lineup');
             },
           },
-        ]
-      );
+        ]);
+      }
     } catch (error: any) {
       console.error('Error saving team:', error);
-      console.error('Error response:', error.response?.data);
-      Alert.alert('Error', error.response?.data?.detail || 'Error al guardar');
+      const errorMessage = error.response?.data?.detail || 'Error al guardar el equipo. Intenta de nuevo.';
+      Alert.alert('Error', errorMessage);
     } finally {
       setLoading(false);
     }
