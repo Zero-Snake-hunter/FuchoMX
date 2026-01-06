@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  SafeAreaView,
+  ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
@@ -46,9 +48,12 @@ export default function FantasyDashboardScreen() {
   };
 
   const handleCreateTeam = () => {
+    console.log('Team exists:', team?.exists);
     if (team?.exists) {
+      console.log('NAVIGATING TO FIELD');
       router.push('/fantasy/field');
     } else {
+      console.log('NAVIGATING TO CREATE TEAM');
       router.push('/fantasy/create-team');
     }
   };
@@ -62,88 +67,107 @@ export default function FantasyDashboardScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Ionicons name="people" size={80} color="#0047AB" />
-        <Text style={styles.title}>FANTASY FÚTBOL</Text>
-        <Text style={styles.subtitle}>Arma tu equipo ideal de la Liga MX</Text>
-      </View>
+    <SafeAreaView style={styles.container}>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.header}>
+          <Ionicons name="people" size={80} color="#0047AB" />
+          <Text style={styles.title}>FANTASY FÚTBOL</Text>
+          <Text style={styles.subtitle}>Arma tu equipo ideal de la Liga MX</Text>
+        </View>
 
-      <View style={styles.content}>
-        {team?.exists ? (
-          <View style={styles.teamCard}>
-            <View style={styles.teamHeader}>
-              <Ionicons name="shield" size={48} color="#DC143C" />
-              <View style={styles.teamInfo}>
-                <Text style={styles.teamName}>{team.name}</Text>
-                <Text style={styles.teamSubtitle}>Tu equipo fantasy</Text>
-              </View>
-            </View>
-
-            {jornada && (
-              <View style={styles.jornadaInfo}>
-                <Text style={styles.jornadaLabel}>Jornada {jornada.week_number}</Text>
-                <View
-                  style={[
-                    styles.statusBadge,
-                    jornada.status === 'upcoming'
-                      ? styles.statusOpen
-                      : styles.statusClosed,
-                  ]}
-                >
-                  <Text style={styles.statusText}>
-                    {jornada.status === 'upcoming' ? 'Abierta' : 'Cerrada'}
-                  </Text>
+        <View style={styles.content}>
+          {team?.exists ? (
+            <View style={styles.teamCard}>
+              <View style={styles.teamHeader}>
+                <Ionicons name="shield" size={48} color="#DC143C" />
+                <View style={styles.teamInfo}>
+                  <Text style={styles.teamName}>{team.name}</Text>
+                  <Text style={styles.teamSubtitle}>Tu equipo fantasy</Text>
                 </View>
               </View>
-            )}
 
-            <TouchableOpacity style={styles.primaryButton} onPress={() => router.push('/fantasy/field')}>
-              <Ionicons name="create-outline" size={24} color="#FFFFFF" />
-              <Text style={styles.primaryButtonText}>ARMAR ALINEACIÓN</Text>
-            </TouchableOpacity>
+              {jornada && (
+                <View style={styles.jornadaInfo}>
+                  <Text style={styles.jornadaLabel}>Jornada {jornada.week_number}</Text>
+                  <View
+                    style={[
+                      styles.statusBadge,
+                      jornada.status === 'upcoming'
+                        ? styles.statusOpen
+                        : styles.statusClosed,
+                    ]}
+                  >
+                    <Text style={styles.statusText}>
+                      {jornada.status === 'upcoming' ? 'Abierta' : 'Cerrada'}
+                    </Text>
+                  </View>
+                </View>
+              )}
 
-            <View style={styles.quickActions}>
-              <TouchableOpacity
-                style={styles.secondaryButton}
-                onPress={() => router.push('/fantasy/rankings')}
+              <TouchableOpacity 
+                style={styles.primaryButton} 
+                onPress={() => {
+                  console.log('NAVIGATING TO FIELD FROM BUTTON');
+                  router.push('/fantasy/field');
+                }}
+                activeOpacity={0.7}
               >
-                <Ionicons name="trophy-outline" size={20} color="#0047AB" />
-                <Text style={styles.secondaryButtonText}>Rankings</Text>
+                <Ionicons name="create-outline" size={24} color="#FFFFFF" />
+                <Text style={styles.primaryButtonText}>ARMAR ALINEACIÓN</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.secondaryButton}
-                onPress={() => router.push('/fantasy/create-team')}
+              <View style={styles.quickActions}>
+                <TouchableOpacity
+                  style={styles.secondaryButton}
+                  onPress={() => router.push('/fantasy/rankings')}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="trophy-outline" size={20} color="#0047AB" />
+                  <Text style={styles.secondaryButtonText}>Rankings</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.secondaryButton}
+                  onPress={() => router.push('/fantasy/create-team')}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="pencil-outline" size={20} color="#0047AB" />
+                  <Text style={styles.secondaryButtonText}>Cambiar Nombre</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <View style={styles.welcomeCard}>
+              <Text style={styles.welcomeTitle}>¡Bienvenido!</Text>
+              <Text style={styles.welcomeText}>
+                Crea tu equipo fantasy para comenzar a competir
+              </Text>
+              <Text style={styles.welcomeDefault}>Nombre sugerido: {team?.default_name}</Text>
+
+              <TouchableOpacity 
+                style={styles.primaryButton} 
+                onPress={handleCreateTeam}
+                activeOpacity={0.7}
               >
-                <Ionicons name="pencil-outline" size={20} color="#0047AB" />
-                <Text style={styles.secondaryButtonText}>Cambiar Nombre</Text>
+                <Ionicons name="add-circle-outline" size={24} color="#FFFFFF" />
+                <Text style={styles.primaryButtonText}>CREAR MI EQUIPO</Text>
               </TouchableOpacity>
             </View>
-          </View>
-        ) : (
-          <View style={styles.welcomeCard}>
-            <Text style={styles.welcomeTitle}>¡Bienvenido!</Text>
-            <Text style={styles.welcomeText}>
-              Crea tu equipo fantasy para comenzar a competir
+          )}
+
+          <View style={styles.infoBox}>
+            <Ionicons name="information-circle" size={20} color="#0047AB" />
+            <Text style={styles.infoText}>
+              Selecciona 11 jugadores (4-4-2) y un Director Técnico cada jornada
             </Text>
-            <Text style={styles.welcomeDefault}>Nombre sugerido: {team?.default_name}</Text>
-
-            <TouchableOpacity style={styles.primaryButton} onPress={handleCreateTeam}>
-              <Ionicons name="add-circle-outline" size={24} color="#FFFFFF" />
-              <Text style={styles.primaryButtonText}>CREAR MI EQUIPO</Text>
-            </TouchableOpacity>
           </View>
-        )}
-
-        <View style={styles.infoBox}>
-          <Ionicons name="information-circle" size={20} color="#0047AB" />
-          <Text style={styles.infoText}>
-            Selecciona 11 jugadores (4-4-2) y un Director Técnico cada jornada
-          </Text>
         </View>
-      </View>
-    </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -157,6 +181,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#000000',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 120,
   },
   header: {
     alignItems: 'center',
@@ -177,7 +207,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   content: {
-    flex: 1,
     paddingHorizontal: 24,
   },
   teamCard: {

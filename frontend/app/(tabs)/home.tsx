@@ -6,80 +6,94 @@ import {
   TouchableOpacity,
   SafeAreaView,
   StatusBar,
-  Dimensions,
+  ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 
-const { width } = Dimensions.get('window');
-
 export default function HomeScreen() {
   const router = useRouter();
   const { user } = useAuth();
+
+  const handleQuinielaPress = () => {
+    console.log('NAVIGATING TO QUINIELA');
+    router.push('/quiniela');
+  };
+
+  const handleFantasyPress = () => {
+    console.log('NAVIGATING TO FANTASY');
+    router.push('/fantasy');
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" />
       
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>Hola,</Text>
-          <Text style={styles.userName}>{user?.display_name || 'Usuario'}</Text>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.greeting}>Hola,</Text>
+            <Text style={styles.userName}>{user?.display_name || 'Usuario'}</Text>
+          </View>
+          <View style={styles.pointsContainer}>
+            <Ionicons name="trophy" size={24} color="#FFD700" />
+            <Text style={styles.points}>{user?.total_points || 0}</Text>
+          </View>
         </View>
-        <View style={styles.pointsContainer}>
-          <Ionicons name="trophy" size={24} color="#FFD700" />
-          <Text style={styles.points}>{user?.total_points || 0}</Text>
-        </View>
-      </View>
 
-      <View style={styles.content}>
-        <Text style={styles.title}>SELECCIONA UN MODO</Text>
-        <Text style={styles.subtitle}>Elige cómo quieres jugar</Text>
+        <View style={styles.content}>
+          <Text style={styles.title}>SELECCIONA UN MODO</Text>
+          <Text style={styles.subtitle}>Elige cómo quieres jugar</Text>
 
-        <View style={styles.cardsContainer}>
-          <TouchableOpacity
-            style={styles.modeCard}
-            activeOpacity={0.8}
-            onPress={() => router.push('/quiniela')}
-          >
-            <View style={[styles.cardIconContainer, { backgroundColor: '#DC143C' }]}>
-              <Ionicons name="checkmark-circle" size={48} color="#FFFFFF" />
-            </View>
-            <Text style={styles.cardTitle}>QUINIELA{' \n'}TRADICIONAL</Text>
-            <Text style={styles.cardDescription}>
-              Predice los resultados de cada partido y gana puntos
+          <View style={styles.cardsContainer}>
+            <TouchableOpacity
+              style={styles.modeCard}
+              activeOpacity={0.8}
+              onPress={handleQuinielaPress}
+            >
+              <View style={[styles.cardIconContainer, { backgroundColor: '#DC143C' }]}>
+                <Ionicons name="checkmark-circle" size={48} color="#FFFFFF" />
+              </View>
+              <Text style={styles.cardTitle}>QUINIELA{' \n'}TRADICIONAL</Text>
+              <Text style={styles.cardDescription}>
+                Predice los resultados de cada partido y gana puntos
+              </Text>
+              <View style={styles.cardFooter}>
+                <Ionicons name="arrow-forward" size={24} color="#DC143C" />
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.modeCard}
+              activeOpacity={0.8}
+              onPress={handleFantasyPress}
+            >
+              <View style={[styles.cardIconContainer, { backgroundColor: '#0047AB' }]}>
+                <Ionicons name="people" size={48} color="#FFFFFF" />
+              </View>
+              <Text style={styles.cardTitle}>FANTASY{' \n'}FÚTBOL</Text>
+              <Text style={styles.cardDescription}>
+                Arma tu equipo ideal y compite con otros managers
+              </Text>
+              <View style={styles.cardFooter}>
+                <Ionicons name="arrow-forward" size={24} color="#0047AB" />
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.infoBox}>
+            <Ionicons name="information-circle" size={20} color="#0047AB" />
+            <Text style={styles.infoText}>
+              Ambos modos están disponibles. Puedes jugar uno o ambos simultáneamente.
             </Text>
-            <View style={styles.cardFooter}>
-              <Ionicons name="arrow-forward" size={24} color="#DC143C" />
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.modeCard}
-            activeOpacity={0.8}
-            onPress={() => router.push('/fantasy')}
-          >
-            <View style={[styles.cardIconContainer, { backgroundColor: '#0047AB' }]}>
-              <Ionicons name="people" size={48} color="#FFFFFF" />
-            </View>
-            <Text style={styles.cardTitle}>FANTASY{' \n'}FÚTBOL</Text>
-            <Text style={styles.cardDescription}>
-              Arma tu equipo ideal y compite con otros managers
-            </Text>
-            <View style={styles.cardFooter}>
-              <Ionicons name="arrow-forward" size={24} color="#0047AB" />
-            </View>
-          </TouchableOpacity>
+          </View>
         </View>
-
-        <View style={styles.infoBox}>
-          <Ionicons name="information-circle" size={20} color="#0047AB" />
-          <Text style={styles.infoText}>
-            Ambos modos están disponibles. Puedes jugar uno o ambos simultáneamente.
-          </Text>
-        </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -88,6 +102,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000000',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 120,
   },
   header: {
     flexDirection: 'row',
@@ -122,7 +142,6 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   content: {
-    flex: 1,
     paddingHorizontal: 24,
   },
   title: {
@@ -139,6 +158,7 @@ const styles = StyleSheet.create({
   },
   cardsContainer: {
     gap: 20,
+    marginBottom: 24,
   },
   modeCard: {
     backgroundColor: '#1a1a1a',
@@ -177,7 +197,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#0a1a2a',
     padding: 16,
     borderRadius: 12,
-    marginTop: 24,
     borderWidth: 1,
     borderColor: '#0047AB',
   },
