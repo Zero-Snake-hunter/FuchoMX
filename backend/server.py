@@ -334,18 +334,37 @@ async def get_current_jornada():
         
         match["id"] = str(match.pop("_id"))
         match["jornada_id"] = str(match["jornada_id"])
-        match["home_team"] = {
-            "id": str(home_team["_id"]),
-            "name": home_team["name"],
-            "short_name": home_team["short_name"],
-            "shield_url": home_team["shield_url"]
-        }
-        match["away_team"] = {
-            "id": str(away_team["_id"]),
-            "name": away_team["name"],
-            "short_name": away_team["short_name"],
-            "shield_url": away_team["shield_url"]
-        }
+        
+        if home_team:
+            match["home_team"] = {
+                "id": str(home_team["_id"]),
+                "name": home_team["name"],
+                "short_name": home_team["short_name"],
+                "shield_url": home_team["shield_url"]
+            }
+        else:
+            match["home_team"] = {
+                "id": "unknown",
+                "name": "Equipo Local",
+                "short_name": "LOC",
+                "shield_url": "https://via.placeholder.com/100"
+            }
+        
+        if away_team:
+            match["away_team"] = {
+                "id": str(away_team["_id"]),
+                "name": away_team["name"],
+                "short_name": away_team["short_name"],
+                "shield_url": away_team["shield_url"]
+            }
+        else:
+            match["away_team"] = {
+                "id": "unknown",
+                "name": "Equipo Visitante",
+                "short_name": "VIS",
+                "shield_url": "https://via.placeholder.com/100"
+            }
+        
         match.pop("home_team_id")
         match.pop("away_team_id")
     
