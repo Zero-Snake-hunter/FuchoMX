@@ -1004,6 +1004,476 @@ async def calculate_jornada_points(jornada_id: str):
         "total_points_awarded": total_points_awarded
     }
 
+# ============ FANTASY SCORING SYSTEM ============
+
+# Sistema de puntuación por posición
+FANTASY_SCORING = {
+    "minutes_played": {
+        "threshold_60": 2,  # >= 60 minutos
+        "under_60": 1       # < 60 minutos
+    },
+    "goals": {
+        "POR": 6,
+        "DEF": 6,
+        "MED": 5,
+        "DEL": 4
+    },
+    "assists": 3,
+    "clean_sheet": {  # Portería a cero
+        "POR": 5,
+        "DEF": 4
+    },
+    "goals_conceded": {  # Por cada 2 goles recibidos (solo POR y DEF)
+        "POR": -1,
+        "DEF": -1
+    },
+    "yellow_card": -1,
+    "red_card": -3,
+    "penalty_saved": 5,
+    "penalty_missed": -3,
+    "own_goal": -2,
+    # Bonos especiales
+    "bonuses": {
+        "man_of_the_match": 2,
+        "brace": 1,          # 2 goles
+        "hat_trick": 2,      # 3+ goles
+        "keeper_4_saves": 1  # Portero con 4+ atajadas
+    },
+    "dt": {
+        "team_win": 2,
+        "team_draw": 1,
+        "team_loss": 0
+    }
+}
+
+def calculate_player_points(player_stats: dict, position: str) -> dict:
+    """Calculate fantasy points for a single player based on their stats"""
+    points = 0
+    breakdown = {}
+    
+    # Minutos jugados
+    minutes = player_stats.get("minutes", 0)
+    if minutes >= 60:
+        points += FANTASY_SCORING["minutes_played"]["threshold_60"]
+        breakdown["minutes"] = {"value": minutes, "points": 2, "label": "Minutos (≥60)"}
+    elif minutes > 0:
+        points += FANTASY_SCORING["minutes_played"]["under_60"]
+        breakdown["minutes"] = {"value": minutes, "points": 1, "label": "Minutos (<60)"}
+    
+    # Goles
+    goals = player_stats.get("goals", 0)
+    if goals > 0:
+        goal_points = goals * FANTASY_SCORING["goals"].get(position, 4)
+        points += goal_points
+        breakdown["goals"] = {"value": goals, "points": goal_points, "label": f"Goles ({position})"}
+        
+        # Bonus por doblete/hat-trick
+        if goals == 2:
+            points += FANTASY_SCORING["bonuses"]["brace"]
+            breakdown["brace"] = {"value": 1, "points": 1, "label": "Doblete"}
+        elif goals >= 3:
+            points += FANTASY_SCORING["bonuses"]["hat_trick"]
+            breakdown["hat_trick"] = {"value": 1, "points": 2, "label": "Hat-trick"}
+    
+    # Asistencias
+    assists = player_stats.get("assists", 0)
+    if assists > 0:
+        assist_points = assists * FANTASY_SCORING["assists"]
+        points += assist_points
+        breakdown["assists"] = {"value": assists, "points": assist_points, "label": "Asistencias"}
+    
+    # Portería a cero (solo para POR y DEF)
+    if position in ["POR", "DEF"]:
+        clean_sheet = player_stats.get("clean_sheet", False)
+        if clean_sheet and minutes >= 60:
+            cs_points = FANTASY_SCORING["clean_sheet"].get(position, 0)
+            points += cs_points
+            breakdown["clean_sheet"] = {"value": 1, "points": cs_points, "label": "Portería a cero"}
+        
+        # Goles recibidos (penalización por cada 2)
+        goals_conceded = player_stats.get("goals_conceded", 0)
+        if goals_conceded >= 2:
+            gc_penalty = (goals_conceded // 2) * FANTASY_SCORING["goals_conceded"].get(position, -1)
+            points += gc_penalty
+            breakdown["goals_conceded"] = {"value": goals_conceded, "points": gc_penalty, "label": "Goles recibidos"}
+    
+    # Portero - atajadas
+    if position == "POR":
+        saves = player_stats.get("saves", 0)
+        if saves >= 4:
+            points += FANTASY_SCORING["bonuses"]["keeper_4_saves"]
+            breakdown["saves"] = {"value": saves, "points": 1, "label": "4+ Atajadas"}
+        
+        # Penalti atajado
+        penalty_saved = player_stats.get("penalty_saved", 0)
+        if penalty_saved > 0:
+            ps_points = penalty_saved * FANTASY_SCORING["penalty_saved"]
+            points += ps_points
+            breakdown["penalty_saved"] = {"value": penalty_saved, "points": ps_points, "label": "Penalti atajado"}
+    
+    # Tarjeta amarilla
+    yellow = player_stats.get("yellow_card", 0)
+    if yellow > 0:
+        yellow_points = yellow * FANTASY_SCORING["yellow_card"]
+        points += yellow_points
+        breakdown["yellow_card"] = {"value": yellow, "points": yellow_points, "label": "Tarjeta amarilla"}
+    
+    # Tarjeta roja
+    red = player_stats.get("red_card", 0)
+    if red > 0:
+        red_points = red * FANTASY_SCORING["red_card"]
+        points += red_points
+        breakdown["red_card"] = {"value": red, "points": red_points, "label": "Tarjeta roja"}
+    
+    # Penalti fallado
+    penalty_missed = player_stats.get("penalty_missed", 0)
+    if penalty_missed > 0:
+        pm_points = penalty_missed * FANTASY_SCORING["penalty_missed"]
+        points += pm_points
+        breakdown["penalty_missed"] = {"value": penalty_missed, "points": pm_points, "label": "Penalti fallado"}
+    
+    # Autogol
+    own_goal = player_stats.get("own_goal", 0)
+    if own_goal > 0:
+        og_points = own_goal * FANTASY_SCORING["own_goal"]
+        points += og_points
+        breakdown["own_goal"] = {"value": own_goal, "points": og_points, "label": "Autogol"}
+    
+    # Jugador del partido
+    if player_stats.get("man_of_the_match", False):
+        points += FANTASY_SCORING["bonuses"]["man_of_the_match"]
+        breakdown["motm"] = {"value": 1, "points": 2, "label": "⭐ Jugador del partido"}
+    
+    return {
+        "total_points": points,
+        "breakdown": breakdown
+    }
+
+@api_router.post("/admin/fantasy/simulate-jornada/{jornada_id}")
+async def simulate_fantasy_jornada(jornada_id: str):
+    """
+    Simula una jornada completa de Fantasy con estadísticas mock.
+    Genera stats para todos los jugadores y calcula puntos.
+    """
+    import random
+    
+    jornada_obj_id = ObjectId(jornada_id)
+    
+    # Verificar jornada
+    jornada = await db.jornadas.find_one({"_id": jornada_obj_id})
+    if not jornada:
+        raise HTTPException(status_code=404, detail="Jornada no encontrada")
+    
+    # Obtener partidos de esta jornada
+    matches = await db.matches.find({"jornada_id": jornada_obj_id}).to_list(20)
+    if not matches:
+        raise HTTPException(status_code=400, detail="No hay partidos en esta jornada")
+    
+    # Generar resultados y estadísticas mock para cada partido
+    match_results = []
+    player_stats_bulk = []
+    
+    for match in matches:
+        home_team_id = match["home_team_id"]
+        away_team_id = match["away_team_id"]
+        
+        # Generar marcador realista
+        home_score = random.choices([0, 1, 2, 3, 4], weights=[20, 35, 25, 15, 5])[0]
+        away_score = random.choices([0, 1, 2, 3, 4], weights=[25, 35, 25, 12, 3])[0]
+        
+        # Actualizar partido
+        await db.matches.update_one(
+            {"_id": match["_id"]},
+            {"$set": {
+                "home_score": home_score,
+                "away_score": away_score,
+                "status": "finished"
+            }}
+        )
+        
+        match_results.append({
+            "match_id": str(match["_id"]),
+            "home_team_id": str(home_team_id),
+            "away_team_id": str(away_team_id),
+            "home_score": home_score,
+            "away_score": away_score
+        })
+        
+        # Generar estadísticas para jugadores de ambos equipos
+        for team_id, is_home, goals_scored, goals_conceded in [
+            (home_team_id, True, home_score, away_score),
+            (away_team_id, False, away_score, home_score)
+        ]:
+            # Obtener jugadores del equipo
+            players = await db.players.find({"team_id": team_id}).to_list(30)
+            
+            # Distribuir goles entre jugadores
+            goals_to_assign = goals_scored
+            
+            for player in players:
+                position = player.get("position", "MED")
+                
+                # Generar estadísticas realistas
+                played = random.random() > 0.1  # 90% juegan
+                minutes = random.randint(60, 90) if played else random.randint(0, 45) if random.random() > 0.5 else 0
+                
+                stats = {
+                    "match_id": match["_id"],
+                    "jornada_id": jornada_obj_id,
+                    "player_id": player["_id"],
+                    "team_id": team_id,
+                    "position": position,
+                    "minutes": minutes,
+                    "goals": 0,
+                    "assists": 0,
+                    "clean_sheet": goals_conceded == 0 and minutes >= 60,
+                    "goals_conceded": goals_conceded if position in ["POR", "DEF"] else 0,
+                    "yellow_card": 1 if random.random() < 0.15 else 0,
+                    "red_card": 1 if random.random() < 0.02 else 0,
+                    "saves": random.randint(0, 6) if position == "POR" else 0,
+                    "penalty_saved": 1 if position == "POR" and random.random() < 0.05 else 0,
+                    "penalty_missed": 0,
+                    "own_goal": 1 if random.random() < 0.01 else 0,
+                    "man_of_the_match": False,
+                    "created_at": datetime.utcnow()
+                }
+                
+                # Asignar goles a delanteros/medios principalmente
+                if goals_to_assign > 0 and minutes >= 45:
+                    if position == "DEL" and random.random() < 0.5:
+                        stats["goals"] = min(goals_to_assign, random.randint(1, 2))
+                        goals_to_assign -= stats["goals"]
+                    elif position == "MED" and random.random() < 0.3:
+                        stats["goals"] = min(goals_to_assign, 1)
+                        goals_to_assign -= stats["goals"]
+                    elif position == "DEF" and random.random() < 0.1:
+                        stats["goals"] = min(goals_to_assign, 1)
+                        goals_to_assign -= stats["goals"]
+                
+                # Asignar asistencias
+                if stats["goals"] == 0 and random.random() < 0.2 and minutes >= 45:
+                    stats["assists"] = 1
+                
+                player_stats_bulk.append(stats)
+        
+        # Asignar jugador del partido a uno al azar
+        if player_stats_bulk:
+            match_players = [p for p in player_stats_bulk if p["match_id"] == match["_id"]]
+            if match_players:
+                motm_idx = random.randint(0, len(match_players) - 1)
+                match_players[motm_idx]["man_of_the_match"] = True
+    
+    # Guardar todas las estadísticas
+    if player_stats_bulk:
+        # Eliminar stats anteriores de esta jornada
+        await db.player_match_stats.delete_many({"jornada_id": jornada_obj_id})
+        await db.player_match_stats.insert_many(player_stats_bulk)
+    
+    # Ahora calcular puntos para todos los equipos fantasy
+    fantasy_results = await calculate_fantasy_points(jornada_id)
+    
+    return {
+        "message": "Jornada simulada exitosamente",
+        "jornada_id": jornada_id,
+        "matches_simulated": len(match_results),
+        "match_results": match_results,
+        "fantasy_results": fantasy_results
+    }
+
+async def calculate_fantasy_points(jornada_id: str) -> dict:
+    """Calcula puntos fantasy para todos los equipos de una jornada"""
+    jornada_obj_id = ObjectId(jornada_id)
+    
+    # Obtener todas las alineaciones de esta jornada
+    all_lineups = await db.fantasy_lineups.find({
+        "jornada_id": jornada_obj_id
+    }).to_list(1000)
+    
+    # Agrupar por fantasy_team_id
+    team_lineups = {}
+    for lineup in all_lineups:
+        team_id = lineup["fantasy_team_id"]
+        if team_id not in team_lineups:
+            team_lineups[team_id] = []
+        team_lineups[team_id].append(lineup)
+    
+    # Obtener stats de jugadores para esta jornada
+    player_stats_map = {}
+    all_stats = await db.player_match_stats.find({"jornada_id": jornada_obj_id}).to_list(1000)
+    for stat in all_stats:
+        player_stats_map[stat["player_id"]] = stat
+    
+    # Calcular puntos por equipo
+    team_results = []
+    
+    for fantasy_team_id, lineup_items in team_lineups.items():
+        # Obtener info del equipo fantasy
+        fantasy_team = await db.fantasy_teams.find_one({"_id": fantasy_team_id})
+        if not fantasy_team:
+            continue
+        
+        user = await db.users.find_one({"_id": fantasy_team["user_id"]})
+        if not user:
+            continue
+        
+        team_total_points = 0
+        players_breakdown = []
+        dt_points = 0
+        
+        for item in lineup_items:
+            if item.get("is_dt"):
+                # Calcular puntos del DT
+                dt_team_id = item.get("dt_team_id")
+                if dt_team_id:
+                    # Buscar resultado del partido del equipo del DT
+                    match = await db.matches.find_one({
+                        "jornada_id": jornada_obj_id,
+                        "$or": [
+                            {"home_team_id": dt_team_id},
+                            {"away_team_id": dt_team_id}
+                        ]
+                    })
+                    
+                    if match and match.get("status") == "finished":
+                        home_score = match.get("home_score", 0)
+                        away_score = match.get("away_score", 0)
+                        
+                        if match["home_team_id"] == dt_team_id:
+                            if home_score > away_score:
+                                dt_points = FANTASY_SCORING["dt"]["team_win"]
+                            elif home_score == away_score:
+                                dt_points = FANTASY_SCORING["dt"]["team_draw"]
+                        else:
+                            if away_score > home_score:
+                                dt_points = FANTASY_SCORING["dt"]["team_win"]
+                            elif away_score == home_score:
+                                dt_points = FANTASY_SCORING["dt"]["team_draw"]
+                        
+                        team_total_points += dt_points
+            else:
+                # Calcular puntos del jugador
+                player_id = item.get("player_id")
+                if player_id and player_id in player_stats_map:
+                    stats = player_stats_map[player_id]
+                    position = stats.get("position", "MED")
+                    
+                    result = calculate_player_points(stats, position)
+                    team_total_points += result["total_points"]
+                    
+                    # Obtener info del jugador
+                    player = await db.players.find_one({"_id": player_id})
+                    
+                    players_breakdown.append({
+                        "player_id": str(player_id),
+                        "player_name": player.get("name", "Unknown") if player else "Unknown",
+                        "position": position,
+                        "position_slot": item.get("position_slot"),
+                        "points": result["total_points"],
+                        "breakdown": result["breakdown"]
+                    })
+        
+        # Guardar en points_log
+        await db.fantasy_points_log.delete_many({
+            "fantasy_team_id": fantasy_team_id,
+            "jornada_id": jornada_obj_id
+        })
+        
+        await db.fantasy_points_log.insert_one({
+            "fantasy_team_id": fantasy_team_id,
+            "user_id": fantasy_team["user_id"],
+            "jornada_id": jornada_obj_id,
+            "total_points": team_total_points,
+            "dt_points": dt_points,
+            "players_breakdown": players_breakdown,
+            "created_at": datetime.utcnow()
+        })
+        
+        # Actualizar puntos totales del usuario (fantasy)
+        await db.users.update_one(
+            {"_id": fantasy_team["user_id"]},
+            {"$inc": {"fantasy_total_points": team_total_points}}
+        )
+        
+        team_results.append({
+            "fantasy_team_id": str(fantasy_team_id),
+            "team_name": fantasy_team.get("name", "Unknown"),
+            "user_name": user.get("display_name", "Unknown"),
+            "user_email": user.get("email"),
+            "total_points": team_total_points,
+            "dt_points": dt_points,
+            "players_count": len(players_breakdown),
+            "players_breakdown": players_breakdown
+        })
+    
+    # Ordenar por puntos
+    team_results.sort(key=lambda x: x["total_points"], reverse=True)
+    
+    # Añadir posición en ranking
+    for idx, result in enumerate(team_results):
+        result["rank"] = idx + 1
+    
+    return {
+        "teams_processed": len(team_results),
+        "rankings": team_results
+    }
+
+@api_router.get("/fantasy/rankings/jornada/{jornada_id}")
+async def get_fantasy_jornada_rankings(jornada_id: str):
+    """Obtener ranking de Fantasy para una jornada específica"""
+    jornada_obj_id = ObjectId(jornada_id)
+    
+    # Obtener puntos de la jornada
+    points_logs = await db.fantasy_points_log.find({
+        "jornada_id": jornada_obj_id
+    }).sort("total_points", -1).to_list(100)
+    
+    rankings = []
+    for idx, log in enumerate(points_logs):
+        fantasy_team = await db.fantasy_teams.find_one({"_id": log["fantasy_team_id"]})
+        user = await db.users.find_one({"_id": log["user_id"]})
+        
+        rankings.append({
+            "rank": idx + 1,
+            "team_name": fantasy_team.get("name", "Unknown") if fantasy_team else "Unknown",
+            "user_name": user.get("display_name", "Unknown") if user else "Unknown",
+            "total_points": log["total_points"],
+            "dt_points": log.get("dt_points", 0),
+            "players_breakdown": log.get("players_breakdown", [])
+        })
+    
+    return {"rankings": rankings, "jornada_id": jornada_id}
+
+@api_router.get("/fantasy/rankings/general")
+async def get_fantasy_general_rankings():
+    """Obtener ranking general de Fantasy (acumulado)"""
+    # Agregar puntos de todas las jornadas por equipo
+    pipeline = [
+        {"$group": {
+            "_id": "$fantasy_team_id",
+            "total_points": {"$sum": "$total_points"},
+            "jornadas_played": {"$count": {}}
+        }},
+        {"$sort": {"total_points": -1}},
+        {"$limit": 100}
+    ]
+    
+    aggregated = await db.fantasy_points_log.aggregate(pipeline).to_list(100)
+    
+    rankings = []
+    for idx, item in enumerate(aggregated):
+        fantasy_team = await db.fantasy_teams.find_one({"_id": item["_id"]})
+        if fantasy_team:
+            user = await db.users.find_one({"_id": fantasy_team["user_id"]})
+            rankings.append({
+                "rank": idx + 1,
+                "team_name": fantasy_team.get("name", "Unknown"),
+                "user_name": user.get("display_name", "Unknown") if user else "Unknown",
+                "total_points": item["total_points"],
+                "jornadas_played": item["jornadas_played"]
+            })
+    
+    return {"rankings": rankings}
+
 # ============ FANTASY ROUTES ============
 
 class FantasyTeamCreate(BaseModel):
