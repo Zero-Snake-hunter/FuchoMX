@@ -11,11 +11,35 @@ import {
   FlatList,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+
+// Colores de equipos de Liga MX (simplificado)
+const TEAM_COLORS: { [key: string]: { primary: string; secondary: string } } = {
+  'América': { primary: '#FFD700', secondary: '#0000FF' },
+  'Guadalajara': { primary: '#CD2E3A', secondary: '#FFFFFF' },
+  'Cruz Azul': { primary: '#0047AB', secondary: '#FFFFFF' },
+  'Pumas UNAM': { primary: '#002D62', secondary: '#CDA349' },
+  'Tigres UANL': { primary: '#F9A825', secondary: '#003366' },
+  'Monterrey': { primary: '#002D62', secondary: '#FFFFFF' },
+  'Santos Laguna': { primary: '#2E7D32', secondary: '#FFFFFF' },
+  'León': { primary: '#006633', secondary: '#FFFFFF' },
+  'Toluca': { primary: '#DC143C', secondary: '#FFFFFF' },
+  'Atlas': { primary: '#C41E3A', secondary: '#000000' },
+  'Pachuca': { primary: '#005BAC', secondary: '#FFFFFF' },
+  'Necaxa': { primary: '#C41E3A', secondary: '#FFFFFF' },
+  'Puebla': { primary: '#0047AB', secondary: '#FFFFFF' },
+  'Querétaro': { primary: '#003366', secondary: '#FFFFFF' },
+  'Tijuana': { primary: '#C41E3A', secondary: '#000000' },
+  'Mazatlán': { primary: '#6B3FA0', secondary: '#FFFFFF' },
+  'Juárez': { primary: '#006747', secondary: '#FFFFFF' },
+  'San Luis': { primary: '#C41E3A', secondary: '#002F6C' },
+  'default': { primary: '#666666', secondary: '#FFFFFF' },
+};
 
 // Formación 4-4-2: 1 POR, 4 DEF, 4 MED, 2 DEL
 const FORMATION = {
@@ -38,8 +62,20 @@ const FORMATION = {
   ],
 };
 
+// Función para obtener colores del equipo
+const getTeamColors = (teamName: string) => {
+  // Buscar coincidencia parcial en el nombre del equipo
+  for (const [key, colors] of Object.entries(TEAM_COLORS)) {
+    if (teamName?.toLowerCase().includes(key.toLowerCase())) {
+      return colors;
+    }
+  }
+  return TEAM_COLORS['default'];
+};
+
 export default function LineupScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { token } = useAuth();
   const [lineup, setLineup] = useState<any>({});
   const [dtTeam, setDtTeam] = useState<any>(null);
@@ -68,7 +104,13 @@ export default function LineupScreen() {
       setTeams(response.data.teams);
     } catch (error) {
       console.error('Error loading teams:', error);
+      Alert.alert('Error', 'No se pudieron cargar los equipos');
     }
+  };
+
+  // Función para regresar
+  const handleGoBack = () => {
+    router.back();
   };
 
   const handleSlotPress = (slot: string, position: string) => {
@@ -96,9 +138,14 @@ export default function LineupScreen() {
   };
 
   const handlePlayerSelect = (player: any) => {
+    // Guardar el jugador con información del equipo
+    const playerWithTeam = {
+      ...player,
+      team: selectedTeamForPlayer,
+    };
     setLineup((prev: any) => ({
       ...prev,
-      [selectedSlot!]: player,
+      [selectedSlot!]: playerWithTeam,
     }));
     setShowPlayerSelector(false);
     setSelectedTeamForPlayer(null);
@@ -165,11 +212,19 @@ export default function LineupScreen() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      Alert.alert('¡Éxito!', 'Alineación guardada correctamente', [
-        { text: 'OK', onPress: () => router.back() },
-      ]);
+      // Mostrar éxito y navegar inmediatamente
+      Alert.alert(
+        '¡Alineación Guardada!', 
+        'Tu equipo está listo para competir esta jornada.'
+      );
+      
+      // Navegar al dashboard de Fantasy
+      router.replace('/fantasy');
+      
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.detail || 'Error al guardar alineación');
+      console.error('Error saving lineup:', error);
+      const errorMessage = error.response?.data?.detail || 'Error al guardar alineación. Intenta de nuevo.';
+      Alert.alert('Error', errorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -177,6 +232,7 @@ export default function LineupScreen() {
 
   const renderPlayerSlot = (slot: string, position: string, label: string) => {
     const player = lineup[slot];
+    const teamColors = player?.team ? getTeamColors(player.team.name) : null;
 
     return (
       <TouchableOpacity
@@ -187,31 +243,51 @@ export default function LineupScreen() {
         <View
           style={[
             styles.jersey,
-            player
-              ? { backgroundColor: '#DC143C' }
+            player && teamColors
+              ? { backgroundColor: teamColors.primary, borderWidth: 2, borderColor: teamColors.secondary }
               : { backgroundColor: '#FFFFFF', borderWidth: 2, borderColor: '#333' },
           ]}
         >
           {player ? (
-            <Text style={styles.jerseyNumber}>{player.number}</Text>
+            <Text style={[styles.jerseyNumber, { color: teamColors?.secondary || '#FFFFFF' }]}>
+              {player.number}
+            </Text>
           ) : (
             <Ionicons name="person-add" size={20} color="#666" />
           )}
         </View>
+        {/* Mostrar nombre del jugador o label de posición */}
         <Text style={styles.playerName} numberOfLines={1}>
-          {player ? player.name : label}
+          {player ? player.name.split(' ').slice(-1)[0] : label}
         </Text>
-        {player && (
-          <Text style={styles.teamName} numberOfLines={1}>
-            {player.team?.short_name}
-          </Text>
-        )}
+        {/* Mostrar equipo solo cuando hay jugador */}
+        <Text style={styles.teamName} numberOfLines={1}>
+          {player ? player.team?.short_name : ''}
+        </Text>
       </TouchableOpacity>
     );
   };
 
+  // Contar jugadores seleccionados
+  const selectedCount = Object.keys(lineup).length;
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      {/* Header con botón de regresar */}
+      <View style={styles.header}>
+        <TouchableOpacity 
+          style={styles.backButton} 
+          onPress={handleGoBack}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Armar Alineación</Text>
+        <View style={styles.headerRight}>
+          <Text style={styles.countText}>{selectedCount}/11</Text>
+        </View>
+      </View>
+
       <ScrollView style={styles.scrollView}>
         {/* Field */}
         <View style={styles.field}>
@@ -240,21 +316,24 @@ export default function LineupScreen() {
         <View style={styles.dtSection}>
           <Text style={styles.dtTitle}>DIRECTOR TÉCNICO</Text>
           <TouchableOpacity
-            style={styles.dtCard}
+            style={[styles.dtCard, dtTeam && styles.dtCardSelected]}
             onPress={() => setShowDTSelector(true)}
           >
             {dtTeam ? (
               <View style={styles.dtSelected}>
-                <Ionicons name="shield" size={40} color="#DC143C" />
-                <View style={styles.dtInfo}>
-                  <Text style={styles.dtTeamName}>{dtTeam.name}</Text>
-                  <Text style={styles.dtSubtitle}>Equipo seleccionado</Text>
+                <View style={[styles.dtIcon, { backgroundColor: getTeamColors(dtTeam.name).primary }]}>
+                  <Ionicons name="person" size={24} color={getTeamColors(dtTeam.name).secondary} />
                 </View>
+                <View style={styles.dtInfo}>
+                  <Text style={styles.dtTeamName}>DT de {dtTeam.name}</Text>
+                  <Text style={styles.dtSubtitle}>{dtTeam.short_name}</Text>
+                </View>
+                <Ionicons name="checkmark-circle" size={24} color="#00A551" />
               </View>
             ) : (
               <View style={styles.dtEmpty}>
-                <Ionicons name="person" size={40} color="#666" />
-                <Text style={styles.dtEmptyText}>Seleccionar DT</Text>
+                <Ionicons name="person-add" size={32} color="#666" />
+                <Text style={styles.dtEmptyText}>Seleccionar Director Técnico</Text>
               </View>
             )}
           </TouchableOpacity>
@@ -262,7 +341,7 @@ export default function LineupScreen() {
       </ScrollView>
 
       {/* Submit Button */}
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
         <TouchableOpacity
           style={[styles.submitButton, submitting && styles.buttonDisabled]}
           onPress={handleSubmit}
@@ -297,15 +376,19 @@ export default function LineupScreen() {
             <FlatList
               data={teams}
               keyExtractor={(item: any) => item.id}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.teamItem}
-                  onPress={() => handleTeamSelect(item)}
-                >
-                  <Text style={styles.teamItemName}>{item.name}</Text>
-                  <Ionicons name="chevron-forward" size={20} color="#666" />
-                </TouchableOpacity>
-              )}
+              renderItem={({ item }) => {
+                const colors = getTeamColors(item.name);
+                return (
+                  <TouchableOpacity
+                    style={styles.teamItem}
+                    onPress={() => handleTeamSelect(item)}
+                  >
+                    <View style={[styles.teamColorDot, { backgroundColor: colors.primary }]} />
+                    <Text style={styles.teamItemName}>{item.name}</Text>
+                    <Ionicons name="chevron-forward" size={20} color="#666" />
+                  </TouchableOpacity>
+                );
+              }}
             />
           </View>
         </View>
@@ -322,7 +405,7 @@ export default function LineupScreen() {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
-                {selectedTeamForPlayer?.name} - {selectedPosition}
+                {selectedTeamForPlayer?.name}
               </Text>
               <TouchableOpacity onPress={() => setShowPlayerSelector(false)}>
                 <Ionicons name="close" size={24} color="#FFFFFF" />
@@ -334,18 +417,31 @@ export default function LineupScreen() {
               <FlatList
                 data={players}
                 keyExtractor={(item: any) => item.id}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={styles.playerItem}
-                    onPress={() => handlePlayerSelect(item)}
-                  >
-                    <View style={styles.playerItemNumber}>
-                      <Text style={styles.playerItemNumberText}>{item.number}</Text>
-                    </View>
-                    <Text style={styles.playerItemName}>{item.name}</Text>
-                    <Ionicons name="checkmark" size={20} color="#00A551" />
-                  </TouchableOpacity>
-                )}
+                renderItem={({ item }) => {
+                  const colors = getTeamColors(selectedTeamForPlayer?.name);
+                  return (
+                    <TouchableOpacity
+                      style={styles.playerItem}
+                      onPress={() => handlePlayerSelect(item)}
+                    >
+                      <View style={[styles.playerItemNumber, { backgroundColor: colors.primary }]}>
+                        <Text style={[styles.playerItemNumberText, { color: colors.secondary }]}>
+                          {item.number}
+                        </Text>
+                      </View>
+                      <View style={styles.playerItemInfo}>
+                        <Text style={styles.playerItemName}>{item.name}</Text>
+                        <Text style={styles.playerItemPosition}>{selectedPosition}</Text>
+                      </View>
+                      <Ionicons name="add-circle" size={24} color="#00A551" />
+                    </TouchableOpacity>
+                  );
+                }}
+                ListEmptyComponent={
+                  <View style={styles.emptyList}>
+                    <Text style={styles.emptyText}>No hay jugadores disponibles</Text>
+                  </View>
+                }
               />
             )}
           </View>
@@ -370,15 +466,20 @@ export default function LineupScreen() {
             <FlatList
               data={teams}
               keyExtractor={(item: any) => item.id}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.teamItem}
-                  onPress={() => handleDTSelect(item)}
-                >
-                  <Text style={styles.teamItemName}>{item.name}</Text>
-                  <Ionicons name="checkmark" size={20} color="#00A551" />
-                </TouchableOpacity>
-              )}
+              renderItem={({ item }) => {
+                const colors = getTeamColors(item.name);
+                const isSelected = dtTeam?.id === item.id;
+                return (
+                  <TouchableOpacity
+                    style={[styles.teamItem, isSelected && styles.teamItemSelected]}
+                    onPress={() => handleDTSelect(item)}
+                  >
+                    <View style={[styles.teamColorDot, { backgroundColor: colors.primary }]} />
+                    <Text style={styles.teamItemName}>DT de {item.name}</Text>
+                    {isSelected && <Ionicons name="checkmark-circle" size={24} color="#00A551" />}
+                  </TouchableOpacity>
+                );
+              }}
             />
           </View>
         </View>
@@ -392,18 +493,47 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000000',
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1a1a1a',
+  },
+  backButton: {
+    padding: 8,
+    marginLeft: -8,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  headerRight: {
+    backgroundColor: '#DC143C',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  countText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
   scrollView: {
     flex: 1,
   },
   field: {
     backgroundColor: '#2d7a3f',
     padding: 20,
-    minHeight: 500,
+    minHeight: 450,
   },
   line: {
     flexDirection: 'row',
     justifyContent: 'space-evenly',
-    marginVertical: 20,
+    marginVertical: 16,
   },
   playerSlot: {
     alignItems: 'center',
@@ -418,20 +548,21 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   jerseyNumber: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
-    color: '#FFFFFF',
   },
   playerName: {
     fontSize: 10,
     color: '#FFFFFF',
     textAlign: 'center',
     fontWeight: '600',
+    maxWidth: 65,
   },
   teamName: {
     fontSize: 8,
     color: '#CCCCCC',
     textAlign: 'center',
+    minHeight: 12,
   },
   dtSection: {
     padding: 20,
@@ -450,8 +581,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#333',
   },
+  dtCardSelected: {
+    borderColor: '#00A551',
+  },
   dtSelected: {
     flexDirection: 'row',
+    alignItems: 'center',
+  },
+  dtIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   dtInfo: {
@@ -459,19 +600,20 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   dtTeamName: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#FFFFFF',
   },
   dtSubtitle: {
     fontSize: 12,
     color: '#999',
-    marginTop: 4,
+    marginTop: 2,
   },
   dtEmpty: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 8,
   },
   dtEmptyText: {
     fontSize: 16,
@@ -527,13 +669,22 @@ const styles = StyleSheet.create({
   },
   teamItem: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#333',
   },
+  teamItemSelected: {
+    backgroundColor: '#0a1a2a',
+  },
+  teamColorDot: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    marginRight: 12,
+  },
   teamItemName: {
+    flex: 1,
     fontSize: 16,
     color: '#FFFFFF',
   },
@@ -545,10 +696,9 @@ const styles = StyleSheet.create({
     borderBottomColor: '#333',
   },
   playerItemNumber: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#DC143C',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -556,11 +706,26 @@ const styles = StyleSheet.create({
   playerItemNumberText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+  },
+  playerItemInfo: {
+    flex: 1,
   },
   playerItemName: {
-    flex: 1,
     fontSize: 16,
     color: '#FFFFFF',
+    fontWeight: '500',
+  },
+  playerItemPosition: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 2,
+  },
+  emptyList: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  emptyText: {
+    color: '#666',
+    fontSize: 14,
   },
 });
