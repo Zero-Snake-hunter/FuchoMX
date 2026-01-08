@@ -28,7 +28,10 @@ export default function FantasyDashboardScreen() {
   }, []);
 
   const loadData = async () => {
-    if (!token) return;
+    if (!token) {
+      setLoading(false);
+      return;
+    }
 
     try {
       const [teamRes, jornadaRes] = await Promise.all([
@@ -42,6 +45,13 @@ export default function FantasyDashboardScreen() {
       setJornada(jornadaRes.data.jornada);
     } catch (error: any) {
       console.error('Error loading data:', error);
+      let errorMessage = 'Error al cargar los datos';
+      if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (error.message === 'Network Error') {
+        errorMessage = 'Error de conexión. Verifica tu internet.';
+      }
+      Alert.alert('Error', errorMessage);
     } finally {
       setLoading(false);
     }
