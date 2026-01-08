@@ -866,67 +866,13 @@ async def join_league(
     join_data: JoinLeagueRequest,
     current_user: dict = Depends(get_current_user)
 ):
-    """Join a private league by code"""
-    league = await db.private_leagues.find_one({"code": join_data.code.upper()})
-    
-    if not league:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="C\u00f3digo de liga inv\u00e1lido"
-        )
-    
-    # Check if already member
-    existing = await db.league_members.find_one({
-        "league_id": league["_id"],
-        "user_id": current_user["_id"]
-    })
-    
-    if existing:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Ya eres miembro de esta liga"
-        )
-    
-    # Add as member
-    await db.league_members.insert_one({
-        "league_id": league["_id"],
-        "user_id": current_user["_id"],
-        "joined_at": datetime.utcnow()
-    })
-    
-    logger.info(f"User {current_user['email']} joined league: {league['name']}")
-    
-    return {
-        "message": "Te has unido a la liga exitosamente",
-        "league_id": str(league["_id"]),
-        "league_name": league["name"]
-    }
+    """Join a private league by code (legacy - use /leagues/join instead)"""
+    return await join_unified_league(join_data, current_user)
 
 @api_router.get("/quiniela/my-leagues")
 async def get_my_leagues(current_user: dict = Depends(get_current_user)):
-    """Get all leagues user is member of"""
-    memberships = await db.league_members.find({"user_id": current_user["_id"]}).to_list(100)
-    
-    leagues = []
-    for membership in memberships:
-        league = await db.private_leagues.find_one({"_id": membership["league_id"]})
-        if league:
-            # Count members
-            member_count = await db.league_members.count_documents({"league_id": league["_id"]})
-            
-            # Check if owner
-            is_owner = str(league["owner_id"]) == str(current_user["_id"])
-            
-            leagues.append({
-                "id": str(league["_id"]),
-                "name": league["name"],
-                "code": league["code"],
-                "member_count": member_count,
-                "is_owner": is_owner,
-                "created_at": league["created_at"]
-            })
-    
-    return {"leagues": leagues}
+    """Get all leagues user is member of (legacy - use /leagues/my-leagues instead)"""
+    return await get_my_unified_leagues(current_user)
 
 @api_router.get("/quiniela/league/{league_id}")
 async def get_league_details(
