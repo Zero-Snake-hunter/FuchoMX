@@ -65,7 +65,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setToken(access_token);
       setUser(userData);
     } catch (error: any) {
-      const message = error.response?.data?.detail || 'Error al iniciar sesión';
+      console.error('Login error:', error);
+      let message = 'Error al iniciar sesión';
+      if (error.response?.data?.detail) {
+        message = error.response.data.detail;
+      } else if (error.message === 'Network Error') {
+        message = 'Error de conexión. Verifica tu internet.';
+      } else if (error.code === 'ECONNABORTED') {
+        message = 'Tiempo de espera agotado. Intenta de nuevo.';
+      }
       throw new Error(message);
     }
   };
@@ -86,7 +94,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setToken(access_token);
       setUser(userData);
     } catch (error: any) {
-      const message = error.response?.data?.detail || 'Error al registrarse';
+      console.error('Register error:', error);
+      let message = 'Error al registrarse';
+      if (error.response?.data?.detail) {
+        message = error.response.data.detail;
+      } else if (error.message === 'Network Error') {
+        message = 'Error de conexión. Verifica tu internet.';
+      } else if (error.code === 'ECONNABORTED') {
+        message = 'Tiempo de espera agotado. Intenta de nuevo.';
+      }
       throw new Error(message);
     }
   };
