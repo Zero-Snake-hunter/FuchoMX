@@ -60,8 +60,8 @@ export default function FantasyDashboardScreen() {
   const handleCreateTeam = () => {
     console.log('Team exists:', team?.exists);
     if (team?.exists) {
-      console.log('NAVIGATING TO FIELD');
-      router.push('/fantasy/field');
+      console.log('NAVIGATING TO LINEUP');
+      router.push('/fantasy/lineup');
     } else {
       console.log('NAVIGATING TO CREATE TEAM');
       router.push('/fantasy/create-team');
