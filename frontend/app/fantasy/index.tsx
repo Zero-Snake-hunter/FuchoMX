@@ -121,8 +121,8 @@ export default function FantasyDashboardScreen() {
               <TouchableOpacity 
                 style={styles.primaryButton} 
                 onPress={() => {
-                  console.log('NAVIGATING TO FIELD FROM BUTTON');
-                  router.push('/fantasy/field');
+                  console.log('NAVIGATING TO LINEUP FROM BUTTON');
+                  router.push('/fantasy/lineup');
                 }}
                 activeOpacity={0.7}
               >
