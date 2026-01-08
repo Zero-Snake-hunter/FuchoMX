@@ -555,18 +555,26 @@ async def get_jornada_rankings(jornada_id: str):
 
 class CreateLeagueRequest(BaseModel):
     name: str
+    mode: str = "quiniela"  # "quiniela" o "fantasy"
 
 class JoinLeagueRequest(BaseModel):
     code: str
 
-@api_router.post("/quiniela/league")
-async def create_league(
+@api_router.post("/leagues")
+async def create_unified_league(
     league_data: CreateLeagueRequest,
     current_user: dict = Depends(get_current_user)
 ):
-    """Create a private league"""
+    """Create a unified private league (quiniela or fantasy)"""
     import random
     import string
+    
+    # Validate mode
+    if league_data.mode not in ["quiniela", "fantasy"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Modo debe ser 'quiniela' o 'fantasy'"
+        )
     
     # Generate unique 6-char code
     code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
@@ -578,6 +586,7 @@ async def create_league(
     league_doc = {
         "owner_id": current_user["_id"],
         "name": league_data.name,
+        "mode": league_data.mode,
         "code": code,
         "created_at": datetime.utcnow()
     }
@@ -591,14 +600,266 @@ async def create_league(
         "joined_at": datetime.utcnow()
     })
     
-    logger.info(f"User {current_user['email']} created league: {league_data.name} ({code})")
+    logger.info(f"User {current_user['email']} created {league_data.mode} league: {league_data.name} ({code})")
     
     return {
         "message": "Liga creada exitosamente",
         "league_id": str(result.inserted_id),
         "code": code,
-        "name": league_data.name
+        "name": league_data.name,
+        "mode": league_data.mode
     }
+
+@api_router.post("/leagues/join")
+async def join_unified_league(
+    join_data: JoinLeagueRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Join a private league by code"""
+    league = await db.private_leagues.find_one({"code": join_data.code.upper()})
+    
+    if not league:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Código de liga inválido"
+        )
+    
+    # Check if already member
+    existing = await db.league_members.find_one({
+        "league_id": league["_id"],
+        "user_id": current_user["_id"]
+    })
+    
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Ya eres miembro de esta liga"
+        )
+    
+    # For fantasy leagues, check if user has a fantasy team
+    if league.get("mode") == "fantasy":
+        fantasy_team = await db.fantasy_teams.find_one({"user_id": current_user["_id"]})
+        if not fantasy_team:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Necesitas crear tu equipo fantasy antes de unirte a una liga fantasy"
+            )
+    
+    # Add as member
+    await db.league_members.insert_one({
+        "league_id": league["_id"],
+        "user_id": current_user["_id"],
+        "joined_at": datetime.utcnow()
+    })
+    
+    logger.info(f"User {current_user['email']} joined league: {league['name']}")
+    
+    return {
+        "message": "Te has unido a la liga exitosamente",
+        "league_id": str(league["_id"]),
+        "league_name": league["name"],
+        "mode": league.get("mode", "quiniela")
+    }
+
+@api_router.get("/leagues/my-leagues")
+async def get_my_unified_leagues(current_user: dict = Depends(get_current_user)):
+    """Get all leagues user is member of (both quiniela and fantasy)"""
+    memberships = await db.league_members.find({"user_id": current_user["_id"]}).to_list(100)
+    
+    leagues = []
+    for membership in memberships:
+        league = await db.private_leagues.find_one({"_id": membership["league_id"]})
+        if league:
+            member_count = await db.league_members.count_documents({"league_id": league["_id"]})
+            is_owner = str(league["owner_id"]) == str(current_user["_id"])
+            
+            leagues.append({
+                "id": str(league["_id"]),
+                "name": league["name"],
+                "mode": league.get("mode", "quiniela"),
+                "code": league["code"],
+                "member_count": member_count,
+                "is_owner": is_owner,
+                "created_at": league["created_at"]
+            })
+    
+    return {"leagues": leagues}
+
+@api_router.get("/leagues/{league_id}")
+async def get_unified_league_details(
+    league_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get league details including members and rankings"""
+    league_obj_id = ObjectId(league_id)
+    league = await db.private_leagues.find_one({"_id": league_obj_id})
+    
+    if not league:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Liga no encontrada"
+        )
+    
+    # Check if user is member
+    is_member = await db.league_members.find_one({
+        "league_id": league_obj_id,
+        "user_id": current_user["_id"]
+    })
+    
+    if not is_member:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No eres miembro de esta liga"
+        )
+    
+    # Get all members with their points
+    memberships = await db.league_members.find({"league_id": league_obj_id}).to_list(100)
+    mode = league.get("mode", "quiniela")
+    
+    members = []
+    for membership in memberships:
+        user = await db.users.find_one({"_id": membership["user_id"]})
+        if user:
+            member_data = {
+                "user_id": str(user["_id"]),
+                "display_name": user["display_name"],
+                "joined_at": membership["joined_at"]
+            }
+            
+            if mode == "fantasy":
+                # Get fantasy team and total points
+                fantasy_team = await db.fantasy_teams.find_one({"user_id": user["_id"]})
+                if fantasy_team:
+                    # Sum all fantasy points for this user
+                    pipeline = [
+                        {"$match": {"user_id": user["_id"]}},
+                        {"$group": {"_id": None, "total": {"$sum": "$total_points"}}}
+                    ]
+                    result = await db.fantasy_points_log.aggregate(pipeline).to_list(1)
+                    total_fantasy_points = result[0]["total"] if result else 0
+                    
+                    member_data["team_name"] = fantasy_team["name"]
+                    member_data["total_points"] = total_fantasy_points
+                else:
+                    member_data["team_name"] = "Sin equipo"
+                    member_data["total_points"] = 0
+            else:
+                member_data["total_points"] = user.get("total_points", 0)
+            
+            members.append(member_data)
+    
+    # Sort by points
+    members.sort(key=lambda x: x["total_points"], reverse=True)
+    
+    # Add ranking position
+    for idx, member in enumerate(members):
+        member["rank"] = idx + 1
+    
+    return {
+        "league": {
+            "id": str(league["_id"]),
+            "name": league["name"],
+            "mode": mode,
+            "code": league["code"],
+            "owner_id": str(league["owner_id"]),
+            "is_owner": str(league["owner_id"]) == str(current_user["_id"]),
+            "created_at": league["created_at"]
+        },
+        "members": members
+    }
+
+@api_router.get("/leagues/{league_id}/rankings/jornada/{jornada_id}")
+async def get_league_jornada_rankings(
+    league_id: str,
+    jornada_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get league rankings for a specific jornada"""
+    league_obj_id = ObjectId(league_id)
+    jornada_obj_id = ObjectId(jornada_id)
+    
+    # Verify membership
+    is_member = await db.league_members.find_one({
+        "league_id": league_obj_id,
+        "user_id": current_user["_id"]
+    })
+    
+    if not is_member:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No eres miembro de esta liga"
+        )
+    
+    league = await db.private_leagues.find_one({"_id": league_obj_id})
+    if not league:
+        raise HTTPException(status_code=404, detail="Liga no encontrada")
+    
+    mode = league.get("mode", "quiniela")
+    memberships = await db.league_members.find({"league_id": league_obj_id}).to_list(100)
+    member_user_ids = [m["user_id"] for m in memberships]
+    
+    rankings = []
+    
+    if mode == "fantasy":
+        # Get fantasy points for this jornada for league members
+        for user_id in member_user_ids:
+            user = await db.users.find_one({"_id": user_id})
+            fantasy_team = await db.fantasy_teams.find_one({"user_id": user_id})
+            
+            if fantasy_team:
+                points_log = await db.fantasy_points_log.find_one({
+                    "fantasy_team_id": fantasy_team["_id"],
+                    "jornada_id": jornada_obj_id
+                })
+                
+                rankings.append({
+                    "user_id": str(user_id),
+                    "display_name": user["display_name"] if user else "Unknown",
+                    "team_name": fantasy_team["name"],
+                    "jornada_points": points_log["total_points"] if points_log else 0,
+                    "players_breakdown": points_log.get("players_breakdown", []) if points_log else []
+                })
+    else:
+        # Get quiniela points for this jornada for league members
+        for user_id in member_user_ids:
+            user = await db.users.find_one({"_id": user_id})
+            
+            points_log = await db.points_log.find_one({
+                "user_id": user_id,
+                "jornada_id": jornada_obj_id,
+                "source": "QUINIELA"
+            })
+            
+            rankings.append({
+                "user_id": str(user_id),
+                "display_name": user["display_name"] if user else "Unknown",
+                "jornada_points": points_log["points"] if points_log else 0
+            })
+    
+    # Sort by jornada points
+    rankings.sort(key=lambda x: x["jornada_points"], reverse=True)
+    
+    # Add ranking position
+    for idx, r in enumerate(rankings):
+        r["rank"] = idx + 1
+    
+    return {
+        "league_id": league_id,
+        "league_name": league["name"],
+        "mode": mode,
+        "jornada_id": jornada_id,
+        "rankings": rankings
+    }
+
+# Keep legacy endpoints for backwards compatibility
+@api_router.post("/quiniela/league")
+async def create_league(
+    league_data: CreateLeagueRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Create a private league (legacy - use /leagues instead)"""
+    league_data.mode = "quiniela"
+    return await create_unified_league(league_data, current_user)
 
 @api_router.post("/quiniela/league/join")
 async def join_league(
