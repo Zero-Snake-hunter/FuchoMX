@@ -1,0 +1,116 @@
+{
+  "version": "1.0.0",
+  "last_updated": "2026-01-08",
+  "season": "Clausura 2026",
+  "locked": true,
+  "notes": "Scoring congelado para la temporada. No modificar durante el torneo.",
+  
+  "quiniela": {
+    "correct_prediction": 3,
+    "incorrect_prediction": 0,
+    "max_points_per_jornada": 27,
+    "matches_per_jornada": 9
+  },
+  
+  "fantasy": {
+    "minutes_played": {
+      "threshold_60_or_more": 2,
+      "under_60": 1,
+      "not_played": 0
+    },
+    
+    "goals": {
+      "POR": 6,
+      "DEF": 6,
+      "MED": 5,
+      "DEL": 4
+    },
+    
+    "assists": 3,
+    
+    "clean_sheet": {
+      "POR": 5,
+      "DEF": 4,
+      "MED": 0,
+      "DEL": 0
+    },
+    
+    "goals_conceded_penalty": {
+      "description": "Por cada 2 goles recibidos (solo POR y DEF)",
+      "POR": -1,
+      "DEF": -1
+    },
+    
+    "cards": {
+      "yellow": -1,
+      "red": -3
+    },
+    
+    "penalties": {
+      "saved": 5,
+      "missed": -3
+    },
+    
+    "own_goal": -2,
+    
+    "bonuses": {
+      "man_of_the_match": 2,
+      "brace": {
+        "description": "2 goles en un partido",
+        "points": 1
+      },
+      "hat_trick": {
+        "description": "3 o más goles",
+        "points": 2
+      },
+      "keeper_4_saves": {
+        "description": "Portero con 4+ atajadas",
+        "points": 1
+      }
+    },
+    
+    "dt": {
+      "team_win": 2,
+      "team_draw": 1,
+      "team_loss": 0
+    }
+  },
+  
+  "tiebreakers": {
+    "quiniela": [
+      "Mayor cantidad de aciertos en última jornada",
+      "Mayor cantidad de aciertos en el torneo",
+      "Fecha de registro más antigua"
+    ],
+    "fantasy": [
+      "Mayor cantidad de goles de sus jugadores",
+      "Mayor cantidad de asistencias",
+      "Menos tarjetas rojas",
+      "Fecha de creación del equipo más antigua"
+    ]
+  },
+  
+  "premium_features": {
+    "status": "coming_soon",
+    "planned": [
+      {
+        "feature": "captain",
+        "description": "Multiplicador x1.5 para un jugador",
+        "multiplier": 1.5
+      },
+      {
+        "feature": "vice_captain",
+        "description": "Multiplicador x1.25 si el capitán no juega",
+        "multiplier": 1.25
+      },
+      {
+        "feature": "emergency_substitution",
+        "description": "Cambio después del cierre"
+      },
+      {
+        "feature": "custom_scoring",
+        "description": "Reglas personalizadas para ligas privadas"
+      }
+    ]
+  }
+}
