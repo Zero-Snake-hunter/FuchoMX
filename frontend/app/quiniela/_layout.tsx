@@ -14,10 +14,10 @@ export default function QuinielaLayout() {
       }}
     >
       <Stack.Screen name="index" options={{ title: 'Quiniela Tradicional' }} />
-      <Stack.Screen name="leagues" options={{ title: 'Mis Ligas' }} />
+      <Stack.Screen name="leagues" options={{ headerShown: false }} />
       <Stack.Screen name="create-league" options={{ title: 'Crear Liga' }} />
       <Stack.Screen name="join-league" options={{ title: 'Unirse a Liga' }} />
-      <Stack.Screen name="league-detail" options={{ title: 'Detalle de Liga' }} />
+      <Stack.Screen name="league-detail" options={{ headerShown: false }} />
       <Stack.Screen name="league-results" options={{ title: 'Resultados' }} />
       <Stack.Screen name="history" options={{ title: 'Mis Quinielas' }} />
       <Stack.Screen name="rankings" options={{ title: 'Rankings' }} />
