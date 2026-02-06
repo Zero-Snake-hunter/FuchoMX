@@ -133,6 +133,15 @@ export default function FantasyDashboardScreen() {
               <View style={styles.quickActions}>
                 <TouchableOpacity
                   style={styles.secondaryButton}
+                  onPress={() => router.push('/quiniela/leagues')}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="people-outline" size={20} color="#0047AB" />
+                  <Text style={styles.secondaryButtonText}>Mis Ligas</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.secondaryButton}
                   onPress={() => router.push('/fantasy/rankings')}
                   activeOpacity={0.7}
                 >
@@ -146,7 +155,7 @@ export default function FantasyDashboardScreen() {
                   activeOpacity={0.7}
                 >
                   <Ionicons name="pencil-outline" size={20} color="#0047AB" />
-                  <Text style={styles.secondaryButtonText}>Cambiar Nombre</Text>
+                  <Text style={styles.secondaryButtonText}>Editar</Text>
                 </TouchableOpacity>
               </View>
             </View>
