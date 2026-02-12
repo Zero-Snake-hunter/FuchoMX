@@ -209,15 +209,18 @@ backend:
 
   - task: "Admin - Seed jornada auto-increment"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: "NA"
           agent: "main"
           comment: "REFACTORED seed-jornada now auto-increments week_number, deactivates previous active jornada, sets is_active=true on new one. No longer hardcodes week 1."
+        - working: true
+          agent: "testing"
+          comment: "✅ COMPREHENSIVE TESTING COMPLETED: Auto-increment functionality working perfectly. Successfully created jornada with week_number=18 (auto-incremented from 17). Properly deactivates previous active jornadas and sets new one as active. All functionality confirmed working."
 
 frontend:
   - task: "Sistema de navegación con expo-router"
