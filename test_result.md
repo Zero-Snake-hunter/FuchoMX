@@ -334,16 +334,11 @@ frontend:
 metadata:
   created_by: "main_agent"
   version: "1.0"
-  test_sequence: 1
+  test_sequence: 2
   run_ui: false
 
 test_plan:
-  current_focus:
-    - "Auth flow completo (register, login, luego endpoints autenticados)"
-    - "Admin - Seed temporada completa"
-    - "Admin - Cerrar jornada y activar siguiente"
-    - "Endpoint obtener jornada actual con partidos"
-    - "Admin - Seed jornada auto-increment"
+  current_focus: []
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -355,3 +350,5 @@ agent_communication:
       message: "BACKEND TESTING COMPLETADO. RESULTADOS: ✅ Seed endpoints funcionando perfectamente (teams, jornada). ✅ MongoDB models y relaciones correctas. ✅ Autenticación básica funciona (register, login, valid tokens). ❌ CRITICAL BUG: JWT error handling roto - usa 'jwt.JWTError' que no existe en PyJWT. Debe ser 'jwt.InvalidTokenError'. Tokens inválidos causan 500 en lugar de 401. REQUIERE FIX INMEDIATO en server.py línea 96."
     - agent: "main"
       message: "BUG FIX SESSION: Fixed 2 critical P0 bugs. BUG 1 (Auth 401): Root cause was multiple frontend files using direct axios instead of centralized api instance. Fixed AuthContext.tsx, FantasyContext.tsx, select-player.tsx, join-league.tsx, league-results.tsx, recover.tsx. All now use centralized api instance with interceptors. Added isReady guard in _layout.tsx to prevent race conditions. Added comprehensive logging throughout token flow. BUG 2 (Quiniela Jornada): Backend now has is_active field, automatic state transitions based on dates, admin endpoints for closing jornadas and seeding full seasons. PLEASE TEST: 1) Auth flow (register, login, then authenticated endpoints), 2) Jornada CRUD (seed-teams, seed-season, list jornadas, cerrar-jornada, get current), 3) Quiniela submit with authenticated token."
+    - agent: "testing"
+      message: "🎉 COMPREHENSIVE BACKEND TESTING COMPLETED - ALL SYSTEMS FUNCTIONAL! ✅ Authentication: Register, login, JWT token validation (401 for invalid, 403 for missing). ✅ Jornada Management: Seed teams (18), seed season (17 jornadas), automatic state transitions, close/activate jornadas. ✅ Auto-increment: Seed-jornada creates week 18 automatically. ✅ Quiniela System: Full authenticated submission flow working (get jornada, submit selections, verify). All critical backend flows tested and working perfectly. Ready for production use!"
