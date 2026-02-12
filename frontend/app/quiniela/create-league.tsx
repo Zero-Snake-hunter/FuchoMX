@@ -33,15 +33,15 @@ export default function CreateLeagueScreen() {
 
     setLoading(true);
     try {
-      const response = await axios.post(
-        `${BACKEND_URL}/api/quiniela/league`,
-        { name: leagueName.trim() },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const response = await api.post('/api/quiniela/league', { 
+        name: leagueName.trim() 
+      });
 
       setCreatedLeague(response.data);
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.detail || 'Error al crear liga');
+      if (error.response?.status !== 401) {
+        Alert.alert('Error', error.response?.data?.detail || 'Error al crear liga');
+      }
     } finally {
       setLoading(false);
     }
