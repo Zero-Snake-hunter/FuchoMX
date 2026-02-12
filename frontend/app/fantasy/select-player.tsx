@@ -11,9 +11,8 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFantasy } from '../context/FantasyContext';
 import JerseyView from '../../components/JerseyView';
-import axios from 'axios';
+import api from '../lib/api';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
 export default function SelectPlayerScreen() {
   const router = useRouter();

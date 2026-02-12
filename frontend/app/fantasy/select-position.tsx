@@ -8,9 +8,8 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import axios from 'axios';
+import api from '../lib/api';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
 export default function SelectPositionScreen() {
   const router = useRouter();
@@ -24,7 +23,7 @@ export default function SelectPositionScreen() {
 
   const loadTeams = async () => {
     try {
-      const response = await axios.get(`${BACKEND_URL}/api/teams`);
+      const response = await api.get(`/api/teams`);
       setTeams(response.data.teams);
     } catch (error) {
       console.error('Error loading teams:', error);

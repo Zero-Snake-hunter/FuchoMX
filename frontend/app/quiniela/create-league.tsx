@@ -14,10 +14,9 @@ import {
 import { useRouter } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
+import api from '../lib/api';
 import * as Clipboard from 'expo-clipboard';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
 export default function CreateLeagueScreen() {
   const router = useRouter();

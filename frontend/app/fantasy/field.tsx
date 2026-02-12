@@ -15,9 +15,8 @@ import { Ionicons } from '@expo/vector-icons';
 import FootballPitch from '../../components/FootballPitch';
 import PositionSlot from '../../components/PositionSlot';
 import CoachCard from '../../components/CoachCard';
-import axios from 'axios';
+import api from '../lib/api';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
 const POSITIONS = {
   FW: ['FW_1', 'FW_2'],
@@ -40,7 +39,7 @@ export default function FieldScreen() {
 
   const loadJornada = async () => {
     try {
-      const response = await axios.get(`${BACKEND_URL}/api/jornadas/current`);
+      const response = await api.get(`/api/jornadas/current`);
       setJornada(response.data.jornada);
     } catch (error) {
       Alert.alert('Error', 'No hay jornada activa');

@@ -9,9 +9,8 @@ import {
   RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
+import api from '../lib/api';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
 interface Ranking {
   position: number;
@@ -32,7 +31,7 @@ export default function RankingsScreen() {
 
   const loadRankings = async () => {
     try {
-      const response = await axios.get(`${BACKEND_URL}/api/quiniela/rankings/general`);
+      const response = await api.get(`/api/quiniela/rankings/general`);
       setRankings(response.data.rankings);
     } catch (error) {
       console.error('Error loading rankings:', error);

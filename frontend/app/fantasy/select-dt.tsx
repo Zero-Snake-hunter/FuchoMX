@@ -10,9 +10,8 @@ import {
 import { useRouter } from 'expo-router';
 import { useFantasy } from '../context/FantasyContext';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
+import api from '../lib/api';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
 export default function SelectDTScreen() {
   const router = useRouter();
@@ -26,7 +25,7 @@ export default function SelectDTScreen() {
 
   const loadTeams = async () => {
     try {
-      const response = await axios.get(`${BACKEND_URL}/api/teams`);
+      const response = await api.get(`/api/teams`);
       setTeams(response.data.teams);
     } catch (error) {
       console.error('Error loading teams:', error);
