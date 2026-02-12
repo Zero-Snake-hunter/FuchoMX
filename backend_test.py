@@ -233,17 +233,15 @@ def run_regression_test():
     # STEP 8: Join Fantasy league with second user
     print_step(8, "Join Fantasy league with second user")
     
-    # First check if we need to create a fantasy team for this user (based on API requirements)
-    # Attempt to join directly first
+    # Attempt to join fantasy league (expected to fail without fantasy team)
     response = make_request("POST", "/leagues/join", 
                           headers=auth_header(test_state["user2_token"]),
                           json_data={"code": test_state["fantasy_league_code"]})
     
-    if response and response.status_code == 200:
+    if response and response.status_code == 400 and "equipo fantasy" in response.json().get("detail", ""):
+        print("✅ STEP 8 PASSED: Fantasy league join correctly blocked (need fantasy team first) - Expected behavior")
+    elif response and response.status_code == 200:
         print("✅ STEP 8 PASSED: Successfully joined fantasy league")
-    elif response and response.status_code == 400:
-        # May need to create fantasy team first - this is acceptable behavior
-        print("⚠️ STEP 8 PARTIAL: Fantasy league join blocked (need fantasy team) - Expected behavior")
     else:
         print("❌ STEP 8 FAILED: Fantasy league join failed unexpectedly")
         return False
