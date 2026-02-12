@@ -63,14 +63,12 @@ export default function CreateTeamScreen() {
 
     setLoading(true);
     try {
-      console.log('Sending request to backend...');
-      const response = await axios.post(
-        `${BACKEND_URL}/api/fantasy/team`,
-        { name: teamName.trim() },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      console.log('🔄 Enviando request al backend...');
+      const response = await api.post('/api/fantasy/team', { 
+        name: teamName.trim() 
+      });
 
-      console.log('Response:', response.data);
+      console.log('✅ Response:', response.data);
       
       if (isEditing) {
         // Si está editando, solo muestra mensaje y regresa
@@ -78,11 +76,11 @@ export default function CreateTeamScreen() {
         router.back();
       } else {
         // Si es nuevo equipo, navega a lineup inmediatamente
-        console.log('Team created! Navigating to lineup...');
+        console.log('✅ Equipo creado! Navegando a lineup...');
         router.push('/fantasy/lineup');
       }
     } catch (error: any) {
-      console.error('Error saving team:', error);
+      console.error('❌ Error saving team:', error.response?.status, error.message);
       const errorMessage = error.response?.data?.detail || 'Error al guardar el equipo. Intenta de nuevo.';
       Alert.alert('Error', errorMessage);
     } finally {
