@@ -26,13 +26,14 @@ export default function LeagueResultsScreen() {
 
   const loadResults = async () => {
     try {
-      const response = await axios.get(
-        `${BACKEND_URL}/api/quiniela/league/${leagueId}/results?jornada_id=${jornadaId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+      console.log('📡 [LeagueResults] Cargando resultados para liga:', leagueId, 'jornada:', jornadaId);
+      const response = await api.get(
+        `/api/quiniela/league/${leagueId}/results?jornada_id=${jornadaId}`
       );
       setResults(response.data);
+      console.log('✅ [LeagueResults] Resultados cargados');
     } catch (error) {
-      console.error('Error loading results:', error);
+      console.error('❌ [LeagueResults] Error loading results:', error);
     } finally {
       setLoading(false);
     }
