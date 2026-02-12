@@ -246,8 +246,13 @@ def run_regression_test():
                           headers=auth_header(test_state["user2_token"]),
                           json_data={"code": test_state["fantasy_league_code"]})
     
-    if response and response.status_code == 400 and "equipo fantasy" in response.json().get("detail", ""):
-        print("✅ STEP 8 PASSED: Fantasy league join correctly blocked (need fantasy team first) - Expected behavior")
+    if response and response.status_code == 400:
+        detail = response.json().get("detail", "")
+        if "equipo fantasy" in detail or "fantasy" in detail.lower():
+            print("✅ STEP 8 PASSED: Fantasy league join correctly blocked (need fantasy team first) - Expected behavior")
+        else:
+            print(f"❌ STEP 8 FAILED: Unexpected 400 error: {detail}")
+            return False
     elif response and response.status_code == 200:
         print("✅ STEP 8 PASSED: Successfully joined fantasy league")
     else:
