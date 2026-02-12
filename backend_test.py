@@ -246,6 +246,10 @@ def run_regression_test():
                           headers=auth_header(test_state["user2_token"]),
                           json_data={"code": test_state["fantasy_league_code"]})
     
+    print(f"DEBUG: Response exists? {response is not None}")
+    if response:
+        print(f"DEBUG: Status code: {response.status_code}")
+    
     if response and response.status_code == 400:
         detail = response.json().get("detail", "")
         print(f"DEBUG: Error detail: '{detail}'")
@@ -259,7 +263,7 @@ def run_regression_test():
     elif response and response.status_code == 200:
         print("✅ STEP 8 PASSED: Successfully joined fantasy league")
     else:
-        print("❌ STEP 8 FAILED: Fantasy league join failed unexpectedly")
+        print(f"❌ STEP 8 FAILED: Fantasy league join failed unexpectedly (Status: {response.status_code if response else 'No response'})")
         return False
     
     # STEP 9: Join Quiniela league with second user
