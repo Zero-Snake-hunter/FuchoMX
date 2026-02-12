@@ -85,15 +85,14 @@ export default function LeagueDetailScreen() {
 
   const loadLeagueData = async () => {
     try {
-      const response = await axios.get(
-        `${BACKEND_URL}/api/leagues/${leagueId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const response = await api.get(`/api/leagues/${leagueId}`);
       setLeague(response.data.league);
       setMembers(response.data.members);
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.detail || 'Error al cargar la liga');
-      router.back();
+      if (error.response?.status !== 401) {
+        Alert.alert('Error', error.response?.data?.detail || 'Error al cargar la liga');
+        router.back();
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -102,9 +101,8 @@ export default function LeagueDetailScreen() {
 
   const loadJornadaRankings = async (jornadaId: string) => {
     try {
-      const response = await axios.get(
-        `${BACKEND_URL}/api/leagues/${leagueId}/rankings/jornada/${jornadaId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+      const response = await api.get(
+        `/api/leagues/${leagueId}/rankings/jornada/${jornadaId}`
       );
       setJornadaRankings(response.data.rankings);
     } catch (error) {
