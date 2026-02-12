@@ -124,8 +124,8 @@ export default function LineupScreen() {
     setLoadingPlayers(true);
 
     try {
-      const response = await axios.get(
-        `${BACKEND_URL}/api/players?position=${selectedPosition}&team_id=${team.id}`
+      const response = await api.get(
+        `/api/players?position=${selectedPosition}&team_id=${team.id}`
       );
       setPlayers(response.data.players);
       setShowPlayerSelector(true);
