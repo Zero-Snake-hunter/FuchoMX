@@ -248,6 +248,9 @@ def run_regression_test():
     
     if response and response.status_code == 400:
         detail = response.json().get("detail", "")
+        print(f"DEBUG: Error detail: '{detail}'")
+        print(f"DEBUG: Contains 'equipo fantasy': {'equipo fantasy' in detail}")
+        print(f"DEBUG: Contains 'fantasy team': {'fantasy team' in detail.lower()}")
         if "equipo fantasy" in detail or "fantasy team" in detail.lower():
             print("✅ STEP 8 PASSED: Fantasy league join correctly blocked (need fantasy team first) - Expected behavior")
         else:
