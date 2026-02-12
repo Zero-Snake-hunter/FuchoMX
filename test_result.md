@@ -122,6 +122,9 @@ backend:
         - working: true
           agent: "main"
           comment: "FIXED: Cambiado 'jwt.JWTError' a 'jwt.InvalidTokenError' en línea 96. Probado con token inválido, ahora retorna 401 correctamente. Todos los endpoints de autenticación funcionando."
+        - working: true
+          agent: "testing"
+          comment: "✅ COMPREHENSIVE TESTING COMPLETED: All auth flows working perfectly. Tested register (creates user + token), login (returns new token), /auth/me with valid tokens (200), invalid tokens (401), and no tokens (403). JWT error handling fixed and working correctly. Authentication system is fully functional."
   
   - task: "Modelos de MongoDB para usuarios, equipos, jornadas, partidos"
     implemented: true
