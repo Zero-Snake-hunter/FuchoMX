@@ -69,21 +69,20 @@ export function FantasyProvider({ children }: { children: ReactNode }) {
     return Object.values(lineup).some(player => player.id === playerId);
   };
 
-  const submitLineup = async (jornadaId: string, token: string) => {
+  const submitLineup = async (jornadaId: string, _token: string) => {
+    console.log('📤 [FantasyContext] submitLineup: Enviando alineación...');
     const playersArray = Object.entries(lineup).map(([slot, player]) => ({
       player_id: player.id,
       position_slot: slot,
     }));
 
-    await axios.post(
-      `${BACKEND_URL}/api/fantasy/lineup`,
-      {
-        jornada_id: jornadaId,
-        players: playersArray,
-        dt_team_id: dtTeam?.id,
-      },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
+    // Usa la instancia api centralizada - el interceptor agrega el token automáticamente
+    await api.post('/api/fantasy/lineup', {
+      jornada_id: jornadaId,
+      players: playersArray,
+      dt_team_id: dtTeam?.id,
+    });
+    console.log('✅ [FantasyContext] submitLineup: Alineación enviada');
   };
 
   const clearLineup = () => {
