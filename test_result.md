@@ -159,7 +159,7 @@ backend:
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
         - working: "NA"
           agent: "main"
@@ -167,6 +167,45 @@ backend:
         - working: true
           agent: "testing"
           comment: "Endpoint working correctly. Returns current jornada with complete match data including team details (name, short_name, shield_url). Proper error handling when no jornada exists (404). Match structure includes home_team and away_team objects with full team data."
+        - working: "NA"
+          agent: "main"
+          comment: "MAJOR REFACTOR: Endpoint now has automatic state transition. Finds is_active=true jornada. If end_date passed, auto-closes and activates next jornada. Has fallback for legacy status-based lookup. Also auto-updates status to in_progress when start_date is reached. Needs retesting."
+
+  - task: "Admin - Cerrar jornada y activar siguiente"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "NEW endpoint POST /api/admin/quiniela/cerrar-jornada/{id}. Closes current jornada (status=finished, is_active=false) and activates next jornada by week_number. Returns info about both closed and next jornada."
+
+  - task: "Admin - Seed temporada completa"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "NEW endpoint POST /api/admin/seed-season. Creates 17 jornadas with proper dates (weekly). First jornada is_active=true. Shuffles teams for variety. Also added GET /api/admin/jornadas to list all jornadas with status."
+
+  - task: "Admin - Seed jornada auto-increment"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "REFACTORED seed-jornada now auto-increments week_number, deactivates previous active jornada, sets is_active=true on new one. No longer hardcodes week 1."
 
 frontend:
   - task: "Sistema de navegación con expo-router"
