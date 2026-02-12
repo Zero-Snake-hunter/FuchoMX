@@ -248,7 +248,7 @@ def run_regression_test():
     
     if response and response.status_code == 400:
         detail = response.json().get("detail", "")
-        if "equipo fantasy" in detail or "fantasy" in detail.lower():
+        if "equipo fantasy" in detail or "fantasy team" in detail.lower():
             print("✅ STEP 8 PASSED: Fantasy league join correctly blocked (need fantasy team first) - Expected behavior")
         else:
             print(f"❌ STEP 8 FAILED: Unexpected 400 error: {detail}")
