@@ -35,10 +35,10 @@ export default function JoinLeagueScreen() {
 
     setLoading(true);
     try {
-      const response = await axios.post(
-        `${BACKEND_URL}/api/quiniela/league/join`,
-        { code: code.trim().toUpperCase() },
-        { headers: { Authorization: `Bearer ${token}` } }
+      console.log('📡 [JoinLeague] Uniéndose a liga con código:', code.trim().toUpperCase());
+      const response = await api.post(
+        '/api/quiniela/league/join',
+        { code: code.trim().toUpperCase() }
       );
 
       Alert.alert('¡Éxito!', `Te has unido a "${response.data.league_name}"`, [
