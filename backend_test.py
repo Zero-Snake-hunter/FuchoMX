@@ -246,27 +246,33 @@ def run_regression_test():
                           headers=auth_header(test_state["user2_token"]),
                           json_data={"code": test_state["fantasy_league_code"]})
     
-    if response and response.status_code == 400:
-        detail = response.json().get("detail", "")
-        if "equipo fantasy" in detail or "fantasy team" in detail.lower():
-            print("✅ STEP 8 PASSED: Fantasy league join correctly blocked (need fantasy team first) - Expected behavior")
-        else:
-            print(f"❌ STEP 8 FAILED: Unexpected 400 error: {detail}")
-            return False
-    elif response and response.status_code == 200:
+    step8_passed = False
+    
+    if not response:
+        print("❌ STEP 8 FAILED: No response received")
+        return False
+    
+    if response.status_code == 200:
         print("✅ STEP 8 PASSED: Successfully joined fantasy league")
-    else:
-        status = response.status_code if response else "No response"
-        print(f"❌ STEP 8 FAILED: Fantasy league join failed unexpectedly (Status: {status})")
-        # For debugging, we know this is a 400 with the expected error, so let's just pass it
-        if response and response.status_code == 400:
+        step8_passed = True
+    elif response.status_code == 400:
+        try:
             detail = response.json().get("detail", "")
             if "equipo fantasy" in detail:
-                print("✅ STEP 8 OVERRIDE: Found expected error message - treating as pass")
+                print("✅ STEP 8 PASSED: Fantasy league join correctly blocked (need fantasy team first) - Expected behavior")
+                step8_passed = True
             else:
+                print(f"❌ STEP 8 FAILED: Unexpected 400 error: {detail}")
                 return False
-        else:
+        except Exception as e:
+            print(f"❌ STEP 8 FAILED: Could not parse error response: {e}")
             return False
+    else:
+        print(f"❌ STEP 8 FAILED: Unexpected status code: {response.status_code}")
+        return False
+    
+    if not step8_passed:
+        return False
     
     # STEP 9: Join Quiniela league with second user
     print_step(9, "Join Quiniela league with second user")
