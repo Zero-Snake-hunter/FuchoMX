@@ -12,11 +12,10 @@ import {
 import { useRouter } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
+import api from '../lib/api';
 import MatchCard from '../../components/MatchCard';
 import CountdownTimer from '../../components/CountdownTimer';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
 interface Match {
   id: string;
@@ -63,7 +62,7 @@ export default function QuinielaScreen() {
 
   const loadJornada = async () => {
     try {
-      const response = await axios.get(`${BACKEND_URL}/api/jornadas/current`);
+      const response = await api.get(`/api/jornadas/current`);
       const jornadaData = response.data.jornada;
       setJornada(jornadaData);
 

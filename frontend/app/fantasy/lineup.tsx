@@ -14,9 +14,8 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
+import api from '../lib/api';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
 // Colores de equipos de Liga MX (simplificado)
 const TEAM_COLORS: { [key: string]: { primary: string; secondary: string } } = {
@@ -100,7 +99,7 @@ export default function LineupScreen() {
 
   const loadTeams = async () => {
     try {
-      const response = await axios.get(`${BACKEND_URL}/api/teams`);
+      const response = await api.get(`/api/teams`);
       setTeams(response.data.teams);
     } catch (error) {
       console.error('Error loading teams:', error);
@@ -193,7 +192,7 @@ export default function LineupScreen() {
     setSubmitting(true);
     try {
       // Get current jornada
-      const jornadaResponse = await axios.get(`${BACKEND_URL}/api/jornadas/current`);
+      const jornadaResponse = await api.get(`/api/jornadas/current`);
       const jornadaId = jornadaResponse.data.jornada.id;
 
       // Build players array

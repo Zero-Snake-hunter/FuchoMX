@@ -17,9 +17,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
-import axios from 'axios';
+import api from '../lib/api';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
 type LeagueMode = 'quiniela' | 'fantasy';
 
@@ -58,7 +57,7 @@ export default function LeaguesScreen() {
 
   const loadLeagues = async () => {
     try {
-      const response = await axios.get(`${BACKEND_URL}/api/leagues/my-leagues`, {
+      const response = await api.get(`/api/leagues/my-leagues`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setLeagues(response.data.leagues);

@@ -12,9 +12,8 @@ import {
 import { useRouter } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
+import api from '../lib/api';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
 export default function FantasyDashboardScreen() {
   const router = useRouter();
@@ -35,10 +34,10 @@ export default function FantasyDashboardScreen() {
 
     try {
       const [teamRes, jornadaRes] = await Promise.all([
-        axios.get(`${BACKEND_URL}/api/fantasy/my-team`, {
+        api.get(`/api/fantasy/my-team`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        axios.get(`${BACKEND_URL}/api/jornadas/current`),
+        api.get(`/api/jornadas/current`),
       ]);
 
       setTeam(teamRes.data);

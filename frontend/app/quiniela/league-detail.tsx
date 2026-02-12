@@ -14,10 +14,9 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
+import api from '../lib/api';
 import * as Clipboard from 'expo-clipboard';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
 interface Member {
   user_id: string;
@@ -72,7 +71,7 @@ export default function LeagueDetailScreen() {
 
   const loadJornada = async () => {
     try {
-      const response = await axios.get(`${BACKEND_URL}/api/jornadas/current`);
+      const response = await api.get(`/api/jornadas/current`);
       setJornada(response.data.jornada);
       
       // Load jornada rankings if available
