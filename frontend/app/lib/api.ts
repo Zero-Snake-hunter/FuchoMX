@@ -5,7 +5,7 @@ import { Alert, Platform } from 'react-native';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
-console.log('🔧 API Instance creada con baseURL:', BACKEND_URL);
+console.log('🔧 [API] Instancia creada con baseURL:', BACKEND_URL);
 
 // Crear instancia de axios con configuración base
 const api = axios.create({
@@ -19,26 +19,29 @@ const api = axios.create({
 // Interceptor de REQUEST - Agregar token automáticamente
 api.interceptors.request.use(
   async (config) => {
+    const fullUrl = `${config.baseURL || ''}${config.url || ''}`;
+    console.log(`📡 [API Interceptor] >>> ${config.method?.toUpperCase()} ${fullUrl}`);
+    
     try {
       const token = await AsyncStorage.getItem('auth_token');
       
-      console.log('🔐 Interceptor - Token desde AsyncStorage:', token ? token.substring(0, 30) + '...' : 'NULL');
-      console.log('📡 Interceptor - Request:', config.method?.toUpperCase(), config.url);
-      
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
-        console.log('✅ Header Authorization agregado');
+        console.log(`🔐 [API Interceptor] Token adjuntado: ${token.substring(0, 20)}...`);
       } else {
-        console.log('⚠️ No hay token en AsyncStorage para:', config.url);
+        console.log('⚠️ [API Interceptor] Sin token en AsyncStorage');
       }
     } catch (error) {
-      console.error('❌ Error obteniendo token de AsyncStorage:', error);
+      console.error('❌ [API Interceptor] Error leyendo token de AsyncStorage:', error);
     }
+    
+    // Log final del header Authorization
+    console.log(`📋 [API Interceptor] Authorization header: ${config.headers.Authorization ? 'PRESENTE' : 'AUSENTE'}`);
     
     return config;
   },
   (error) => {
-    console.error('❌ Error en request interceptor:', error);
+    console.error('❌ [API Interceptor] Error en request:', error);
     return Promise.reject(error);
   }
 );
@@ -46,36 +49,31 @@ api.interceptors.request.use(
 // Interceptor de RESPONSE - Manejar errores de autenticación
 api.interceptors.response.use(
   (response) => {
-    // Log solo en desarrollo
-    if (__DEV__) {
-      console.log('✅ Response:', response.status, response.config.url);
-    }
+    console.log(`✅ [API Response] <<< ${response.status} ${response.config.url}`);
     return response;
   },
   async (error) => {
     const originalRequest = error.config;
     
-    // Log del error
-    if (__DEV__) {
-      console.log('❌ Error Response:', error.response?.status, error.config?.url);
-      console.log('❌ Error Detail:', error.response?.data?.detail || error.message);
-    }
+    console.log(`❌ [API Response] <<< ${error.response?.status || 'NETWORK_ERROR'} ${error.config?.url}`);
+    console.log(`❌ [API Response] Detail: ${error.response?.data?.detail || error.message}`);
     
     // Manejar error 401 (Unauthorized)
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       
-      console.log('🔒 Sesión expirada o token inválido');
+      console.log('🔒 [API Response] 401 detectado - Limpiando sesión...');
       
       // Limpiar datos de autenticación
       try {
         await AsyncStorage.removeItem('auth_token');
         await AsyncStorage.removeItem('user_data');
+        console.log('🔒 [API Response] Token y datos de usuario eliminados de AsyncStorage');
       } catch (e) {
-        console.error('Error limpiando auth:', e);
+        console.error('❌ [API Response] Error limpiando auth:', e);
       }
       
-      // Mostrar alerta y redirigir (solo en mobile)
+      // Mostrar alerta y redirigir
       if (Platform.OS !== 'web') {
         Alert.alert(
           'Sesión Expirada',
@@ -94,7 +92,6 @@ api.interceptors.response.use(
           ]
         );
       } else {
-        // En web, redirigir directamente
         try {
           router.replace('/(auth)/login');
         } catch (e) {
@@ -105,7 +102,7 @@ api.interceptors.response.use(
     
     // Manejar error de red
     if (error.message === 'Network Error') {
-      console.log('📵 Error de conexión de red');
+      console.log('📵 [API Response] Error de conexión de red');
     }
     
     return Promise.reject(error);
