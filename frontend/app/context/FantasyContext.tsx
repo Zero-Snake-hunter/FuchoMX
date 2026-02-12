@@ -1,7 +1,5 @@
 import React, { createContext, useState, useContext, ReactNode } from 'react';
-import axios from 'axios';
-
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+import api from '../lib/api';
 
 interface Player {
   id: string;
