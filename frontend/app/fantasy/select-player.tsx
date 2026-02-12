@@ -27,11 +27,14 @@ export default function SelectPlayerScreen() {
 
   const loadPlayers = async () => {
     try {
-      const response = await axios.get(
-        `${BACKEND_URL}/api/players?position=${posType}&team_id=${teamId}`
+      console.log('📡 [SelectPlayer] Cargando jugadores para', posType, teamId);
+      const response = await api.get(
+        `/api/players?position=${posType}&team_id=${teamId}`
       );
       setPlayers(response.data.players);
+      console.log('✅ [SelectPlayer] Jugadores cargados:', response.data.players?.length);
     } catch (error) {
+      console.error('❌ [SelectPlayer] Error:', error);
       Alert.alert('Error', 'Error al cargar jugadores');
     } finally {
       setLoading(false);
