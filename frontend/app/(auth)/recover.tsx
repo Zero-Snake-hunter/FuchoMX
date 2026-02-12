@@ -13,9 +13,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
-
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+import api from '../lib/api';
 
 export default function RecoverPasswordScreen() {
   const router = useRouter();
@@ -30,7 +28,7 @@ export default function RecoverPasswordScreen() {
 
     setLoading(true);
     try {
-      await axios.post(`${BACKEND_URL}/api/auth/recover-password`, {
+      await api.post('/api/auth/recover-password', {
         email: email.toLowerCase().trim(),
       });
 
