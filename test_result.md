@@ -179,15 +179,18 @@ backend:
 
   - task: "Admin - Cerrar jornada y activar siguiente"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: "NA"
           agent: "main"
           comment: "NEW endpoint POST /api/admin/quiniela/cerrar-jornada/{id}. Closes current jornada (status=finished, is_active=false) and activates next jornada by week_number. Returns info about both closed and next jornada."
+        - working: true
+          agent: "testing"
+          comment: "✅ COMPREHENSIVE TESTING COMPLETED: Jornada transition system working perfectly. Successfully tested closing jornada 1 (activates jornada 2), closing jornada 2 (activates jornada 3). Proper status updates (finished/active), sequential activation, and response data containing both closed and next jornada info."
 
   - task: "Admin - Seed temporada completa"
     implemented: true
