@@ -253,7 +253,7 @@ async def seed_teams():
 
 @api_router.post("/admin/seed-jornada")
 async def seed_current_jornada():
-    """Create current jornada with matches"""
+    """Create current jornada with matches - auto-increments week_number"""
     # Get all teams
     teams = await db.teams.find().to_list(100)
     if len(teams) < 2:
@@ -262,26 +262,41 @@ async def seed_current_jornada():
             detail="Primero debes crear los equipos usando /api/admin/seed-teams"
         )
     
-    # Create jornada
+    # Find the highest week_number to auto-increment
+    last_jornada = await db.jornadas.find_one(sort=[("week_number", -1)])
+    next_week = (last_jornada["week_number"] + 1) if last_jornada else 1
+    
+    # Deactivate any currently active jornada
+    await db.jornadas.update_many(
+        {"is_active": True},
+        {"$set": {"is_active": False, "status": "finished"}}
+    )
+    
+    # Create jornada with robust state fields
     jornada_data = {
-        "week_number": 1,
+        "week_number": next_week,
         "start_date": datetime.utcnow() + timedelta(days=2),
         "end_date": datetime.utcnow() + timedelta(days=4),
         "status": "upcoming",  # upcoming, in_progress, finished
+        "is_active": True,
         "created_at": datetime.utcnow()
     }
     
     jornada_result = await db.jornadas.insert_one(jornada_data)
     jornada_id = jornada_result.inserted_id
     
-    # Create matches (9 matches for 18 teams)
+    # Create matches (9 matches for 18 teams) - shuffle teams for variety
+    import random
+    shuffled_teams = list(teams)
+    random.shuffle(shuffled_teams)
+    
     matches = []
-    for i in range(0, 18, 2):
-        if i + 1 < len(teams):
+    for i in range(0, min(18, len(shuffled_teams)), 2):
+        if i + 1 < len(shuffled_teams):
             match = {
                 "jornada_id": jornada_id,
-                "home_team_id": teams[i]["_id"],
-                "away_team_id": teams[i + 1]["_id"],
+                "home_team_id": shuffled_teams[i]["_id"],
+                "away_team_id": shuffled_teams[i + 1]["_id"],
                 "start_at": datetime.utcnow() + timedelta(days=2, hours=i),
                 "status": "scheduled",  # scheduled, live, finished
                 "home_score": None,
@@ -293,13 +308,149 @@ async def seed_current_jornada():
     if matches:
         await db.matches.insert_many(matches)
     
-    logger.info(f"Created jornada {jornada_data['week_number']} with {len(matches)} matches")
+    logger.info(f"Created jornada {next_week} (is_active=True) with {len(matches)} matches")
     
     return {
-        "message": f"Se creó la jornada {jornada_data['week_number']} con {len(matches)} partidos",
+        "message": f"Se creó la jornada {next_week} con {len(matches)} partidos (activa)",
         "jornada_id": str(jornada_id),
+        "week_number": next_week,
         "matches_count": len(matches)
     }
+
+@api_router.post("/admin/seed-season")
+async def seed_full_season():
+    """Create multiple jornadas for a full season (17 jornadas)"""
+    teams = await db.teams.find().to_list(100)
+    if len(teams) < 2:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Primero debes crear los equipos usando /api/admin/seed-teams"
+        )
+    
+    import random
+    
+    # Delete existing jornadas and matches
+    await db.jornadas.delete_many({})
+    await db.matches.delete_many({})
+    
+    created_jornadas = []
+    now = datetime.utcnow()
+    
+    for week in range(1, 18):  # 17 jornadas
+        week_start = now + timedelta(weeks=week - 1)
+        week_end = week_start + timedelta(days=2)
+        
+        jornada_data = {
+            "week_number": week,
+            "start_date": week_start,
+            "end_date": week_end,
+            "status": "upcoming" if week > 1 else "upcoming",
+            "is_active": week == 1,  # Only first jornada is active
+            "created_at": now
+        }
+        
+        jornada_result = await db.jornadas.insert_one(jornada_data)
+        jornada_id = jornada_result.inserted_id
+        
+        # Shuffle teams for this week
+        shuffled_teams = list(teams)
+        random.shuffle(shuffled_teams)
+        
+        matches = []
+        for i in range(0, min(18, len(shuffled_teams)), 2):
+            if i + 1 < len(shuffled_teams):
+                match = {
+                    "jornada_id": jornada_id,
+                    "home_team_id": shuffled_teams[i]["_id"],
+                    "away_team_id": shuffled_teams[i + 1]["_id"],
+                    "start_at": week_start + timedelta(hours=i),
+                    "status": "scheduled",
+                    "home_score": None,
+                    "away_score": None,
+                    "created_at": now
+                }
+                matches.append(match)
+        
+        if matches:
+            await db.matches.insert_many(matches)
+        
+        created_jornadas.append({
+            "week_number": week,
+            "jornada_id": str(jornada_id),
+            "is_active": week == 1,
+            "matches_count": len(matches)
+        })
+    
+    logger.info(f"Created full season with {len(created_jornadas)} jornadas")
+    
+    return {
+        "message": f"Se crearon {len(created_jornadas)} jornadas para la temporada completa",
+        "jornadas": created_jornadas
+    }
+
+@api_router.post("/admin/quiniela/cerrar-jornada/{jornada_id}")
+async def close_jornada(jornada_id: str):
+    """Admin: Close a jornada and activate the next one"""
+    try:
+        jornada_oid = ObjectId(jornada_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="ID de jornada inválido")
+    
+    jornada = await db.jornadas.find_one({"_id": jornada_oid})
+    if not jornada:
+        raise HTTPException(status_code=404, detail="Jornada no encontrada")
+    
+    current_week = jornada["week_number"]
+    
+    # Close the current jornada
+    await db.jornadas.update_one(
+        {"_id": jornada_oid},
+        {"$set": {"status": "finished", "is_active": False}}
+    )
+    
+    # Activate the next jornada
+    next_jornada = await db.jornadas.find_one(
+        {"week_number": current_week + 1}
+    )
+    
+    next_info = None
+    if next_jornada:
+        await db.jornadas.update_one(
+            {"_id": next_jornada["_id"]},
+            {"$set": {"status": "upcoming", "is_active": True}}
+        )
+        next_info = {
+            "id": str(next_jornada["_id"]),
+            "week_number": next_jornada["week_number"]
+        }
+        logger.info(f"Closed jornada {current_week}, activated jornada {current_week + 1}")
+    else:
+        logger.info(f"Closed jornada {current_week}. No next jornada found (season ended)")
+    
+    return {
+        "message": f"Jornada {current_week} cerrada exitosamente",
+        "closed_jornada": {
+            "id": jornada_id,
+            "week_number": current_week
+        },
+        "next_jornada": next_info
+    }
+
+@api_router.get("/admin/jornadas")
+async def list_all_jornadas():
+    """Admin: List all jornadas with their status"""
+    jornadas = await db.jornadas.find().sort("week_number", 1).to_list(100)
+    result = []
+    for j in jornadas:
+        result.append({
+            "id": str(j["_id"]),
+            "week_number": j["week_number"],
+            "start_date": j["start_date"].isoformat() if j.get("start_date") else None,
+            "end_date": j["end_date"].isoformat() if j.get("end_date") else None,
+            "status": j.get("status", "unknown"),
+            "is_active": j.get("is_active", False)
+        })
+    return {"jornadas": result, "total": len(result)}
 
 @api_router.get("/teams")
 async def get_teams():
