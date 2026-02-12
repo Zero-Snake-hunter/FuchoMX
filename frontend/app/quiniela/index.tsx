@@ -62,17 +62,14 @@ export default function QuinielaScreen() {
 
   const loadJornada = async () => {
     try {
-      const response = await api.get(`/api/jornadas/current`);
+      const response = await api.get('/api/jornadas/current');
       const jornadaData = response.data.jornada;
       setJornada(jornadaData);
 
       // Check if user already submitted
       if (token) {
         try {
-          const picksResponse = await axios.get(
-            `${BACKEND_URL}/api/quiniela/my-picks/${jornadaData.id}`,
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
+          const picksResponse = await api.get(`/api/quiniela/my-picks/${jornadaData.id}`);
           
           if (picksResponse.data.submitted) {
             setAlreadySubmitted(true);
@@ -83,12 +80,17 @@ export default function QuinielaScreen() {
             });
             setSelections(existingSelections);
           }
-        } catch (error) {
-          console.log('No previous picks found');
+        } catch (error: any) {
+          // 404 significa que no hay picks previos (normal)
+          if (error.response?.status !== 404 && error.response?.status !== 401) {
+            console.log('Error loading picks:', error);
+          }
         }
       }
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.detail || 'Error al cargar la jornada');
+      if (error.response?.status !== 401) {
+        Alert.alert('Error', error.response?.data?.detail || 'Error al cargar la jornada');
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
