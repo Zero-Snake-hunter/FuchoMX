@@ -54,12 +54,18 @@ api.interceptors.response.use(
   },
   async (error) => {
     const originalRequest = error.config;
+    const requestUrl = error.config?.url || '';
     
-    console.log(`❌ [API Response] <<< ${error.response?.status || 'NETWORK_ERROR'} ${error.config?.url}`);
+    console.log(`❌ [API Response] <<< ${error.response?.status || 'NETWORK_ERROR'} ${requestUrl}`);
     console.log(`❌ [API Response] Detail: ${error.response?.data?.detail || error.message}`);
     
-    // Manejar error 401 (Unauthorized)
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Endpoints de auth que pueden retornar 401 legítimamente (credenciales incorrectas)
+    const isAuthEndpoint = requestUrl.includes('/api/auth/login') || 
+                           requestUrl.includes('/api/auth/register') ||
+                           requestUrl.includes('/api/auth/recover');
+    
+    // Manejar error 401 (Unauthorized) - SOLO para endpoints protegidos, NO para login/register
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
       originalRequest._retry = true;
       
       console.log('🔒 [API Response] 401 detectado - Limpiando sesión...');
