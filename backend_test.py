@@ -8,20 +8,28 @@ import requests
 import json
 from datetime import datetime
 import sys
+import random
+import string
 
 # Configuration
 BACKEND_URL = "https://fantasy-jornada-v1.preview.emergentagent.com/api"
 HEADERS = {"Content-Type": "application/json"}
 
+# Generate unique test data
+def generate_unique_email():
+    """Generate unique email for testing"""
+    suffix = ''.join(random.choices(string.digits, k=10))
+    return f"regression_test_{suffix}@test.com"
+
 # Test data
 test_users = [
     {
-        "email": "regression_test@test.com",
+        "email": generate_unique_email(),
         "password": "test1234",
         "display_name": "Regression Tester"
     },
     {
-        "email": "regression_test2@test.com", 
+        "email": generate_unique_email(), 
         "password": "test1234",
         "display_name": "Second Tester"
     }
