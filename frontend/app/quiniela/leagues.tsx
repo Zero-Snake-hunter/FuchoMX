@@ -57,13 +57,13 @@ export default function LeaguesScreen() {
 
   const loadLeagues = async () => {
     try {
-      const response = await api.get(`/api/leagues/my-leagues`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.get('/api/leagues/my-leagues');
       setLeagues(response.data.leagues);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading leagues:', error);
-      Alert.alert('Error', 'No se pudieron cargar las ligas');
+      if (error.response?.status !== 401) {
+        Alert.alert('Error', 'No se pudieron cargar las ligas');
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
