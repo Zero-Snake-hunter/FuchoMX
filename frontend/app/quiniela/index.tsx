@@ -144,14 +144,10 @@ export default function QuinielaScreen() {
         selection,
       }));
 
-      await axios.post(
-        `${BACKEND_URL}/api/quiniela/submit`,
-        {
-          jornada_id: jornada.id,
-          selections: selectionsArray,
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await api.post('/api/quiniela/submit', {
+        jornada_id: jornada.id,
+        selections: selectionsArray,
+      });
 
       Alert.alert(
         '¡Quiniela enviada!',
@@ -167,7 +163,9 @@ export default function QuinielaScreen() {
 
       setAlreadySubmitted(true);
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.detail || 'Error al enviar quiniela');
+      if (error.response?.status !== 401) {
+        Alert.alert('Error', error.response?.data?.detail || 'Error al enviar quiniela');
+      }
     } finally {
       setSubmitting(false);
     }
