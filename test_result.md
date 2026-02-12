@@ -312,7 +312,11 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Sistema de autenticación (registro, login, recuperación)"
+    - "Auth flow completo (register, login, luego endpoints autenticados)"
+    - "Admin - Seed temporada completa"
+    - "Admin - Cerrar jornada y activar siguiente"
+    - "Endpoint obtener jornada actual con partidos"
+    - "Admin - Seed jornada auto-increment"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
