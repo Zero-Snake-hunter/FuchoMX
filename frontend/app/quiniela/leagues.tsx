@@ -85,11 +85,10 @@ export default function LeaguesScreen() {
 
     setSubmitting(true);
     try {
-      const response = await axios.post(
-        `${BACKEND_URL}/api/leagues`,
-        { name: newLeagueName.trim(), mode: newLeagueMode },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const response = await api.post('/api/leagues', { 
+        name: newLeagueName.trim(), 
+        mode: newLeagueMode 
+      });
 
       Alert.alert(
         '¡Liga Creada!',
@@ -123,11 +122,9 @@ export default function LeaguesScreen() {
 
     setSubmitting(true);
     try {
-      const response = await axios.post(
-        `${BACKEND_URL}/api/leagues/join`,
-        { code: joinCode.trim().toUpperCase() },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const response = await api.post('/api/leagues/join', { 
+        code: joinCode.trim().toUpperCase() 
+      });
 
       Alert.alert('¡Éxito!', `Te has unido a "${response.data.league_name}"`);
       setShowJoinModal(false);
