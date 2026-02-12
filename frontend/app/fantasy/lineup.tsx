@@ -192,7 +192,7 @@ export default function LineupScreen() {
     setSubmitting(true);
     try {
       // Get current jornada
-      const jornadaResponse = await api.get(`/api/jornadas/current`);
+      const jornadaResponse = await api.get('/api/jornadas/current');
       const jornadaId = jornadaResponse.data.jornada.id;
 
       // Build players array
@@ -201,15 +201,11 @@ export default function LineupScreen() {
         position_slot: slot,
       }));
 
-      await axios.post(
-        `${BACKEND_URL}/api/fantasy/lineup`,
-        {
-          jornada_id: jornadaId,
-          players: playersArray,
-          dt_team_id: dtTeam.id,
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await api.post('/api/fantasy/lineup', {
+        jornada_id: jornadaId,
+        players: playersArray,
+        dt_team_id: dtTeam.id,
+      });
 
       // Mostrar éxito y navegar inmediatamente
       Alert.alert(
@@ -222,8 +218,10 @@ export default function LineupScreen() {
       
     } catch (error: any) {
       console.error('Error saving lineup:', error);
-      const errorMessage = error.response?.data?.detail || 'Error al guardar alineación. Intenta de nuevo.';
-      Alert.alert('Error', errorMessage);
+      if (error.response?.status !== 401) {
+        const errorMessage = error.response?.data?.detail || 'Error al guardar alineación. Intenta de nuevo.';
+        Alert.alert('Error', errorMessage);
+      }
     } finally {
       setSubmitting(false);
     }
