@@ -462,12 +462,54 @@ async def get_teams():
 
 @api_router.get("/jornadas/current")
 async def get_current_jornada():
-    """Get current jornada with matches"""
-    # Find upcoming or in-progress jornada
-    jornada = await db.jornadas.find_one(
-        {"status": {"$in": ["upcoming", "in_progress"]}},
-        sort=[("week_number", 1)]
-    )
+    """Get current active jornada with matches - implements automatic state transition"""
+    now = datetime.utcnow()
+    
+    # Step 1: Find jornada with is_active = true
+    jornada = await db.jornadas.find_one({"is_active": True})
+    
+    # Step 2: If active jornada exists and its end_date has passed, transition to next
+    if jornada and jornada.get("end_date") and jornada["end_date"] < now:
+        logger.info(f"Jornada {jornada['week_number']} expirada (end_date: {jornada['end_date']}). Transitando...")
+        
+        # Close expired jornada
+        await db.jornadas.update_one(
+            {"_id": jornada["_id"]},
+            {"$set": {"status": "finished", "is_active": False}}
+        )
+        
+        # Activate next jornada
+        next_jornada = await db.jornadas.find_one(
+            {"week_number": jornada["week_number"] + 1}
+        )
+        
+        if next_jornada:
+            await db.jornadas.update_one(
+                {"_id": next_jornada["_id"]},
+                {"$set": {"status": "upcoming", "is_active": True}}
+            )
+            jornada = next_jornada
+            jornada["status"] = "upcoming"
+            jornada["is_active"] = True
+            logger.info(f"Jornada {next_jornada['week_number']} activada automáticamente")
+        else:
+            jornada = None
+            logger.info("No hay siguiente jornada disponible. Temporada terminada.")
+    
+    # Step 3: Fallback - if no is_active found, try legacy status-based lookup
+    if not jornada:
+        jornada = await db.jornadas.find_one(
+            {"status": {"$in": ["upcoming", "in_progress"]}},
+            sort=[("week_number", 1)]
+        )
+        # If found via fallback, set is_active for consistency
+        if jornada:
+            await db.jornadas.update_one(
+                {"_id": jornada["_id"]},
+                {"$set": {"is_active": True}}
+            )
+            jornada["is_active"] = True
+            logger.info(f"Jornada {jornada['week_number']} activada via fallback (legacy status)")
     
     if not jornada:
         raise HTTPException(
@@ -475,7 +517,15 @@ async def get_current_jornada():
             detail="No hay jornada activa. Usa /api/admin/seed-jornada para crear una."
         )
     
-    # Get matches for this jornada
+    # Step 4: Update status based on dates
+    if jornada.get("start_date") and jornada["start_date"] <= now and jornada.get("status") == "upcoming":
+        await db.jornadas.update_one(
+            {"_id": jornada["_id"]},
+            {"$set": {"status": "in_progress"}}
+        )
+        jornada["status"] = "in_progress"
+    
+    # Step 5: Get matches for this jornada
     matches = await db.matches.find({"jornada_id": jornada["_id"]}).to_list(100)
     
     # Get team details for each match
