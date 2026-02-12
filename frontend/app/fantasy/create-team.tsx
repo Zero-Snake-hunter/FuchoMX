@@ -13,9 +13,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
-
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+import api from '../lib/api';
 
 export default function CreateTeamScreen() {
   const router = useRouter();
@@ -29,28 +27,32 @@ export default function CreateTeamScreen() {
   }, []);
 
   const loadCurrentTeam = async () => {
-    if (!token) return;
+    if (!token) {
+      console.log('⚠️ No token disponible, no se puede cargar equipo');
+      return;
+    }
 
     try {
-      console.log('Loading team...');
-      const response = await axios.get(`${BACKEND_URL}/api/fantasy/my-team`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      console.log('🔄 Cargando equipo actual...');
+      const response = await api.get('/api/fantasy/my-team');
 
-      console.log('Team response:', response.data);
+      console.log('✅ Equipo cargado:', response.data);
       if (response.data.exists) {
         setTeamName(response.data.name);
         setIsEditing(true);
       } else {
         setTeamName(response.data.default_name);
       }
-    } catch (error) {
-      console.error('Error loading team:', error);
+    } catch (error: any) {
+      console.error('❌ Error loading team:', error.response?.status, error.message);
+      if (error.response?.status !== 401) {
+        Alert.alert('Error', 'No se pudo cargar la información del equipo');
+      }
     }
   };
 
   const handleSave = async () => {
-    console.log('handleSave called');
+    console.log('🔄 handleSave called');
     console.log('Team name:', teamName);
     console.log('Token:', token ? 'exists' : 'missing');
 
