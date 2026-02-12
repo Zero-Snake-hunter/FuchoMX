@@ -162,7 +162,7 @@ backend:
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: "NA"
           agent: "main"
@@ -173,6 +173,9 @@ backend:
         - working: "NA"
           agent: "main"
           comment: "MAJOR REFACTOR: Endpoint now has automatic state transition. Finds is_active=true jornada. If end_date passed, auto-closes and activates next jornada. Has fallback for legacy status-based lookup. Also auto-updates status to in_progress when start_date is reached. Needs retesting."
+        - working: true
+          agent: "testing"
+          comment: "✅ COMPREHENSIVE TESTING COMPLETED: Automatic state transition system working perfectly. Tested current jornada retrieval with active jornada week 1, 2, and 3. Auto-transitions working correctly when jornadas are closed. Returns proper match data with team details. All functionality working as expected."
 
   - task: "Admin - Cerrar jornada y activar siguiente"
     implemented: true
