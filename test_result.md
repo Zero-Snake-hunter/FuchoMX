@@ -222,6 +222,18 @@ backend:
           agent: "testing"
           comment: "✅ COMPREHENSIVE TESTING COMPLETED: Auto-increment functionality working perfectly. Successfully created jornada with week_number=18 (auto-incremented from 17). Properly deactivates previous active jornadas and sets new one as active. All functionality confirmed working."
 
+  - task: "Authenticated Quiniela Submission System"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ COMPREHENSIVE TESTING COMPLETED: Full quiniela submission flow working perfectly. Tested with authenticated user token: 1) Get current active jornada with 9 matches, 2) Submit quiniela with valid selections (HOME/DRAW/AWAY), 3) Verify submitted selections retrieval. All endpoints responding correctly with proper validation and data persistence."
+
 frontend:
   - task: "Sistema de navegación con expo-router"
     implemented: true
