@@ -5,6 +5,8 @@ import { Alert, Platform } from 'react-native';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
+console.log('🔧 API Instance creada con baseURL:', BACKEND_URL);
+
 // Crear instancia de axios con configuración base
 const api = axios.create({
   baseURL: BACKEND_URL,
@@ -20,27 +22,23 @@ api.interceptors.request.use(
     try {
       const token = await AsyncStorage.getItem('auth_token');
       
+      console.log('🔐 Interceptor - Token desde AsyncStorage:', token ? token.substring(0, 30) + '...' : 'NULL');
+      console.log('📡 Interceptor - Request:', config.method?.toUpperCase(), config.url);
+      
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
-        
-        // Log solo en desarrollo
-        if (__DEV__) {
-          console.log('🔐 Token enviado:', token.substring(0, 20) + '...');
-          console.log('📡 Request:', config.method?.toUpperCase(), config.url);
-        }
+        console.log('✅ Header Authorization agregado');
       } else {
-        if (__DEV__) {
-          console.log('⚠️ No hay token disponible para:', config.url);
-        }
+        console.log('⚠️ No hay token en AsyncStorage para:', config.url);
       }
     } catch (error) {
-      console.error('Error obteniendo token:', error);
+      console.error('❌ Error obteniendo token de AsyncStorage:', error);
     }
     
     return config;
   },
   (error) => {
-    console.error('Error en request interceptor:', error);
+    console.error('❌ Error en request interceptor:', error);
     return Promise.reject(error);
   }
 );
