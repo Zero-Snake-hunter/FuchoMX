@@ -34,23 +34,24 @@ export default function FantasyDashboardScreen() {
 
     try {
       const [teamRes, jornadaRes] = await Promise.all([
-        api.get(`/api/fantasy/my-team`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        api.get(`/api/jornadas/current`),
+        api.get('/api/fantasy/my-team'),
+        api.get('/api/jornadas/current'),
       ]);
 
       setTeam(teamRes.data);
       setJornada(jornadaRes.data.jornada);
     } catch (error: any) {
       console.error('Error loading data:', error);
-      let errorMessage = 'Error al cargar los datos';
-      if (error.response?.data?.detail) {
-        errorMessage = error.response.data.detail;
-      } else if (error.message === 'Network Error') {
-        errorMessage = 'Error de conexión. Verifica tu internet.';
+      // No mostrar error si es 401 (el interceptor lo maneja)
+      if (error.response?.status !== 401) {
+        let errorMessage = 'Error al cargar los datos';
+        if (error.response?.data?.detail) {
+          errorMessage = error.response.data.detail;
+        } else if (error.message === 'Network Error') {
+          errorMessage = 'Error de conexión. Verifica tu internet.';
+        }
+        Alert.alert('Error', errorMessage);
       }
-      Alert.alert('Error', errorMessage);
     } finally {
       setLoading(false);
     }
