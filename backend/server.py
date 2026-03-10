@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional
 import uuid
 from datetime import datetime, timedelta
+from real_liga_mx_data import LIGA_MX_TEAMS
 import bcrypt
 import jwt
 from bson import ObjectId
@@ -2264,6 +2265,111 @@ async def seed_players():
         "message": f"Se crearon {players_created} jugadores para {len(teams)} equipos",
         "players_count": players_created,
         "teams_count": len(teams)
+    }
+
+@api_router.post("/admin/seed-real-data")
+async def seed_real_data():
+    """Seed database with REAL Liga MX teams and players from real_liga_mx_data.py"""
+    import random
+    
+    logger.info("🏟️ Seeding REAL Liga MX data...")
+    
+    # Clear existing data
+    await db.teams.delete_many({})
+    await db.players.delete_many({})
+    await db.jornadas.delete_many({})
+    await db.matches.delete_many({})
+    
+    teams_created = 0
+    players_created = 0
+    team_ids = []
+    
+    for team_data in LIGA_MX_TEAMS:
+        # Insert team
+        team_doc = {
+            "name": team_data["name"],
+            "short_name": team_data["short_name"],
+            "color": team_data.get("color", "#000000"),
+            "shield_url": team_data["shield_url"],
+            "created_at": datetime.utcnow()
+        }
+        team_result = await db.teams.insert_one(team_doc)
+        team_id = team_result.inserted_id
+        team_ids.append(team_id)
+        teams_created += 1
+        
+        # Insert players for this team
+        for player_data in team_data.get("players", []):
+            player_doc = {
+                "name": player_data["name"],
+                "team_id": team_id,
+                "position": player_data["position"],
+                "number": player_data["number"],
+                "stats": {
+                    "minutes_played": 0,
+                    "goals": 0,
+                    "assists": 0,
+                    "saves": 0,
+                    "clean_sheets": 0,
+                    "defensive_actions": 0
+                },
+                "created_at": datetime.utcnow()
+            }
+            await db.players.insert_one(player_doc)
+            players_created += 1
+    
+    # Create 17 jornadas for the season
+    now = datetime.utcnow()
+    jornadas_created = 0
+    
+    for week in range(1, 18):
+        week_start = now + timedelta(weeks=week - 1)
+        week_end = week_start + timedelta(days=2)
+        
+        jornada_data = {
+            "week_number": week,
+            "start_date": week_start,
+            "end_date": week_end,
+            "status": "upcoming",
+            "is_active": week == 1,
+            "created_at": now
+        }
+        
+        jornada_result = await db.jornadas.insert_one(jornada_data)
+        jornada_id = jornada_result.inserted_id
+        
+        # Shuffle teams and create 9 matches per jornada
+        shuffled = list(team_ids)
+        random.shuffle(shuffled)
+        
+        matches = []
+        for i in range(0, min(len(shuffled), 18), 2):
+            if i + 1 < len(shuffled):
+                match = {
+                    "jornada_id": jornada_id,
+                    "home_team_id": shuffled[i],
+                    "away_team_id": shuffled[i + 1],
+                    "start_at": week_start + timedelta(hours=i),
+                    "status": "scheduled",
+                    "home_score": None,
+                    "away_score": None,
+                    "created_at": now
+                }
+                matches.append(match)
+        
+        if matches:
+            await db.matches.insert_many(matches)
+        
+        jornadas_created += 1
+    
+    logger.info(f"✅ REAL data seeded: {teams_created} teams, {players_created} players, {jornadas_created} jornadas")
+    
+    return {
+        "message": f"🏟️ Datos REALES de Liga MX cargados exitosamente",
+        "teams_created": teams_created,
+        "players_created": players_created,
+        "jornadas_created": jornadas_created,
+        "teams": [t["name"] for t in LIGA_MX_TEAMS]
     }
 
 # ============ ROOT ============
