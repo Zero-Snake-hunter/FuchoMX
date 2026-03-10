@@ -157,6 +157,9 @@ async def register(user_data: UserRegister):
     result = await db.users.insert_one(user_dict)
     user_dict["_id"] = result.inserted_id
     
+    # Award first login achievement
+    await award_achievement(result.inserted_id, "first_login")
+    
     # Create access token
     access_token = create_access_token({"sub": str(result.inserted_id)})
     
@@ -795,7 +798,8 @@ async def create_unified_league(
     
     result = await db.private_leagues.insert_one(league_doc)
     
-    # Add creator as member
+    # Award create league achievement
+    await award_achievement(current_user["_id"], "create_league")
     await db.league_members.insert_one({
         "league_id": result.inserted_id,
         "user_id": current_user["_id"],
@@ -853,6 +857,9 @@ async def join_unified_league(
         "user_id": current_user["_id"],
         "joined_at": datetime.utcnow()
     })
+    
+    # Award join league achievement
+    await award_achievement(current_user["_id"], "join_league")
     
     logger.info(f"User {current_user['email']} joined league: {league['name']}")
     
@@ -2046,7 +2053,8 @@ async def submit_fantasy_lineup(
     
     await db.fantasy_lineups.insert_many(lineup_docs)
     
-    logger.info(f"User {current_user['email']} submitted fantasy lineup for jornada {lineup.jornada_id}")
+    # Award first lineup achievement
+    await award_achievement(current_user["_id"], "first_lineup")
     
     return {
         "message": "Alineación guardada exitosamente",
@@ -2371,6 +2379,347 @@ async def seed_real_data():
         "jornadas_created": jornadas_created,
         "teams": [t["name"] for t in LIGA_MX_TEAMS]
     }
+
+# ============ ACHIEVEMENTS & STREAKS SYSTEM ============
+
+# ─── CATÁLOGO DE LOGROS ─────────────────────────────────────────────────────
+ACHIEVEMENTS_CATALOG = [
+    # QUINIELA
+    {"id": "first_quiniela",    "title": "Primer Envío",           "description": "Envía tu primera quiniela",                       "emoji": "📝", "category": "quiniela", "secret": False},
+    {"id": "five_correct",      "title": "Buen Ojo",               "description": "Acierta 5 o más partidos en una jornada",         "emoji": "👁️", "category": "quiniela", "secret": False},
+    {"id": "perfect_jornada",   "title": "Ojo de Águila",          "description": "Acierta TODOS los partidos de una jornada",       "emoji": "🎯", "category": "quiniela", "secret": False},
+    {"id": "quiniela_streak_3", "title": "En Racha 🔥",            "description": "Juega 3 jornadas consecutivas sin faltar",        "emoji": "🔥", "category": "quiniela", "secret": False},
+    {"id": "quiniela_streak_5", "title": "Imparable",              "description": "Juega 5 jornadas consecutivas sin faltar",        "emoji": "⚡", "category": "quiniela", "secret": False},
+    {"id": "quiniela_streak_10","title": "Leyenda de la Quiniela", "description": "Juega 10 jornadas seguidas sin faltar",           "emoji": "👑", "category": "quiniela", "secret": False},
+    {"id": "win_streak_3",      "title": "Racha Ganadora",         "description": "Gana 3 jornadas consecutivas en tu liga",        "emoji": "🏅", "category": "quiniela", "secret": False},
+    {"id": "win_streak_5",      "title": "Dominador",              "description": "Gana 5 jornadas consecutivas en tu liga",        "emoji": "💥", "category": "quiniela", "secret": True},
+    {"id": "top3_jornada",      "title": "Podio",                  "description": "Termina top 3 en tu liga en una jornada",        "emoji": "🏆", "category": "quiniela", "secret": False},
+    {"id": "correct_5_streak",  "title": "5 Seguidas 🎯",          "description": "5 predicciones correctas consecutivas",          "emoji": "🎯", "category": "quiniela", "secret": False},
+    # FANTASY
+    {"id": "first_lineup",      "title": "Manager Debut",          "description": "Arma tu primera alineación fantasy",             "emoji": "⚽", "category": "fantasy",  "secret": False},
+    {"id": "fantasy_streak_3",  "title": "Manager Constante",      "description": "Arma tu alineación 3 jornadas seguidas",        "emoji": "📋", "category": "fantasy",  "secret": False},
+    {"id": "fantasy_100pts",    "title": "Centurión",              "description": "Acumula 100 puntos fantasy en total",            "emoji": "💯", "category": "fantasy",  "secret": False},
+    {"id": "fantasy_top",       "title": "Manager del Momento",    "description": "Sé el mejor manager de una jornada",            "emoji": "⭐", "category": "fantasy",  "secret": False},
+    # SOCIAL
+    {"id": "first_login",       "title": "¡Bienvenido!",           "description": "Inicia sesión por primera vez",                  "emoji": "🎉", "category": "general",  "secret": False},
+    {"id": "create_league",     "title": "El Convocador",          "description": "Crea tu primera liga privada",                   "emoji": "🏟️", "category": "social",   "secret": False},
+    {"id": "join_league",       "title": "Un Equipo",              "description": "Únete a tu primera liga privada",               "emoji": "🤝", "category": "social",   "secret": False},
+    {"id": "invite_5",          "title": "Influencer",             "description": "Tu liga tiene 5 o más miembros",                 "emoji": "📣", "category": "social",   "secret": False},
+    # SECRETOS
+    {"id": "veteran",           "title": "Veterano",               "description": "30 días en la app",                             "emoji": "🎖️", "category": "general",  "secret": True},
+    {"id": "quiniela_leader",   "title": "Líder Invicto",          "description": "Primer lugar en tu liga 4 semanas seguidas",    "emoji": "🥇", "category": "quiniela", "secret": True},
+]
+
+ACHIEVEMENTS_BY_ID = {a["id"]: a for a in ACHIEVEMENTS_CATALOG}
+
+
+# ─── HELPER: otorgar un logro ────────────────────────────────────────────────
+async def award_achievement(user_id, achievement_id: str) -> bool:
+    """Otorga un logro. Retorna True si es nuevo, False si ya lo tenía."""
+    if achievement_id not in ACHIEVEMENTS_BY_ID:
+        return False
+    existing = await db.user_achievements.find_one({
+        "user_id": user_id, "achievement_id": achievement_id
+    })
+    if existing:
+        return False
+    await db.user_achievements.insert_one({
+        "user_id": user_id,
+        "achievement_id": achievement_id,
+        "unlocked_at": datetime.utcnow()
+    })
+    logger.info(f"🏅 Logro '{achievement_id}' → user {user_id}")
+    return True
+
+
+# ─── HELPER: actualizar racha de participación ───────────────────────────────
+async def update_participation_streak(user_id) -> dict:
+    doc = await db.user_streaks.find_one({"user_id": user_id})
+    if not doc:
+        await db.user_streaks.insert_one({
+            "user_id": user_id,
+            "quiniela_streak":       1,
+            "quiniela_streak_best":  1,
+            "win_streak":            0,
+            "win_streak_best":       0,
+            "correct_answers_streak":0,
+            "correct_answers_best":  0,
+            "fantasy_streak":        0,
+            "fantasy_streak_best":   0,
+            "updated_at": datetime.utcnow()
+        })
+        return {"current": 1, "best": 1, "is_new_record": True}
+
+    new_streak = doc.get("quiniela_streak", 0) + 1
+    best       = max(new_streak, doc.get("quiniela_streak_best", 0))
+    await db.user_streaks.update_one(
+        {"user_id": user_id},
+        {"$set": {
+            "quiniela_streak":       new_streak,
+            "quiniela_streak_best":  best,
+            "updated_at":            datetime.utcnow()
+        }}
+    )
+    return {"current": new_streak, "best": best, "is_new_record": new_streak >= best}
+
+
+async def reset_participation_streak(user_id):
+    doc = await db.user_streaks.find_one({"user_id": user_id})
+    previous = doc.get("quiniela_streak", 0) if doc else 0
+    await db.user_streaks.update_one(
+        {"user_id": user_id},
+        {"$set": {"quiniela_streak": 0, "updated_at": datetime.utcnow()}},
+        upsert=True
+    )
+    return previous
+
+
+# ─── HELPER: actualizar racha de victorias en liga ───────────────────────────
+async def update_win_streak(user_id, won: bool) -> dict:
+    doc = await db.user_streaks.find_one({"user_id": user_id})
+    current = doc.get("win_streak", 0) if doc else 0
+    best    = doc.get("win_streak_best", 0) if doc else 0
+
+    if won:
+        new_streak = current + 1
+        new_best   = max(new_streak, best)
+    else:
+        new_streak = 0
+        new_best   = best
+
+    await db.user_streaks.update_one(
+        {"user_id": user_id},
+        {"$set": {
+            "win_streak":      new_streak,
+            "win_streak_best": new_best,
+            "updated_at":      datetime.utcnow()
+        }},
+        upsert=True
+    )
+    return {"current": new_streak, "best": new_best, "won": won}
+
+
+# ─── HELPER: actualizar racha de predicciones correctas ─────────────────────
+async def update_correct_streak(user_id, correct: bool) -> int:
+    doc = await db.user_streaks.find_one({"user_id": user_id})
+    current = doc.get("correct_answers_streak", 0) if doc else 0
+    best    = doc.get("correct_answers_best",   0) if doc else 0
+
+    new_streak = (current + 1) if correct else 0
+    new_best   = max(new_streak, best)
+
+    await db.user_streaks.update_one(
+        {"user_id": user_id},
+        {"$set": {
+            "correct_answers_streak": new_streak,
+            "correct_answers_best":   new_best,
+            "updated_at":             datetime.utcnow()
+        }},
+        upsert=True
+    )
+    return new_streak
+
+
+# ─── FUNCIÓN PRINCIPAL: calcular logros post-jornada ────────────────────────
+async def check_and_award_achievements_after_jornada(user_id, jornada_id: str) -> list:
+    jornada_obj_id = ObjectId(jornada_id)
+    new_achievements = []
+
+    # 1. Primer envío de quiniela
+    total_q = await db.quiniela_selections.count_documents({"user_id": user_id})
+    if total_q > 0:
+        if await award_achievement(user_id, "first_quiniela"):
+            new_achievements.append("first_quiniela")
+
+    # 2. Partidos correctos esta jornada
+    matches = await db.matches.find({
+        "jornada_id": jornada_obj_id, "status": "finished"
+    }).to_list(100)
+
+    correct_this_jornada = 0
+    for match in matches:
+        sel = await db.quiniela_selections.find_one({
+            "user_id": user_id, "match_id": match["_id"]
+        })
+        if not sel:
+            continue
+        home = match.get("home_score", 0) or 0
+        away = match.get("away_score", 0) or 0
+        actual = "HOME" if home > away else ("AWAY" if away > home else "DRAW")
+        is_correct = sel["selection"] == actual
+        await update_correct_streak(user_id, is_correct)
+        if is_correct:
+            correct_this_jornada += 1
+
+    if correct_this_jornada >= 5:
+        if await award_achievement(user_id, "five_correct"):
+            new_achievements.append("five_correct")
+    if len(matches) > 0 and correct_this_jornada == len(matches):
+        if await award_achievement(user_id, "perfect_jornada"):
+            new_achievements.append("perfect_jornada")
+
+    # Racha de 5 correctas seguidas
+    streak_doc = await db.user_streaks.find_one({"user_id": user_id})
+    if streak_doc and streak_doc.get("correct_answers_streak", 0) >= 5:
+        if await award_achievement(user_id, "correct_5_streak"):
+            new_achievements.append("correct_5_streak")
+
+    # 3. Racha de participación
+    streak_info = await update_participation_streak(user_id)
+    streak = streak_info["current"]
+    for threshold, achievement_id in [
+        (3,  "quiniela_streak_3"),
+        (5,  "quiniela_streak_5"),
+        (10, "quiniela_streak_10"),
+    ]:
+        if streak >= threshold:
+            if await award_achievement(user_id, achievement_id):
+                new_achievements.append(achievement_id)
+
+    # 4. Racha de victorias en liga
+    user_leagues = await db.league_members.find({"user_id": user_id}).to_list(100)
+    for membership in user_leagues:
+        league = await db.private_leagues.find_one({"_id": membership["league_id"]})
+        if not league or league.get("mode") != "quiniela":
+            continue
+
+        all_members = await db.league_members.find(
+            {"league_id": membership["league_id"]}
+        ).to_list(100)
+
+        member_points = []
+        for m in all_members:
+            pts_log = await db.points_log.find_one({
+                "user_id": m["user_id"],
+                "jornada_id": jornada_obj_id,
+                "source": "QUINIELA"
+            })
+            member_points.append({
+                "user_id": m["user_id"],
+                "points": pts_log["points"] if pts_log else 0
+            })
+
+        member_points.sort(key=lambda x: x["points"], reverse=True)
+
+        top3_ids = [mp["user_id"] for mp in member_points[:3]]
+        if user_id in top3_ids:
+            if await award_achievement(user_id, "top3_jornada"):
+                new_achievements.append("top3_jornada")
+
+        won = len(member_points) > 0 and member_points[0]["user_id"] == user_id
+        win_info = await update_win_streak(user_id, won)
+        if win_info["current"] >= 3:
+            if await award_achievement(user_id, "win_streak_3"):
+                new_achievements.append("win_streak_3")
+        if win_info["current"] >= 5:
+            if await award_achievement(user_id, "win_streak_5"):
+                new_achievements.append("win_streak_5")
+
+    # 5. Fantasy 100 puntos acumulados
+    pipeline = [
+        {"$match": {"user_id": user_id}},
+        {"$group": {"_id": None, "total": {"$sum": "$total_points"}}}
+    ]
+    fantasy_pts = await db.fantasy_points_log.aggregate(pipeline).to_list(1)
+    if fantasy_pts and fantasy_pts[0]["total"] >= 100:
+        if await award_achievement(user_id, "fantasy_100pts"):
+            new_achievements.append("fantasy_100pts")
+
+    return new_achievements
+
+
+# ─── ENDPOINTS ───────────────────────────────────────────────────────────────
+
+@api_router.get("/achievements/catalog")
+async def get_achievements_catalog():
+    """Catálogo público de logros."""
+    return {
+        "achievements": [
+            {**a, "description": "???" if a["secret"] else a["description"],
+                  "emoji": "🔒" if a["secret"] else a["emoji"]}
+            for a in ACHIEVEMENTS_CATALOG
+        ],
+        "total": len(ACHIEVEMENTS_CATALOG)
+    }
+
+
+@api_router.get("/achievements/my")
+async def get_my_achievements(current_user: dict = Depends(get_current_user)):
+    """Logros + rachas del usuario autenticado."""
+    user_id = current_user["_id"]
+
+    unlocked_docs = await db.user_achievements.find({"user_id": user_id}).to_list(200)
+    unlocked_map  = {d["achievement_id"]: d["unlocked_at"] for d in unlocked_docs}
+
+    streak_doc = await db.user_streaks.find_one({"user_id": user_id}) or {}
+
+    result = []
+    for a in ACHIEVEMENTS_CATALOG:
+        unlocked = a["id"] in unlocked_map
+        result.append({
+            "id":          a["id"],
+            "title":       a["title"],
+            "description": a["description"] if (not a["secret"] or unlocked) else "Logro secreto — ¡sigue jugando!",
+            "emoji":       a["emoji"]       if (not a["secret"] or unlocked) else "🔒",
+            "category":    a["category"],
+            "secret":      a["secret"],
+            "unlocked":    unlocked,
+            "unlocked_at": unlocked_map[a["id"]].isoformat() if unlocked else None,
+        })
+
+    # Desbloqueados primero
+    result.sort(key=lambda x: (not x["unlocked"], x["category"]))
+
+    return {
+        "achievements":    result,
+        "total":           len(result),
+        "unlocked_count":  len(unlocked_map),
+        "streaks": {
+            "quiniela_current":       streak_doc.get("quiniela_streak", 0),
+            "quiniela_best":          streak_doc.get("quiniela_streak_best", 0),
+            "win_current":            streak_doc.get("win_streak", 0),
+            "win_best":               streak_doc.get("win_streak_best", 0),
+            "correct_current":        streak_doc.get("correct_answers_streak", 0),
+            "correct_best":           streak_doc.get("correct_answers_best", 0),
+            "fantasy_current":        streak_doc.get("fantasy_streak", 0),
+        }
+    }
+
+
+@api_router.post("/admin/achievements/check/{jornada_id}")
+async def trigger_achievement_check(jornada_id: str):
+    """Admin: verifica y otorga logros a TODOS los usuarios tras una jornada."""
+    all_users = await db.users.find().to_list(10000)
+    summary = []
+
+    for user in all_users:
+        new = await check_and_award_achievements_after_jornada(user["_id"], jornada_id)
+        if new:
+            summary.append({
+                "user":             user.get("display_name"),
+                "new_achievements": new
+            })
+
+    # Resetear rachas de usuarios que NO participaron esta jornada
+    jornada_obj_id = ObjectId(jornada_id)
+    participant_ids = set()
+    async for sel in db.quiniela_selections.find({"jornada_id": jornada_obj_id}):
+        participant_ids.add(sel["user_id"])
+
+    reset_count = 0
+    for user in all_users:
+        if user["_id"] not in participant_ids:
+            previous = await reset_participation_streak(user["_id"])
+            if previous > 0:
+                reset_count += 1
+                logger.info(f"Racha reseteada: {user.get('display_name')} tenía {previous}")
+
+    return {
+        "message":                  f"Logros verificados: {len(all_users)} usuarios",
+        "new_achievements_awarded": summary,
+        "streaks_reset":            reset_count
+    }
+
 
 # ============ ROOT ============
 

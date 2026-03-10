@@ -61,6 +61,22 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.menuSection}>
+          <Text style={styles.sectionTitle}>MI ACTIVIDAD</Text>
+
+          <TouchableOpacity
+            style={styles.achievementsButton}
+            onPress={() => router.push('/profile/achievements')}
+          >
+            <Text style={styles.achievementsEmoji}>🏅</Text>
+            <View style={styles.achievementsTextContainer}>
+              <Text style={styles.achievementsTitle}>Logros y Rachas</Text>
+              <Text style={styles.achievementsSubtitle}>Ver mis insignias y rachas</Text>
+            </View>
+            <Text style={styles.achievementsArrow}>→</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.menuSection}>
           <Text style={styles.sectionTitle}>AJUSTES</Text>
           
           <TouchableOpacity style={styles.menuItem}>
@@ -209,5 +225,36 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 24,
     marginBottom: 32,
+  },
+  achievementsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#111',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#1E1E1E',
+  },
+  achievementsEmoji: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  achievementsTextContainer: {
+    flex: 1,
+  },
+  achievementsTitle: {
+    color: '#FFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  achievementsSubtitle: {
+    color: '#555',
+    fontSize: 12,
+  },
+  achievementsArrow: {
+    color: '#E63946',
+    fontSize: 18,
   },
 });

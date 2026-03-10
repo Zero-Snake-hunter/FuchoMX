@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,11 +11,22 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
+import { StreakWidget } from '../../components/StreakWidget';
+import { AchievementToast } from '../../components/AchievementToast';
+import api from '../lib/api';
 
 export default function HomeScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
+  const [streaks, setStreaks] = useState({ quiniela_current: 0, win_current: 0, correct_current: 0 });
+  const [toast, setToast] = useState({ visible: false, emoji: '', title: '', description: '' });
+
+  useEffect(() => {
+    api.get('/api/achievements/my').then(res => {
+      setStreaks(res.data.streaks);
+    }).catch(() => {});
+  }, []);
 
   const handleQuinielaPress = () => {
     console.log('NAVIGATING TO QUINIELA');
@@ -49,6 +60,13 @@ export default function HomeScreen() {
             <Text style={styles.points}>{user?.total_points || 0}</Text>
           </View>
         </View>
+
+        <StreakWidget
+          quinielaStreak={streaks.quiniela_current}
+          winStreak={streaks.win_current}
+          correctStreak={streaks.correct_current}
+          onPress={() => router.push('/profile/achievements')}
+        />
 
         <View style={styles.content}>
           <Text style={styles.title}>SELECCIONA UN MODO</Text>
@@ -98,6 +116,14 @@ export default function HomeScreen() {
           </View>
         </View>
       </ScrollView>
+
+      <AchievementToast
+        visible={toast.visible}
+        emoji={toast.emoji}
+        title={toast.title}
+        description={toast.description}
+        onHide={() => setToast(t => ({ ...t, visible: false }))}
+      />
     </View>
   );
 }
