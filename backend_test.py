@@ -12,7 +12,7 @@ import random
 import string
 
 # Configuration
-BACKEND_URL = "https://fantasy-jornada-v1.preview.emergentagent.com/api"
+BACKEND_URL = "https://quiniela-fantasy.preview.emergentagent.com/api"
 HEADERS = {"Content-Type": "application/json"}
 
 # Generate unique test data

@@ -391,14 +391,49 @@ frontend:
           agent: "main"
           comment: "Pantalla de perfil mostrando: nombre, email, puntos totales, opciones de ajustes, botón de cerrar sesión."
 
+  - task: "League Limits - Plan Gratuito (1 liga, max 25 miembros)"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "NUEVO: Implementados límites del plan gratuito. 1) create_unified_league: Verifica que el usuario no sea owner de ninguna liga (1 liga max). 2) join_unified_league: Verifica que la liga no esté llena (max_members=25). 3) league_doc ahora incluye max_members=25. 4) get_my_unified_leagues ahora retorna max_members e is_full. 5) Nuevo endpoint GET /leagues/{league_id}/availability. Probado con curl: crear 1ª liga OK, crear 2ª liga rechazada (400), unirse OK, disponibilidad OK."
+        - working: true
+          agent: "main"
+          comment: "VALIDADO CON CURL: Test 1 (crear 1ª liga) OK, Test 2 (crear 2ª liga = error 400 plan gratuito) OK, Test 3 (unirse a liga) OK, Test 4 (my-leagues con max_members/is_full) OK, Test 5 (/availability con spots_left) OK. Todos los 5 tests pasaron."
+        - working: true
+          agent: "testing"
+          comment: "✅ COMPREHENSIVE PYTEST TESTING COMPLETED: 15/15 tests passed. Verified: 1) First league creation returns 200, 2) Second league blocked with 400 + 'Plan Gratuito' message, 3) Second league in different mode (fantasy) also blocked, 4) Different user can create their own league, 5) Join succeeds when not full, 6) /availability endpoint returns member_count/max_members/is_full/spots_left, 7) Invalid ID returns 400, 8) Non-existent returns 404, 9) my-leagues includes max_members/is_full, 10) is_full consistency verified, 11) /availability route NOT captured by /{league_id} wildcard, 12) All endpoints require auth. Tests in /app/backend/tests/test_league_limits.py"
+
+  - task: "Frontend leagues.tsx - Indicador de capacidad"
+    implemented: true
+    working: true
+    file: "/app/frontend/app/quiniela/leagues.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "NUEVO: Actualizado renderLeagueCard para mostrar '👥 3/25' en la meta row. Badge 'LLENA' rojo cuando is_full=true. Barra de progreso de capacidad (azul normal, rojo si llena). Interface League actualizada con max_members y is_full."
+        - working: true
+          agent: "testing"
+          comment: "✅ FRONTEND TESTING COMPLETED: Navigation login→home→quiniela→leagues fully working. Leagues screen shows '👥 1/25' capacity indicator in league cards. Progress bar visible. 👑 Admin badge shown for owners. League code displayed. Second league creation error received from backend (400 + plan gratuito message) and Alert.alert called correctly with proper message. LLENA badge code verified correct but untestable without 25+ members. Minor warning: AuthContext.tsx/FantasyContext.tsx causing Expo Router 'missing default export' warnings (non-blocking)."
+
 metadata:
   created_by: "main_agent"
   version: "1.0"
-  test_sequence: 2
-  run_ui: false
+  test_sequence: 3
+  run_ui: true
 
 test_plan:
-  current_focus: []
+  current_focus:
+    - "League Limits - Plan Gratuito (1 liga, max 25 miembros)"
+    - "Frontend leagues.tsx - Indicador de capacidad"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -414,3 +449,5 @@ agent_communication:
       message: "🎉 COMPREHENSIVE BACKEND TESTING COMPLETED - ALL SYSTEMS FUNCTIONAL! ✅ Authentication: Register, login, JWT token validation (401 for invalid, 403 for missing). ✅ Jornada Management: Seed teams (18), seed season (17 jornadas), automatic state transitions, close/activate jornadas. ✅ Auto-increment: Seed-jornada creates week 18 automatically. ✅ Quiniela System: Full authenticated submission flow working (get jornada, submit selections, verify). All critical backend flows tested and working perfectly. Ready for production use!"
     - agent: "testing"
       message: "✅ FULL REGRESSION TEST COMPLETED SUCCESSFULLY - ALL 15 STEPS PASSED! 🎯 Authentication: User registration, login, profile retrieval all working perfectly. 🎯 Quiniela Flow: Jornada retrieval, submission, verification working end-to-end. 🎯 League System: Fantasy/Quiniela league creation and joining working correctly. 🎯 Data Retrieval: Teams (18), players (378), rankings, admin jornadas all functional. 🎯 API Security: No 401 errors on authenticated endpoints, proper token handling. Backend is production-ready with comprehensive API coverage!"
+    - agent: "main"
+      message: "LEAGUE LIMITS FEATURE IMPLEMENTADA. Backend: 1) Límite 1 liga por usuario (owner), 2) Límite 25 miembros por liga, 3) Campo max_members en league_doc, 4) Nuevo endpoint /leagues/{id}/availability, 5) my-leagues retorna max_members/is_full. Frontend: leagues.tsx muestra '👥 X/25', badge LLENA, barra de progreso de capacidad. CURL TESTS ALL PASSED. NECESITO: testing del agente de testing para validar backend (API availability, límites) y frontend (indicador visual de capacidad en pantalla de ligas)."

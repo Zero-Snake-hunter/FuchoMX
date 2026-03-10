@@ -6,7 +6,7 @@ Quick auth test to verify invalid token handling
 import requests
 import json
 
-BASE_URL = "https://fantasy-jornada-v1.preview.emergentagent.com/api"
+BASE_URL = "https://quiniela-fantasy.preview.emergentagent.com/api"
 
 def test_invalid_token():
     """Test invalid token scenario"""

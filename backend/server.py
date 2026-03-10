@@ -765,6 +765,8 @@ class CreateLeagueRequest(BaseModel):
 class JoinLeagueRequest(BaseModel):
     code: str
 
+MAX_MEMBERS_FREE = 25
+
 @api_router.post("/leagues")
 async def create_unified_league(
     league_data: CreateLeagueRequest,
@@ -781,6 +783,14 @@ async def create_unified_league(
             detail="Modo debe ser 'quiniela' o 'fantasy'"
         )
     
+    # Plan gratuito: solo 1 liga por usuario (owner)
+    owned_league = await db.private_leagues.find_one({"owner_id": current_user["_id"]})
+    if owned_league:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Plan Gratuito: solo puedes crear 1 liga. Actualiza a Premium para crear más ligas."
+        )
+    
     # Generate unique 6-char code
     code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
     
@@ -793,6 +803,7 @@ async def create_unified_league(
         "name": league_data.name,
         "mode": league_data.mode,
         "code": code,
+        "max_members": MAX_MEMBERS_FREE,
         "created_at": datetime.utcnow()
     }
     
@@ -842,6 +853,15 @@ async def join_unified_league(
             detail="Ya eres miembro de esta liga"
         )
     
+    # Check league capacity
+    max_members = league.get("max_members", MAX_MEMBERS_FREE)
+    current_count = await db.league_members.count_documents({"league_id": league["_id"]})
+    if current_count >= max_members:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Esta liga está llena ({current_count}/{max_members} miembros)"
+        )
+    
     # For fantasy leagues, check if user has a fantasy team
     if league.get("mode") == "fantasy":
         fantasy_team = await db.fantasy_teams.find_one({"user_id": current_user["_id"]})
@@ -880,6 +900,7 @@ async def get_my_unified_leagues(current_user: dict = Depends(get_current_user))
         league = await db.private_leagues.find_one({"_id": membership["league_id"]})
         if league:
             member_count = await db.league_members.count_documents({"league_id": league["_id"]})
+            max_members = league.get("max_members", MAX_MEMBERS_FREE)
             is_owner = str(league["owner_id"]) == str(current_user["_id"])
             
             leagues.append({
@@ -888,11 +909,40 @@ async def get_my_unified_leagues(current_user: dict = Depends(get_current_user))
                 "mode": league.get("mode", "quiniela"),
                 "code": league["code"],
                 "member_count": member_count,
+                "max_members": max_members,
+                "is_full": member_count >= max_members,
                 "is_owner": is_owner,
                 "created_at": league["created_at"]
             })
     
     return {"leagues": leagues}
+
+@api_router.get("/leagues/{league_id}/availability")
+async def get_league_availability(
+    league_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get availability info for a league (capacity, spots left)"""
+    try:
+        league_obj_id = ObjectId(league_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="ID de liga inválido")
+    
+    league = await db.private_leagues.find_one({"_id": league_obj_id})
+    if not league:
+        raise HTTPException(status_code=404, detail="Liga no encontrada")
+    
+    member_count = await db.league_members.count_documents({"league_id": league_obj_id})
+    max_members = league.get("max_members", MAX_MEMBERS_FREE)
+    
+    return {
+        "league_id": league_id,
+        "name": league["name"],
+        "member_count": member_count,
+        "max_members": max_members,
+        "is_full": member_count >= max_members,
+        "spots_left": max(0, max_members - member_count)
+    }
 
 @api_router.get("/leagues/{league_id}")
 async def get_unified_league_details(

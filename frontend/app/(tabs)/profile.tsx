@@ -74,6 +74,18 @@ export default function ProfileScreen() {
             </View>
             <Text style={styles.achievementsArrow}>→</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.planButton}
+            onPress={() => router.push('/profile/plan')}
+          >
+            <Text style={styles.achievementsEmoji}>🎉</Text>
+            <View style={styles.achievementsTextContainer}>
+              <Text style={styles.achievementsTitle}>Tu Plan Gratuito</Text>
+              <Text style={styles.achievementsSubtitle}>Ver qué incluye tu plan</Text>
+            </View>
+            <Text style={styles.achievementsArrow}>→</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.menuSection}>
@@ -256,5 +268,16 @@ const styles = StyleSheet.create({
   achievementsArrow: {
     color: '#E63946',
     fontSize: 18,
+  },
+  planButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#111',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#E6394622',
   },
 });

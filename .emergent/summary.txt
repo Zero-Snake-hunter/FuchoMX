@@ -1,95 +1,78 @@
 <analysis>
+
 **original_problem_statement:**
-The user wants to develop a full-stack, cross-platform (Android/iOS) mobile application for a football pool, built with a professional architecture. The application will feature two main modes: Quiniela Tradicional (Traditional Pool) and Fantasy Fútbol.
+The user wants to develop a full-stack, cross-platform mobile application for a football pool with Quiniela Tradicional and Fantasy Fútbol modes.
 
 **PRODUCT REQUIREMENTS:**
--   **User System:** Secure user registration (email/password), login, password recovery, and a user profile.
--   **Main Menu:** A simple home screen to navigate to Quiniela Tradicional or Fantasy Fútbol.
--   **Quiniela Tradicional Mode:** Users predict match outcomes (Win A, Draw, Win B), with selections locked before the round starts. A system calculates points and updates leaderboards.
--   **Fantasy Fútbol Mode:** Users create a fantasy team (4-4-2 + DT) on a visual football pitch, selecting real players. An automatic scoring system awards points based on real-world performance.
--   **Private Leagues:** Users can create and join private leagues with a unique code for both Quiniela and Fantasy modes. Leagues have dedicated leaderboards and a results matrix for Quiniela.
--   **Technical & Design:** Start with mocked data, integrate payments (PayPal) and push notifications later. The UI should be minimalist and sporty (black, red, strong blue) and in Spanish.
+-   **User System:** Secure user registration, login, and profile management.
+-   **Quiniela Tradicional Mode:** Users predict match outcomes, with points and leaderboards.
+-   **Fantasy Fútbol Mode:** Users create fantasy teams, with scoring based on real-world player performance.
+-   **Private Leagues:** Users can create/join private leagues for both game modes.
+-   **Real Data:** The application, which initially used mock data, is being transitioned to use real data. The first step was a one-time seeding of real Liga MX teams and players.
+-   **Gamification:** Implement an achievements and streaks system to improve user engagement.
+-   **Onboarding & Monetization Prep:** Introduce a first-time user onboarding flow and a Your Plan screen that outlines the features of the free tier, preparing for future premium features. This includes adding limits to the free plan (e.g., max members per league, one league creation per user).
 
 **User's preferred language**: Spanish. The next agent MUST respond in Spanish.
 
 **what currently exists?**
-A full-stack application using Expo (React Native) frontend, FastAPI backend, and MongoDB. All major features from the Product Requirements have been implemented, including:
-- User Authentication (Login/Register).
-- Quiniela Tradicional mode.
-- Fantasy Fútbol mode with a validated scoring system and a complete, visually rich lineup creation UI.
-- A unified Private Leagues system (backend and frontend) supporting both Quiniela and Fantasy modes.
-- Official documentation files () have been created.
+The application is a functional full-stack Expo (React Native) and FastAPI app. All critical bugs reported at the beginning of the session, including a major mobile authentication (401) issue and a game-blocking Quiniela progression bug, have been fixed and rigorously validated.
 
-The project is now in a critical debugging phase to address mobile-specific stability issues before moving on. A major refactor was just performed to centralize API calls through a single Axios instance with interceptors to handle authentication.
+The codebase has been significantly improved:
+-   All API calls are now centralized through a global Axios instance with interceptors, ensuring consistent token handling.
+-   The backend database has been seeded with real-world data for Liga MX teams and players, replacing the initial mock data.
+-   A complete, visually rich achievements and streaks system has been implemented on both the backend (tracking logic) and frontend (dedicated screen, home page widget).
+-   A complex dependency conflict that was breaking the frontend has been diagnosed and resolved.
+-   The foundation for an onboarding flow and a Your Plan screen has been laid out on the frontend.
 
 **Last working item**:
--   **Last item agent was working:** Fixing critical 401 authentication errors that occur on mobile devices. The agent implemented a global Axios instance () with request/response interceptors to automatically attach the bearer token to all API calls. A massive refactor was performed to replace all direct  calls with the new  instance.
+-   **Last item agent was working:** Implementing a new user onboarding flow, a Your Plan screen, and backend limits for the free tier. The agent successfully created all the necessary frontend files (, ), updated the root navigator (, ), and added the navigation button to the profile screen. The frontend portion of this task is largely complete.
 -   **Status:** IN PROGRESS
--   **Agent Testing Done:** N (The agent performed the refactor but was still debugging why 401 errors persisted, suspecting an issue with how the interceptor reads the token from AsyncStorage at runtime).
--   **Which testing method agent to use?** Manual testing using the Expo Go QR code on a physical device is required to replicate the mobile-specific 401 error. The agent should also use the  to attempt navigation after login and check for errors.
--   **User Testing Done:** Y (The user reported the 401 errors from their mobile device).
+-   **Agent Testing Done:** N (Backend changes have not been implemented yet)
+-   **Which testing method agent to use?**
+    1.  **Backend:** Use  to test the new backend logic (creating a second league, joining a full league).
+    2.  **Frontend:** Use the  and  to perform the full verification flow requested by the user: fresh install to see onboarding, register, verify navigation post-onboarding, test league creation/joining limits, and view the new Your Plan screen.
+-   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   Issue 1: Critical Auth 401 Errors on Mobile (P0)
--   Issue 2: Quiniela Stuck on Jornada 1 (P0)
-
-**Issues Detail:**
--   **Issue 1: Critical Auth 401 Errors on Mobile**
-    -   **Attempted fixes:** A global Axios instance with an interceptor was created in . The entire frontend codebase was refactored to use this new  instance instead of direct  calls. Debugging logs were added to  to trace token handling.
-    -   **Next debug checklist:** Follow the user's mandatory instructions precisely:
-        1.  In , add a  immediately after  to confirm the token is being saved upon login.
-        2.  Thoroughly review . Ensure the  function in  correctly awaits and retrieves the token. The previous agent added logs here; check their output.
-        3.  Verify the logic in the root layout () that checks for the token on app startup and maintains the session.
-        4.  Confirm the  interceptor correctly handles 401s by clearing the token and redirecting to login.
-    -   **Why fix this issue?** This is a critical blocker. The app is unusable on mobile devices as users cannot perform any authenticated actions.
-    -   **Status:** IN PROGRESS
-    -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** Frontend (Mobile-specific).
-    -   **Blocked on other issue:** None.
-
--   **Issue 2: Quiniela Stuck on Jornada 1**
-    -   **Attempted fixes:** None. This issue has not been started.
-    -   **Next debug checklist:** Follow the user's mandatory instructions:
-        1.  **Backend:**
-            - Check  for a  endpoint. Ensure it returns the active jornada based on the current date, not a hardcoded value.
-            - Implement or verify the logic that automatically closes a  when its end date passes and opens the next one.
-            - Consider creating an admin endpoint  for testing purposes.
-        2.  **Frontend:**
-            - In , ensure the screen calls  to fetch the jornada dynamically, instead of using a hardcoded ID.
-    -   **Why fix this issue?** This is a core gameplay-blocking issue for the Quiniela mode. The game cannot progress week to week.
-    -   **Status:** NOT STARTED
-    -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** Both.
-    -   **Blocked on other issue:** Issue 1 (Auth 401 Errors) should be fixed first to enable proper testing.
+There are no outstanding bugs. The focus is on completing the current feature implementation.
 
 **In progress Task List**:
--   None. The current focus is on critical bug fixes.
+-   Task 1: Complete Onboarding and League Limits Feature (P0)
+
+ **Task Detail:**
+  - **Task 1: Complete Onboarding and League Limits Feature**
+     -   **Where to resume:** The frontend scaffolding is complete. The next step is to implement the backend logic in  as specified by the user in  of their last instruction set. This involves:
+         1.  Adding a check in  to reject new members if a league is full (25 members).
+         2.  Adding a check in  to prevent a user from creating more than one league.
+         3.  Updating the  schema to include .
+         4.  Creating a new endpoint .
+         5.  Updating the  endpoint to return  and  status.
+     -   **What will be achieved with this?** This will implement the first set of limitations for the free plan, a key step towards monetization, and introduce a guided experience for new users.
+     -   **Status:** IN PROGRESS
+     -   **Should Test frontend/backend/both after fix?** Both. The backend logic needs direct testing, and the full user flow (onboarding, league creation/joining) needs end-to-end validation on the frontend.
+     -   **Blocked on something:** None.
 
 **Upcoming and Future Tasks**
--   **(P2) Payment Integration:** Implement PayPal for premium features (e.g., advanced league rules).
--   **(P2) Push Notifications:** Configure and implement Expo Notifications for reminders.
--   **(P3) Real Data Integration:** Replace all mock data with a live sports data API.
+-   **(P1) Full API-Football Integration:** The current real data is from a one-time seed script. The next step is to implement a full, dynamic integration with the API-Football service to fetch live data for matches, player stats, etc., with a fallback to mock/seeded data if the API key is not present.
+-   **(P2) PayPal Integration:** Implement a payment system using PayPal for users to purchase Premium status or create VIP leagues, as per the user's detailed plan.
 
 **Completed work in this session**
--   **Bug Fixes (Initial):**
-    -   Fixed unresponsive Register button.
-    -   Fixed broken navigation on the Create Fantasy Team button.
-    -   Fixed clipped UI on the home screen.
--   **Fantasy UX Overhaul:**
-    -   Implemented a working Back button in the lineup screen header.
-    -   Vastly improved the visual representation of selected players, showing team colors, player numbers, and names.
-    -   Completed the Save Lineup flow with backend validation and navigation.
--   **Fantasy Scoring System:**
-    -   Implemented a detailed fantasy scoring engine in the backend.
-    -   Successfully ran a full-journey simulation to validate point calculations and rankings.
--   **Unified Private Leagues:**
-    -   Refactored the backend to support both Quiniela and Fantasy modes within the same league structure.
-    -   Implemented a complete, multi-screen frontend UI to create, join, view, and manage private leagues for both modes.
--   **Documentation:**
-    -   Created  and  for users and internal reference.
+-   **Critical Bug Fixes:**
+    -   **Auth 401 on Mobile:** Resolved by refactoring all frontend  calls to a single, centralized  instance with proper async interceptors. Added extensive logging and validation to confirm the fix.
+    -   **Quiniela Stuck on Jornada 1:** Implemented a robust, date-based automatic progression system for jornadas on the backend.
+-   **Data Seeding:**
+    -   Created a new backend endpoint () to populate the database with real teams and players from Liga MX, including real team shields.
+-   **Feature Implementation:**
+    -   **Achievements & Streaks System:** Implemented a full-featured gamification system, including:
+        -   Backend logic to define, award, and track achievements and streaks ().
+        -   A dedicated, styled screen to view all achievements and streaks ().
+        -   A  on the home screen ().
+        -   An  for real-time notifications ().
+-   **Technical Debt & Debugging:**
+    -   Diagnosed and resolved a critical frontend dependency conflict involving multiple versions of , which was causing the app to crash.
 
 **Earlier issues found/mentioned but not fixed**
--   A generic web server returned an unknown error was reported by the user but was superseded by the more specific and actionable 401 auth error report. This is likely a symptom of the same authentication problem.
+-   None. All reported issues from this session have been addressed.
 
 **Known issue recurrence from previous fork**
 -   None.
@@ -98,91 +81,78 @@ The project is now in a critical debugging phase to address mobile-specific stab
 
 
 **Key Technical Concepts**
--   **Frontend:** Expo SDK, React Native, TypeScript, Expo Router, React Context, , Axios interceptors.
--   **Backend:** FastAPI (Python), Motor (async MongoDB), Pydantic, python-jose (JWT).
+-   **Frontend:** Expo Router, React Context, Axios Interceptors, AsyncStorage, First-Time User Onboarding, Feature Gating (Free Plan).
+-   **Backend:** FastAPI, Motor (async MongoDB), Pydantic, JWT, Background tasks for seeding.
 -   **Database:** MongoDB.
--   **Architecture:** Full-stack with a monolithic backend and a modular Expo frontend. Centralized API handling via .
+-   **Architecture:** Monolithic backend, modular Expo frontend. Now includes gamification logic and initial free-tier limitations.
 
 **key DB schema**
--   **users:** {_id, email, password_hash, display_name}
--   **private_leagues:** {_id, owner_id, name, code, members, **mode: 'quiniela' | 'fantasy'**}
--   (Other schemas like teams, players, matches, etc., remain the same)
+-   **private_leagues:** {_id, owner_id, name, code, members, mode, **max_members: 25**}
+-   **achievements:** (New Collection) {_id, key, name, description, emoji, category}
+-   **user_achievements:** (New Collection) {user_id, achievement_key, earned_at}
+-   **user_streaks:** (New Collection) {user_id, quiniela_current, win_current, etc.}
 
 **changes in tech stack**
--   Introduced a standardized API client using **Axios interceptors** to manage authentication tokens globally, a significant architectural improvement.
+-   **backend:** Added  for making async requests in the seeding script.
 
 **All files of reference**
--   : **(NEW & CRITICAL)** The heart of the new auth fix. Contains the global Axios instance and interceptors.
--   : Manages auth state and should be using  to persist the token.
--   : Contains all backend logic, including the Quiniela jornada logic that needs to be fixed.
--   : Frontend for Quiniela mode; needs to be checked for how it fetches the current .
--   All files under  that were refactored to use the new  instance (e.g., , , etc.).
+-   : **(CRITICAL FOR NEXT STEP)** Needs to be modified to add league limit logic.
+-   : **(NEW)** Contains the new logic to route users to onboarding or home.
+-   : **(NEW)** The new onboarding UI.
+-   : **(NEW)** The screen detailing free plan features.
+-   : Needs to be updated to display league capacity.
+-   : Modified to add Your Plan button.
 
 **Areas that need refactoring**:
--   The refactoring from  to the new  instance was done in a hurry. While many files were updated, there might be remaining hardcoded headers or direct  calls. A full project search for  and  is recommended after fixing the primary bug.
--   The  file is now extremely large and complex. It should be broken down into multiple files using FastAPI's .
+-   The  file has grown even larger with the addition of the achievements system. It is a prime candidate for being broken down into smaller modules using FastAPI's .
 
 **key api endpoints**
--   
--    (Needs to be fixed)
--   
--    (New unified endpoint)
--    (New unified endpoint)
--    (New fantasy-specific ranking)
+-   : **(NEW)** Seeds the DB with real data.
+-   : **(NEW)** Fetches achievements and streaks for the current user.
+-   : **(NEW)** Triggers achievement calculation.
+-   : **(UPCOMING)** To be created in the next step.
 
 **Critical Info for New Agent**
--   **Your absolute priority is to fix the two P0 bugs outlined by the user: Mobile 401 errors and the Quiniela jornada progression.** Do not work on any other features.
--   **Follow the user's technical instructions to the letter.** They provided a very specific, mandatory debugging and implementation plan for both issues. Do not deviate.
--   The recent refactor to a global  instance is the likely source of the 401 bug. Focus your debugging on  and how it interacts with  and .
--   The user is highly technical and expects detailed, evidence-based confirmation of fixes, especially for mobile-specific issues.
+-   **Your immediate task is to complete the Onboarding and League Limits feature.** Start by implementing the backend changes in  as detailed in the user's last message ().
+-   After implementing the backend logic, update the league list UI in  to show the member count vs. max capacity ().
+-   Once the implementation is complete, you **MUST** perform the full verification flow requested by the user: test the onboarding for new users, ensure session persistence for existing users, and rigorously test the new league creation/joining limits.
+-   The user is highly technical and expects clear, evidence-based confirmation of all changes. Provide logs and screenshots.
 
 **documents created in this job**
 -   
--   
--   
--   
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **PENDING:** User provided very specific, mandatory technical instructions to fix two P0 bugs: 401 errors on mobile and the Quiniela not advancing to the next jornada.
-2.  **COMPLETED:** User requested the creation of official documentation for the app's rules.
-3.  **COMPLETED:** User instructed the agent to implement the frontend UI for the unified private leagues system.
-4.  **COMPLETED:** User approved the backend implementation of the unified leagues and recommended moving to the frontend UI next.
-5.  **COMPLETED:** User confirmed the fantasy scoring system was solid and instructed the agent to implement the unified private leagues system (Option C).
-6.  **COMPLETED:** User provided a clear roadmap: simulate a journey (D), freeze scoring (A), build unified leagues (C), then document (B).
-7.  **COMPLETED:** Agent asked for the next step after completing the Fantasy UX validation.
-8.  **COMPLETED:** User requested a full, objective validation of the entire Fantasy UX flow with visual evidence before considering it closed.
-9.  **COMPLETED:** Agent notified user that the critical UX Fantasy bugs were fixed.
-10. **COMPLETED:** User reported three new critical P0 bugs related to the Fantasy UX (back button, player visuals, save flow).
+1.  **PENDING:** User provided a multi-step plan to implement a new onboarding flow, a Your Plan screen, and backend limits on league creation/membership.
+2.  **COMPLETED:** User provided files and instructions for implementing a full achievements and streaks system.
+3.  **COMPLETED:** User asked agent to continue with the process.
+4.  **COMPLETED:** User confirmed the plan to implement real data seeding.
+5.  **COMPLETED:** User provided a script and instructions to seed the database with real Liga MX data as a first step towards full API integration.
+6.  **COMPLETED:** User provided the next high-level goals: API-Football integration and PayPal integration.
+7.  **COMPLETED:** User requested rigorous hardening and validation tests for the auth and Quiniela bug fixes, including regression testing.
+8.  **COMPLETED:** Agent confirmed both P0 bugs were fixed and provided evidence.
+9.  **COMPLETED:** User provided highly detailed, technical instructions to debug and fix the critical authentication and Quiniela bugs.
+10. **COMPLETED:** Agent proposed a plan to address the two P0 bugs.
 
 **Project Health Check:**
--   **Broken:**
-    -   **Mobile Authentication:** Users get 401 errors on mobile, making the app unusable.
-    -   **Quiniela Game Progression:** The game is stuck on the first week and cannot advance.
+-   **Broken:** None. The app is in a stable state.
 -   **Mocked:**
-    -   All sports data (teams, players, matches, scores) is still mocked via backend endpoints.
+    -   Live sports data (match schedules, results, player stats) is still not being fetched from a real-time API. The current data is from a one-time seed.
     -   Payment integration is not implemented.
 
 **3rd Party Integrations**
+-   **API-Football:** Planned for full integration. Will require a User API Key.
 -   **PayPal:** Planned for future implementation. Will require User API Key.
--   **Sports Data API (e.g., API-Football):** Planned for future implementation. Will require User API Key.
 
 **Testing status**
--   **Testing agent used after significant changes:** YES (screenshot_tool and curl have been used extensively).
--   **Troubleshoot agent used after agent stuck in loop:** NO
+-   **Testing agent used after significant changes:** YES (Backend testing agent was used to validate bug fixes).
+-   **Troubleshoot agent used after agent stuck in loop:** YES (Agent called it when facing a persistent Metro bundler issue).
 -   **Test files created:** None.
--   **Known regressions:** A fundamental feature, user authentication, is now broken on mobile devices, which is a major regression.
+-   **Known regressions:** None. A comprehensive regression test was performed after the major bug fixes.
 
 **Credentials to test flow:**
--   Register new users via the UI or API (e.g.,  / ). Multiple users like ,  have been created for testing leagues.
+-   Register new users via the UI. The app state should be clean for testing the new onboarding flow.
 
 **What agent forgot to execute**
--   The agent is currently executing the user's latest and highest-priority requests. The second P0 task (fixing Quiniela jornada progression) is pending but not forgotten.
-
-STRICT EXECUTION RULE:
-Follow the user's previously provided debugging checklist step-by-step.
-Do NOT propose alternative architectures.
-Do NOT refactor beyond the specified files.
-Do NOT introduce new abstractions.
-Focus only on stabilizing authentication and jornada progression.
+-   The agent was in the middle of implementing the Onboarding and League Limits feature. It completed the frontend setup but has not yet started the required backend changes in  or the UI update in .
 
 </analysis>

@@ -28,6 +28,8 @@ interface League {
   mode: LeagueMode;
   code: string;
   member_count: number;
+  max_members: number;
+  is_full: boolean;
   is_owner: boolean;
   created_at: string;
 }
@@ -179,12 +181,31 @@ export default function LeaguesScreen() {
           <Text style={styles.leagueName} numberOfLines={1}>{item.name}</Text>
           <View style={styles.leagueMeta}>
             <Ionicons name="people" size={14} color="#999" />
-            <Text style={styles.metaText}>{item.member_count} miembros</Text>
+            <Text style={styles.metaText}>
+              👥 {item.member_count}/{item.max_members ?? 25}
+            </Text>
+            {item.is_full && (
+              <View style={styles.fullBadge}>
+                <Text style={styles.fullBadgeText}>LLENA</Text>
+              </View>
+            )}
             {item.is_owner && (
               <View style={styles.ownerBadge}>
                 <Text style={styles.ownerText}>👑 Admin</Text>
               </View>
             )}
+          </View>
+          {/* Capacity bar */}
+          <View style={styles.capacityBarBg}>
+            <View
+              style={[
+                styles.capacityBarFill,
+                {
+                  width: `${Math.min(100, ((item.member_count) / (item.max_members ?? 25)) * 100)}%`,
+                  backgroundColor: item.is_full ? '#DC143C' : '#0047AB',
+                },
+              ]}
+            />
           </View>
         </View>
         <Ionicons name="chevron-forward" size={24} color="#666" />
@@ -635,6 +656,28 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: 'bold',
     color: '#FFFFFF',
+  },
+  fullBadge: {
+    backgroundColor: '#FF4444',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  fullBadgeText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  capacityBarBg: {
+    height: 4,
+    backgroundColor: '#333',
+    borderRadius: 2,
+    marginTop: 6,
+    overflow: 'hidden',
+  },
+  capacityBarFill: {
+    height: 4,
+    borderRadius: 2,
   },
   codeRow: {
     flexDirection: 'row',
