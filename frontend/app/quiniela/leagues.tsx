@@ -189,6 +189,18 @@ export default function LeaguesScreen() {
                 <Text style={styles.fullBadgeText}>LLENA</Text>
               </View>
             )}
+            {!item.is_full && (
+              <TouchableOpacity
+                style={styles.shareCapacityBtn}
+                onPress={() => shareCode(item)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="share-social-outline" size={13} color="#0047AB" />
+                <Text style={styles.shareCapacityText}>
+                  Quedan {(item.max_members ?? 25) - item.member_count} lugares
+                </Text>
+              </TouchableOpacity>
+            )}
             {item.is_owner && (
               <View style={styles.ownerBadge}>
                 <Text style={styles.ownerText}>👑 Admin</Text>
@@ -667,6 +679,22 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: 'bold',
     color: '#FFFFFF',
+  },
+  shareCapacityBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0047AB18',
+    borderRadius: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    gap: 3,
+    borderWidth: 1,
+    borderColor: '#0047AB44',
+  },
+  shareCapacityText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#0047AB',
   },
   capacityBarBg: {
     height: 4,

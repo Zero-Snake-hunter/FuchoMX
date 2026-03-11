@@ -12,7 +12,7 @@ import { useRouter } from 'expo-router';
 const FREE_PERKS = [
   { icon: '📝', text: 'Quiniela tradicional',           sub: 'Todas las jornadas de Liga MX' },
   { icon: '⚽', text: 'Fantasy fútbol',                 sub: 'Formación 4-4-2 con jugadores reales' },
-  { icon: '🏟️', text: 'Crea 1 liga propia',            sub: 'Hasta 25 amigos por liga' },
+  { icon: '🏟️', text: 'Crea ligas ilimitadas',          sub: 'Hasta 25 amigos por liga' },
   { icon: '🤝', text: 'Únete a ligas ilimitadas',       sub: 'Sin límite de ligas ajenas' },
   { icon: '🔀', text: 'Quiniela y Fantasy en una liga', sub: 'Ambos modos disponibles' },
   { icon: '🏆', text: 'Rankings globales',              sub: 'Compite con todos los usuarios' },
@@ -80,10 +80,10 @@ export default function PlanScreen() {
         <View style={st.highlightBox}>
           <Text style={st.highlightEmoji}>👥</Text>
           <View style={st.highlightInfo}>
-            <Text style={st.highlightTitle}>Tu liga, hasta 25 amigos</Text>
+            <Text style={st.highlightTitle}>Ligas ilimitadas, hasta 25 amigos</Text>
             <Text style={st.highlightSub}>
-              Crea 1 liga propia (quiniela o fantasy) e invita hasta 25 personas.{'\n'}
-              Únete a <Text style={{ color: '#E63946', fontWeight: '700' }}>ligas ilimitadas</Text> de otros.
+              Crea todas las ligas que quieras por cada grupo de amigos que tengas e invita hasta a{' '}
+              <Text style={{ color: '#E63946', fontWeight: '700' }}>25 personas</Text> en cada una.
             </Text>
           </View>
         </View>

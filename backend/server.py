@@ -783,14 +783,6 @@ async def create_unified_league(
             detail="Modo debe ser 'quiniela' o 'fantasy'"
         )
     
-    # Plan gratuito: solo 1 liga por usuario (owner)
-    owned_league = await db.private_leagues.find_one({"owner_id": current_user["_id"]})
-    if owned_league:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Plan Gratuito: solo puedes crear 1 liga. Actualiza a Premium para crear más ligas."
-        )
-    
     # Generate unique 6-char code
     code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
     
