@@ -1943,7 +1943,7 @@ async def get_fantasy_general_rankings():
         {"$group": {
             "_id": "$fantasy_team_id",
             "total_points": {"$sum": "$total_points"},
-            "jornadas_played": {"$count": {}}
+            "jornadas_played": {"$sum": 1}
         }},
         {"$sort": {"total_points": -1}},
         {"$limit": 100}
@@ -2211,13 +2211,12 @@ async def get_fantasy_rankings():
     for team in teams:
         user = await db.users.find_one({"_id": team["user_id"]})
         if user:
-            # Get total fantasy points
-            points = await db.points_log.find({
-                "user_id": user["_id"],
-                "source": "FANTASY"
+            # Get total fantasy points from fantasy_points_log
+            points = await db.fantasy_points_log.find({
+                "user_id": user["_id"]
             }).to_list(1000)
             
-            total_points = sum(p["points"] for p in points)
+            total_points = sum(p.get("total_points", 0) for p in points)
             
             rankings.append({
                 "user_id": str(user["_id"]),
