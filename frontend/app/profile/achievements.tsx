@@ -9,6 +9,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import api from '../lib/api';
+import ShareResultCard, { ShareResultData } from '../components/ShareResultCard';
 
 const { width } = Dimensions.get('window');
 
@@ -36,7 +37,11 @@ const CAT_LABEL: Record<string, string> = {
 };
 
 // ─── Componente: una tarjeta de logro ────────────────────
-const BadgeCard = ({ item, index }: { item: Achievement; index: number }) => {
+const BadgeCard = ({
+  item, index, onShare,
+}: {
+  item: Achievement; index: number; onShare: (a: Achievement) => void;
+}) => {
   const fade  = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.85)).current;
 
@@ -77,11 +82,22 @@ const BadgeCard = ({ item, index }: { item: Achievement; index: number }) => {
             )}
           </View>
 
-          {/* Chip categoría */}
-          <View style={[s.catChip, { backgroundColor: item.unlocked ? `${color}22` : '#181818' }]}>
-            <Text style={[s.catText, { color: item.unlocked ? color : '#444' }]}>
-              {CAT_LABEL[item.category]}
-            </Text>
+          {/* Derecha: chip + compartir */}
+          <View style={{ alignItems: 'flex-end', gap: 6 }}>
+            <View style={[s.catChip, { backgroundColor: item.unlocked ? `${color}22` : '#181818' }]}>
+              <Text style={[s.catText, { color: item.unlocked ? color : '#444' }]}>
+                {CAT_LABEL[item.category]}
+              </Text>
+            </View>
+            {item.unlocked && (
+              <TouchableOpacity
+                style={s.shareBtn}
+                onPress={() => onShare(item)}
+                activeOpacity={0.7}
+              >
+                <Text style={s.shareBtnTxt}>📤</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </View>
@@ -139,6 +155,7 @@ export default function AchievementsScreen() {
   const [data,   setData]   = useState<any>(null);
   const [loading,setLoading]= useState(true);
   const [filter, setFilter] = useState('all');
+  const [shareAchievement, setShareAchievement] = useState<ShareResultData | null>(null);
 
   useEffect(() => { load(); }, []);
 
@@ -151,6 +168,16 @@ export default function AchievementsScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleShareAchievement = (item: Achievement) => {
+    setShareAchievement({
+      mode: 'achievement',
+      userName: 'Jugador FuchoMX',
+      achievementTitle: item.title,
+      achievementEmoji: item.emoji,
+      achievementDesc: item.description,
+    });
   };
 
   const achievements: Achievement[] = data?.achievements ?? [];
@@ -184,6 +211,14 @@ export default function AchievementsScreen() {
 
   return (
     <SafeAreaView style={s.container}>
+      {/* ShareResultCard overlay */}
+      {shareAchievement && (
+        <ShareResultCard
+          data={shareAchievement}
+          onClose={() => setShareAchievement(null)}
+        />
+      )}
+
       {/* Header */}
       <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
@@ -261,7 +296,7 @@ export default function AchievementsScreen() {
               <Text style={s.emptyTxt}>Sin logros en esta categoría aún</Text>
             </View>
           ) : (
-            filtered.map((item, i) => <BadgeCard key={item.id} item={item} index={i} />)
+            filtered.map((item, i) => <BadgeCard key={item.id} item={item} index={i} onShare={handleShareAchievement} />)
           )}
         </View>
 
@@ -301,6 +336,12 @@ const s = StyleSheet.create({
   cardPending:   { color: '#444', fontSize: 11, marginTop: 4 },
   catChip:       { paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6 },
   catText:       { fontSize: 10, fontWeight: '700' },
+  shareBtn: {
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: '#DC143C22', borderWidth: 1, borderColor: '#DC143C55',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  shareBtnTxt: { fontSize: 14 },
 
   chip:          { paddingHorizontal: 14, paddingVertical: 7, backgroundColor: '#111', borderRadius: 20, borderWidth: 1, borderColor: '#222' },
   chipActive:    { backgroundColor: '#E63946', borderColor: '#E63946' },

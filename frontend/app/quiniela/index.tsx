@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import api from '../lib/api';
 import MatchCard from '../../components/MatchCard';
 import CountdownTimer from '../../components/CountdownTimer';
+import ShareResultCard, { ShareResultData } from '../components/ShareResultCard';
 
 
 interface Match {
@@ -48,13 +49,14 @@ interface Jornada {
 
 export default function QuinielaScreen() {
   const router = useRouter();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [jornada, setJornada] = useState<Jornada | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selections, setSelections] = useState<{ [matchId: string]: string }>({});
   const [submitting, setSubmitting] = useState(false);
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
+  const [shareData, setShareData] = useState<ShareResultData | null>(null);
 
   useEffect(() => {
     loadJornada();
@@ -149,19 +151,46 @@ export default function QuinielaScreen() {
         selections: selectionsArray,
       });
 
-      Alert.alert(
-        '¡Quiniela enviada!',
-        'Tu quiniela ha sido enviada exitosamente. ¡Buena suerte!',
-        [
-          {
-            text: 'Ver Rankings',
-            onPress: () => router.push('/quiniela/rankings'),
-          },
-          { text: 'OK' },
-        ]
-      );
-
       setAlreadySubmitted(true);
+
+      // Intentar obtener ranking/liga para la tarjeta de compartir
+      let position: number | undefined;
+      let leagueName: string | undefined;
+      let leagueCode: string | undefined;
+      let streak: number | undefined;
+      try {
+        const [rankRes, leagueRes, streakRes] = await Promise.allSettled([
+          api.get('/api/quiniela/rankings'),
+          api.get('/api/leagues/my-leagues'),
+          api.get('/api/achievements/my'),
+        ]);
+        if (rankRes.status === 'fulfilled') {
+          const me = rankRes.value.data.rankings?.findIndex(
+            (r: any) => r.user_id === (user as any)?._id || r.display_name === (user as any)?.display_name
+          );
+          if (me !== undefined && me >= 0) position = me + 1;
+        }
+        if (leagueRes.status === 'fulfilled' && leagueRes.value.data.leagues?.length) {
+          const first = leagueRes.value.data.leagues[0];
+          leagueName = first.name;
+          leagueCode = first.code;
+        }
+        if (streakRes.status === 'fulfilled') {
+          streak = streakRes.value.data.streaks?.quiniela_current;
+        }
+      } catch (_) {}
+
+      setShareData({
+        mode: 'result',
+        userName: (user as any)?.display_name ?? 'Jugador',
+        jornadaNumber: jornada.week_number,
+        points: selectionsArray.length,
+        position,
+        streak,
+        leagueName,
+        leagueCode,
+      });
+
     } catch (error: any) {
       if (error.response?.status !== 401) {
         Alert.alert('Error', error.response?.data?.detail || 'Error al enviar quiniela');
@@ -195,6 +224,14 @@ export default function QuinielaScreen() {
 
   return (
     <View style={styles.container}>
+      {/* ShareResultCard overlay */}
+      {shareData && (
+        <ShareResultCard
+          data={shareData}
+          onClose={() => setShareData(null)}
+        />
+      )}
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -222,9 +259,21 @@ export default function QuinielaScreen() {
           )}
 
           {alreadySubmitted && (
-            <View style={styles.submittedBadge}>
-              <Ionicons name="checkmark-circle" size={20} color="#00A551" />
-              <Text style={styles.submittedText}>Quiniela enviada</Text>
+            <View style={styles.submittedBlock}>
+              <View style={styles.submittedBadge}>
+                <Ionicons name="checkmark-circle" size={20} color="#00A551" />
+                <Text style={styles.submittedText}>Quiniela enviada</Text>
+              </View>
+              {shareData && (
+                <TouchableOpacity
+                  style={styles.shareBtn}
+                  onPress={() => setShareData({ ...shareData })}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="share-social-outline" size={16} color="#FFF" />
+                  <Text style={styles.shareBtnText}>Compartir resultado</Text>
+                </TouchableOpacity>
+              )}
             </View>
           )}
         </View>
@@ -371,11 +420,31 @@ const styles = StyleSheet.create({
   submittedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0a2a1a',
-    padding: 12,
-    borderRadius: 12,
+    gap: 8,
+    backgroundColor: '#0A2E1A',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: '#00A551',
+  },
+  submittedBlock: {
+    gap: 8,
+    alignItems: 'flex-end',
+  },
+  shareBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#DC143C',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+  },
+  shareBtnText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '700',
   },
   submittedText: {
     color: '#00A551',
