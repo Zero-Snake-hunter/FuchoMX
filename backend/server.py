@@ -532,6 +532,40 @@ async def get_current_jornada():
     # Step 5: Get matches for this jornada
     matches = await db.matches.find({"jornada_id": jornada["_id"]}).to_list(100)
     
+    # Step 5b: Auto-advance if ALL matches are finished
+    if matches:
+        finished_count = sum(1 for m in matches if m.get("status") == "finished")
+        total_count = len(matches)
+        
+        if total_count > 0 and finished_count == total_count:
+            logger.info(
+                f"Jornada {jornada['week_number']}: todos {total_count} partidos finalizados "
+                f"({finished_count}/{total_count}). Avanzando automáticamente..."
+            )
+            # Mark current jornada as finished
+            await db.jornadas.update_one(
+                {"_id": jornada["_id"]},
+                {"$set": {"is_active": False, "status": "finished"}}
+            )
+            # Activate next jornada
+            next_j = await db.jornadas.find_one(
+                {"week_number": jornada["week_number"] + 1}
+            )
+            if next_j:
+                await db.jornadas.update_one(
+                    {"_id": next_j["_id"]},
+                    {"$set": {"is_active": True, "status": "upcoming"}}
+                )
+                jornada = next_j
+                logger.info(
+                    f"Jornada {next_j['week_number']} activada porque todos los partidos de "
+                    f"Jornada {next_j['week_number'] - 1} terminaron"
+                )
+                # Reload matches for the new active jornada
+                matches = await db.matches.find({"jornada_id": jornada["_id"]}).to_list(100)
+            else:
+                logger.info("No hay siguiente jornada — temporada completada.")
+    
     # Get team details for each match
     for match in matches:
         home_team = await db.teams.find_one({"_id": match["home_team_id"]})
