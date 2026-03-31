@@ -80,7 +80,10 @@ export default function MatchCard({ match, selection, onSelect, disabled }: Matc
         <View style={styles.team}>
           <Image
             source={{ uri: match.home_team.shield_url }}
+            defaultSource={require('../assets/shield-placeholder.png')}
             style={styles.shield}
+            resizeMode="contain"
+            onError={(e) => console.log('Shield error home:', e.nativeEvent.error)}
           />
           <Text style={styles.teamName} numberOfLines={2}>
             {match.home_team.name}
@@ -101,7 +104,10 @@ export default function MatchCard({ match, selection, onSelect, disabled }: Matc
         <View style={styles.team}>
           <Image
             source={{ uri: match.away_team.shield_url }}
+            defaultSource={require('../assets/shield-placeholder.png')}
             style={styles.shield}
+            resizeMode="contain"
+            onError={(e) => console.log('Shield error away:', e.nativeEvent.error)}
           />
           <Text style={styles.teamName} numberOfLines={2}>
             {match.away_team.name}

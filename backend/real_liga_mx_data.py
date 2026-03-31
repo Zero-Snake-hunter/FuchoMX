@@ -8,7 +8,7 @@ LIGA_MX_TEAMS = [
         "name": "Club América",
         "short_name": "AME",
         "color": "#FFD700",
-        "shield_url": "https://upload.wikimedia.org/wikipedia/en/thumb/a/a4/Club_America_crest.svg/200px-Club_America_crest.svg.png",
+        "shield_url": "https://media.api-sports.io/football/teams/1326.png",
         "players": [
             # Porteros
             {"name": "Memo Ochoa",         "number": 13, "position": "POR"},
@@ -38,7 +38,7 @@ LIGA_MX_TEAMS = [
         "name": "Guadalajara",
         "short_name": "GDL",
         "color": "#CC0000",
-        "shield_url": "https://upload.wikimedia.org/wikipedia/en/thumb/2/22/CD_Guadalajara_logo.svg/200px-CD_Guadalajara_logo.svg.png",
+        "shield_url": "https://media.api-sports.io/football/teams/1327.png",
         "players": [
             {"name": "Raúl Gudiño",           "number": 1,  "position": "POR"},
             {"name": "Miguel Jiménez",         "number": 13, "position": "POR"},
@@ -63,7 +63,7 @@ LIGA_MX_TEAMS = [
         "name": "Cruz Azul",
         "short_name": "CAZ",
         "color": "#0047AB",
-        "shield_url": "https://upload.wikimedia.org/wikipedia/en/thumb/c/cd/Cruz_Azul_Logo.svg/200px-Cruz_Azul_Logo.svg.png",
+        "shield_url": "https://media.api-sports.io/football/teams/1329.png",
         "players": [
             {"name": "Sebastián Jurado",   "number": 1,  "position": "POR"},
             {"name": "José de Jesús Corona","number": 13, "position": "POR"},
@@ -88,7 +88,7 @@ LIGA_MX_TEAMS = [
         "name": "Tigres UANL",
         "short_name": "TIG",
         "color": "#FFD700",
-        "shield_url": "https://upload.wikimedia.org/wikipedia/en/thumb/2/2f/Tigres_UANL_logo.svg/200px-Tigres_UANL_logo.svg.png",
+        "shield_url": "https://media.api-sports.io/football/teams/1330.png",
         "players": [
             {"name": "Nahuel Guzmán",      "number": 1,  "position": "POR"},
             {"name": "Tiago Volpi",        "number": 25, "position": "POR"},
@@ -113,7 +113,7 @@ LIGA_MX_TEAMS = [
         "name": "Monterrey",
         "short_name": "MTY",
         "color": "#003087",
-        "shield_url": "https://upload.wikimedia.org/wikipedia/en/thumb/f/f5/Rayados_del_Monterrey_logo.svg/200px-Rayados_del_Monterrey_logo.svg.png",
+        "shield_url": "https://media.api-sports.io/football/teams/1331.png",
         "players": [
             {"name": "Esteban Andrada",    "number": 1,  "position": "POR"},
             {"name": "Luis Cárdenas",      "number": 13, "position": "POR"},
@@ -138,7 +138,7 @@ LIGA_MX_TEAMS = [
         "name": "Pumas UNAM",
         "short_name": "PUM",
         "color": "#003D79",
-        "shield_url": "https://upload.wikimedia.org/wikipedia/en/thumb/5/54/Pumas_UNAM_football_logo.svg/200px-Pumas_UNAM_football_logo.svg.png",
+        "shield_url": "https://media.api-sports.io/football/teams/1332.png",
         "players": [
             {"name": "Julio González",     "number": 1,  "position": "POR"},
             {"name": "Alfredo Talavera",   "number": 25, "position": "POR"},
@@ -162,7 +162,7 @@ LIGA_MX_TEAMS = [
         "name": "Santos Laguna",
         "short_name": "SAN",
         "color": "#00A551",
-        "shield_url": "https://upload.wikimedia.org/wikipedia/en/thumb/1/1c/Santos_Laguna_logo.svg/200px-Santos_Laguna_logo.svg.png",
+        "shield_url": "https://media.api-sports.io/football/teams/1334.png",
         "players": [
             {"name": "Carlos Acevedo",     "number": 1,  "position": "POR"},
             {"name": "Jonathan Orozco",    "number": 13, "position": "POR"},
@@ -186,7 +186,7 @@ LIGA_MX_TEAMS = [
         "name": "Toluca",
         "short_name": "TOL",
         "color": "#DC143C",
-        "shield_url": "https://upload.wikimedia.org/wikipedia/en/thumb/5/50/Deportivo_Toluca_F.C._logo.svg/200px-Deportivo_Toluca_F.C._logo.svg.png",
+        "shield_url": "https://media.api-sports.io/football/teams/1335.png",
         "players": [
             {"name": "Tiago Volpi",        "number": 1,  "position": "POR"},
             {"name": "Renato Paiva",       "number": 13, "position": "POR"},
@@ -210,7 +210,7 @@ LIGA_MX_TEAMS = [
         "name": "León",
         "short_name": "LEO",
         "color": "#00A551",
-        "shield_url": "https://upload.wikimedia.org/wikipedia/en/thumb/0/0a/Club_Le%C3%B3n_logo.svg/200px-Club_Le%C3%B3n_logo.svg.png",
+        "shield_url": "https://media.api-sports.io/football/teams/1336.png",
         "players": [
             {"name": "Rodolfo Cota",       "number": 1,  "position": "POR"},
             {"name": "Pedro Munhoz",       "number": 25, "position": "POR"},
@@ -234,7 +234,7 @@ LIGA_MX_TEAMS = [
         "name": "Atlas",
         "short_name": "ATL",
         "color": "#8B0000",
-        "shield_url": "https://upload.wikimedia.org/wikipedia/en/thumb/a/a4/Atlas_FC_logo.svg/200px-Atlas_FC_logo.svg.png",
+        "shield_url": "https://media.api-sports.io/football/teams/1338.png",
         "players": [
             {"name": "Camilo Vargas",      "number": 1,  "position": "POR"},
             {"name": "Aldo Rocha",         "number": 6,  "position": "MED"},
@@ -258,7 +258,7 @@ LIGA_MX_TEAMS = [
         "name": "Pachuca",
         "short_name": "PAC",
         "color": "#0047AB",
-        "shield_url": "https://upload.wikimedia.org/wikipedia/en/thumb/c/c9/Pachuca_f%C3%BAtbol.svg/200px-Pachuca_f%C3%BAtbol.svg.png",
+        "shield_url": "https://media.api-sports.io/football/teams/1339.png",
         "players": [
             {"name": "Oscar Ustari",       "number": 1,  "position": "POR"},
             {"name": "Rodolfo Marín",      "number": 13, "position": "POR"},
@@ -282,7 +282,7 @@ LIGA_MX_TEAMS = [
         "name": "Tijuana",
         "short_name": "TIJ",
         "color": "#000000",
-        "shield_url": "https://upload.wikimedia.org/wikipedia/en/thumb/e/ec/Xolos_FC_logo.svg/200px-Xolos_FC_logo.svg.png",
+        "shield_url": "https://media.api-sports.io/football/teams/1341.png",
         "players": [
             {"name": "Jonathan Orozco",    "number": 1,  "position": "POR"},
             {"name": "Ricardo Gutiérrez",  "number": 13, "position": "POR"},
@@ -306,7 +306,7 @@ LIGA_MX_TEAMS = [
         "name": "Necaxa",
         "short_name": "NEC",
         "color": "#DC143C",
-        "shield_url": "https://upload.wikimedia.org/wikipedia/en/thumb/7/78/Club_Necaxa_logo.svg/200px-Club_Necaxa_logo.svg.png",
+        "shield_url": "https://media.api-sports.io/football/teams/1343.png",
         "players": [
             {"name": "Luis Malagon",       "number": 1,  "position": "POR"},
             {"name": "Hugo González",      "number": 13, "position": "POR"},
@@ -330,7 +330,7 @@ LIGA_MX_TEAMS = [
         "name": "Querétaro",
         "short_name": "QRO",
         "color": "#003087",
-        "shield_url": "https://upload.wikimedia.org/wikipedia/en/thumb/1/16/Queretaro_FC_logo.svg/200px-Queretaro_FC_logo.svg.png",
+        "shield_url": "https://media.api-sports.io/football/teams/1344.png",
         "players": [
             {"name": "Washington Aguerre", "number": 1,  "position": "POR"},
             {"name": "Tiago Cantoro",      "number": 13, "position": "POR"},
@@ -354,7 +354,7 @@ LIGA_MX_TEAMS = [
         "name": "Mazatlán",
         "short_name": "MAZ",
         "color": "#663399",
-        "shield_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2b/Mazatlan_FC.svg/200px-Mazatlan_FC.svg.png",
+        "shield_url": "https://media.api-sports.io/football/teams/5765.png",
         "players": [
             {"name": "Pablo Míguez",       "number": 1,  "position": "POR"},
             {"name": "Rafael García",      "number": 13, "position": "POR"},
@@ -378,7 +378,7 @@ LIGA_MX_TEAMS = [
         "name": "Puebla",
         "short_name": "PUE",
         "color": "#003087",
-        "shield_url": "https://upload.wikimedia.org/wikipedia/en/thumb/5/5e/Club_Puebla_logo.svg/200px-Club_Puebla_logo.svg.png",
+        "shield_url": "https://media.api-sports.io/football/teams/1342.png",
         "players": [
             {"name": "Nicolás Vikonis",    "number": 1,  "position": "POR"},
             {"name": "Ángel Rodríguez",    "number": 13, "position": "POR"},
@@ -402,7 +402,7 @@ LIGA_MX_TEAMS = [
         "name": "Juárez",
         "short_name": "JUA",
         "color": "#008000",
-        "shield_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f5/FC_Ju%C3%A1rez_logo.svg/200px-FC_Ju%C3%A1rez_logo.svg.png",
+        "shield_url": "https://media.api-sports.io/football/teams/6678.png",
         "players": [
             {"name": "Leonardo Morales",   "number": 1,  "position": "POR"},
             {"name": "Julio Furch",        "number": 9,  "position": "DEL"},
@@ -426,7 +426,7 @@ LIGA_MX_TEAMS = [
         "name": "Atlético San Luis",
         "short_name": "ASL",
         "color": "#DC143C",
-        "shield_url": "https://upload.wikimedia.org/wikipedia/en/thumb/9/96/Atletico_San_Luis_logo.svg/200px-Atletico_San_Luis_logo.svg.png",
+        "shield_url": "https://media.api-sports.io/football/teams/6677.png",
         "players": [
             {"name": "Alfonso Blanco",     "number": 1,  "position": "POR"},
             {"name": "Guillermo Allison",  "number": 13, "position": "POR"},
