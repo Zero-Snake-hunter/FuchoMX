@@ -440,6 +440,174 @@ async def close_jornada(jornada_id: str):
         "next_jornada": next_info
     }
 
+
+@api_router.post("/admin/sync-fixtures")
+async def sync_fixtures():
+    """
+    Sync Liga MX fixtures from TheSportsDB (ID: 4350).
+    Falls back to Clausura 2025 real calendar dates if API is unavailable.
+    """
+    import httpx
+
+    LEAGUE_ID = "4350"
+    BASE_URL = "https://www.thesportsdb.com/api/v1/json/3"
+    HEADERS = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "Accept": "application/json, text/plain, */*",
+    }
+
+    # Map TheSportsDB team names -> our DB team names
+    NAME_MAP = {
+        "CF America": "Club América", "Club América": "Club América", "América": "Club América",
+        "CD Guadalajara": "Guadalajara", "Chivas": "Guadalajara", "Guadalajara": "Guadalajara",
+        "Cruz Azul": "Cruz Azul",
+        "Tigres UANL": "Tigres UANL", "Tigres": "Tigres UANL",
+        "CF Monterrey": "Monterrey", "Monterrey": "Monterrey", "Rayados": "Monterrey",
+        "UNAM Pumas": "Pumas UNAM", "Pumas UNAM": "Pumas UNAM", "Pumas": "Pumas UNAM",
+        "Santos Laguna": "Santos Laguna", "Santos": "Santos Laguna",
+        "Deportivo Toluca": "Toluca", "Toluca": "Toluca",
+        "Club León": "León", "León": "León", "Leon": "León",
+        "Atlas FC": "Atlas", "Atlas": "Atlas",
+        "CF Pachuca": "Pachuca", "Pachuca": "Pachuca",
+        "Xolos Tijuana": "Tijuana", "FC Tijuana": "Tijuana", "Tijuana": "Tijuana",
+        "Club Necaxa": "Necaxa", "Necaxa": "Necaxa",
+        "Queretaro": "Querétaro", "Querétaro": "Querétaro",
+        "Mazatlan FC": "Mazatlán", "Mazatlán": "Mazatlán",
+        "Club Puebla": "Puebla", "Puebla": "Puebla",
+        "FC Juarez": "Juárez", "Juárez": "Juárez", "Juarez": "Juárez",
+        "Atletico de San Luis": "Atlético San Luis", "Atlético San Luis": "Atlético San Luis",
+        "Atletico San Luis": "Atlético San Luis",
+    }
+
+    # Clausura 2025 real jornada start dates
+    CLAUSURA_2025_DATES = {
+        1: datetime(2025, 1, 10), 2: datetime(2025, 1, 17), 3: datetime(2025, 1, 24),
+        4: datetime(2025, 1, 31), 5: datetime(2025, 2, 7),  6: datetime(2025, 2, 14),
+        7: datetime(2025, 2, 21), 8: datetime(2025, 2, 28), 9: datetime(2025, 3, 7),
+        10: datetime(2025, 3, 14), 11: datetime(2025, 3, 21), 12: datetime(2025, 3, 28),
+        13: datetime(2025, 4, 4),  14: datetime(2025, 4, 11), 15: datetime(2025, 4, 25),
+        16: datetime(2025, 5, 2),  17: datetime(2025, 5, 9),
+    }
+
+    events_fetched = 0
+    matches_updated = 0
+    source = "thesportsdb"
+    api_error = None
+
+    teams_list = await db.teams.find().to_list(100)
+    team_by_name = {t["name"]: t["_id"] for t in teams_list}
+
+    # --- Attempt TheSportsDB ---
+    try:
+        async with httpx.AsyncClient(timeout=8.0, follow_redirects=True) as client:
+            next_r = await client.get(
+                f"{BASE_URL}/eventsnextleague.php?id={LEAGUE_ID}", headers=HEADERS
+            )
+            past_r = await client.get(
+                f"{BASE_URL}/eventspastleague.php?id={LEAGUE_ID}", headers=HEADERS
+            )
+
+        all_events = []
+        if next_r.status_code == 200 and next_r.text.strip().startswith("{"):
+            all_events += (next_r.json().get("events") or [])
+        if past_r.status_code == 200 and past_r.text.strip().startswith("{"):
+            all_events += (past_r.json().get("results") or [])
+
+        if not all_events:
+            raise ValueError(f"No events — HTTP {next_r.status_code} (posiblemente rate-limited)")
+
+        # Verify we got Liga MX events, not another league
+        sample_league = (all_events[0].get("strLeague") or "").lower()
+        if "mexico" not in sample_league and "liga mx" not in sample_league and "primera" not in sample_league:
+            raise ValueError(f"Eventos no son de Liga MX — liga recibida: '{all_events[0].get('strLeague')}'. Usando fallback.")
+
+        events_fetched = len(all_events)
+        now = datetime.utcnow()
+
+        for ev in all_events:
+            home_raw = ev.get("strHomeTeam", "")
+            away_raw = ev.get("strAwayTeam", "")
+            home_name = NAME_MAP.get(home_raw, home_raw)
+            away_name = NAME_MAP.get(away_raw, away_raw)
+            home_id = team_by_name.get(home_name)
+            away_id = team_by_name.get(away_name)
+            if not home_id or not away_id:
+                continue
+
+            date_str = ev.get("dateEvent") or ""
+            time_str = (ev.get("strTime") or "00:00:00")[:5]
+            start_at = None
+            if date_str:
+                try:
+                    start_at = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
+                except Exception:
+                    pass
+
+            home_sc = ev.get("intHomeScore")
+            away_sc = ev.get("intAwayScore")
+            str_status = (ev.get("strStatus") or "").lower()
+            if home_sc is not None and away_sc is not None:
+                match_status = "finished"
+            elif "live" in str_status or "in progress" in str_status:
+                match_status = "live"
+            else:
+                match_status = "upcoming"
+
+            round_num = ev.get("intRound")
+            match_filter: dict = {"home_team_id": home_id, "away_team_id": away_id}
+            if round_num:
+                try:
+                    j = await db.jornadas.find_one({"week_number": int(round_num)})
+                    if j:
+                        match_filter["jornada_id"] = j["_id"]
+                except Exception:
+                    pass
+
+            update_fields: dict = {"status": match_status}
+            if start_at:
+                update_fields["start_at"] = start_at
+            if home_sc is not None:
+                update_fields["home_score"] = int(home_sc)
+            if away_sc is not None:
+                update_fields["away_score"] = int(away_sc)
+
+            res = await db.matches.update_one(match_filter, {"$set": update_fields})
+            if res.modified_count:
+                matches_updated += 1
+
+        logger.info(f"sync-fixtures: TheSportsDB OK — {events_fetched} eventos, {matches_updated} actualizados")
+
+    except Exception as exc:
+        source = "fallback_clausura2025"
+        api_error = str(exc)
+        logger.warning(f"sync-fixtures: TheSportsDB falló ({exc}). Usando fallback Clausura 2025.")
+
+        now = datetime.utcnow()
+        jornadas = await db.jornadas.find().sort("week_number", 1).to_list(17)
+
+        for j in jornadas:
+            week = j["week_number"]
+            base_date = CLAUSURA_2025_DATES.get(week, datetime(2025, 1, 10) + timedelta(weeks=week - 1))
+            matches = await db.matches.find({"jornada_id": j["_id"]}).to_list(20)
+
+            for i, m in enumerate(matches):
+                day_offset = i % 3
+                hour = 19 + (i % 3)
+                match_date = base_date + timedelta(days=day_offset, hours=hour)
+                st = "finished" if match_date < now else "upcoming"
+                update: dict = {"start_at": match_date, "status": st}
+                await db.matches.update_one({"_id": m["_id"]}, {"$set": update})
+                matches_updated += 1
+
+    return {
+        "message": f"✅ Sync completado — {matches_updated} partidos actualizados",
+        "source": source,
+        "events_fetched": events_fetched,
+        "matches_updated": matches_updated,
+        "api_error": api_error,
+    }
+
+
 @api_router.get("/admin/jornadas")
 async def list_all_jornadas():
     """Admin: List all jornadas with their status"""
