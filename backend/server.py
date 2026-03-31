@@ -2869,6 +2869,35 @@ async def check_and_award_achievements_after_jornada(user_id, jornada_id: str) -
             if await award_achievement(user_id, "win_streak_5"):
                 new_achievements.append("win_streak_5")
 
+        # 4b. Líder Invicto: #1 en 4 jornadas consecutivas (últimas 4)
+        # Busca las 4 jornadas más recientes con partidos terminados
+        recent_jornadas = await db.jornadas.find(
+            {"status": "finished"}
+        ).sort("week_number", -1).limit(4).to_list(4)
+
+        if len(recent_jornadas) >= 4:
+            was_first_in_all = True
+            for rj in recent_jornadas:
+                rj_pts = []
+                for m in all_members:
+                    pl = await db.points_log.find_one({
+                        "user_id": m["user_id"],
+                        "jornada_id": rj["_id"],
+                        "source": "QUINIELA"
+                    })
+                    rj_pts.append({
+                        "user_id": m["user_id"],
+                        "points": pl["points"] if pl else 0
+                    })
+                rj_pts.sort(key=lambda x: x["points"], reverse=True)
+                if not rj_pts or rj_pts[0]["user_id"] != user_id:
+                    was_first_in_all = False
+                    break
+
+            if was_first_in_all:
+                if await award_achievement(user_id, "quiniela_leader"):
+                    new_achievements.append("quiniela_leader")
+
     # 5. Fantasy 100 puntos acumulados
     pipeline = [
         {"$match": {"user_id": user_id}},
