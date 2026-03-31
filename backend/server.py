@@ -191,6 +191,12 @@ async def login(credentials: UserLogin):
     # Create access token
     access_token = create_access_token({"sub": str(user["_id"])})
     
+    # Veteran: 30 días en la app
+    if user.get("created_at"):
+        days = (datetime.utcnow() - user["created_at"]).days
+        if days >= 30:
+            await award_achievement(user["_id"], "veteran")
+    
     logger.info(f"User logged in: {credentials.email}")
     
     return TokenResponse(
@@ -1074,6 +1080,11 @@ async def join_unified_league(
     
     # Award join league achievement
     await award_achievement(current_user["_id"], "join_league")
+    
+    # Check invite_5: si la liga ahora tiene 5+ miembros, el owner gana el logro
+    member_count = await db.league_members.count_documents({"league_id": league["_id"]})
+    if member_count >= 5:
+        await award_achievement(league["owner_id"], "invite_5")
     
     logger.info(f"User {current_user['email']} joined league: {league['name']}")
     
@@ -2867,6 +2878,20 @@ async def check_and_award_achievements_after_jornada(user_id, jornada_id: str) -
     if fantasy_pts and fantasy_pts[0]["total"] >= 100:
         if await award_achievement(user_id, "fantasy_100pts"):
             new_achievements.append("fantasy_100pts")
+
+    # 6. Fantasy streak 3 jornadas seguidas con alineación
+    fantasy_lineup_count = await db.fantasy_teams.count_documents({"user_id": user_id})
+    if fantasy_lineup_count >= 3:
+        if await award_achievement(user_id, "fantasy_streak_3"):
+            new_achievements.append("fantasy_streak_3")
+
+    # 7. fantasy_top: mejor manager de la jornada
+    top_fantasy = await db.fantasy_points_log.find(
+        {"jornada_id": jornada_obj_id}
+    ).sort("total_points", -1).limit(1).to_list(1)
+    if top_fantasy and top_fantasy[0]["user_id"] == user_id:
+        if await award_achievement(user_id, "fantasy_top"):
+            new_achievements.append("fantasy_top")
 
     return new_achievements
 
