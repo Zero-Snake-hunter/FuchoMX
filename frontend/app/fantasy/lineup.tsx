@@ -78,8 +78,10 @@ export default function LineupScreen() {
   const { token } = useAuth();
   const [lineup, setLineup] = useState<any>({});
   const [dtTeam, setDtTeam] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [alreadySubmitted, setAlreadySubmitted] = useState(false);
+  const [currentJornada, setCurrentJornada] = useState<any>(null);
 
   // Modal states
   const [showTeamSelector, setShowTeamSelector] = useState(false);
@@ -94,22 +96,57 @@ export default function LineupScreen() {
   const [loadingPlayers, setLoadingPlayers] = useState(false);
 
   useEffect(() => {
-    loadTeams();
+    initScreen();
   }, []);
 
-  const loadTeams = async () => {
+  const initScreen = async () => {
+    setLoading(true);
     try {
-      const response = await api.get(`/api/teams`);
-      setTeams(response.data.teams);
-    } catch (error) {
-      console.error('Error loading teams:', error);
-      Alert.alert('Error', 'No se pudieron cargar los equipos');
+      // 1. Load teams, jornada, and check for existing lineup in parallel
+      const [teamsRes, jornadaRes, teamRes] = await Promise.all([
+        api.get('/api/teams'),
+        api.get('/api/jornadas/current'),
+        api.get('/api/fantasy/my-team'),
+      ]);
+
+      setTeams(teamsRes.data.teams);
+
+      const jornada = jornadaRes.data.jornada;
+      setCurrentJornada(jornada);
+
+      // 2. Check if user has a fantasy team
+      if (!teamRes.data.exists) {
+        Alert.alert(
+          'Equipo requerido',
+          'Primero debes crear tu equipo fantasy',
+          [{ text: 'Crear equipo', onPress: () => router.replace('/fantasy/create-team') }]
+        );
+        return;
+      }
+
+      // 3. Check if already submitted for this jornada
+      const lineupRes = await api.get(`/api/fantasy/lineup/${jornada.id}`);
+      if (lineupRes.data && lineupRes.data.submitted) {
+        setAlreadySubmitted(true);
+      }
+    } catch (error: any) {
+      console.error('Error initializing lineup screen:', error);
+      if (error.response?.status !== 401) {
+        Alert.alert('Error', 'No se pudo cargar la pantalla. Intenta de nuevo.');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
   // Función para regresar
   const handleGoBack = () => {
     router.back();
+  };
+
+  // Prevent duplicate players
+  const hasPlayer = (playerId: string): boolean => {
+    return Object.values(lineup).some((p: any) => p.id === playerId);
   };
 
   const handleSlotPress = (slot: string, position: string) => {
@@ -137,6 +174,15 @@ export default function LineupScreen() {
   };
 
   const handlePlayerSelect = (player: any) => {
+    // Check for duplicate player (already in lineup in a different slot)
+    const existingSlot = Object.entries(lineup).find(
+      ([slot, p]: [string, any]) => p.id === player.id && slot !== selectedSlot
+    );
+    if (existingSlot) {
+      Alert.alert('Jugador duplicado', `${player.name} ya está en tu alineación`);
+      return;
+    }
+
     // Guardar el jugador con información del equipo
     const playerWithTeam = {
       ...player,
@@ -191,15 +237,30 @@ export default function LineupScreen() {
   const submitLineup = async () => {
     setSubmitting(true);
     try {
-      // Get current jornada
-      const jornadaResponse = await api.get('/api/jornadas/current');
-      const jornadaId = jornadaResponse.data.jornada.id;
+      // Use already-loaded jornada (avoid re-fetching which may advance jornada again)
+      if (!currentJornada) {
+        Alert.alert('Error', 'No hay jornada activa. Por favor regresa e intenta de nuevo.');
+        return;
+      }
+      const jornadaId = currentJornada.id;
 
-      // Build players array
-      const playersArray = Object.entries(lineup).map(([slot, player]: [string, any]) => ({
-        player_id: player.id,
-        position_slot: slot,
-      }));
+      // Build players array - validate player.id is present
+      const playersArray = Object.entries(lineup).map(([slot, player]: [string, any]) => {
+        if (!player.id) {
+          throw new Error(`Jugador en posición ${slot} no tiene ID válido`);
+        }
+        return {
+          player_id: player.id,
+          position_slot: slot,
+        };
+      });
+
+      console.log('📤 Enviando alineación:', {
+        jornada_id: jornadaId,
+        players_count: playersArray.length,
+        dt_team_id: dtTeam?.id,
+        sample_player: playersArray[0],
+      });
 
       await api.post('/api/fantasy/lineup', {
         jornada_id: jornadaId,
@@ -207,21 +268,17 @@ export default function LineupScreen() {
         dt_team_id: dtTeam.id,
       });
 
-      // Mostrar éxito y navegar inmediatamente
+      setAlreadySubmitted(true);
       Alert.alert(
         '¡Alineación Guardada!', 
-        'Tu equipo está listo para competir esta jornada.'
+        `Tu equipo está listo para la Jornada ${currentJornada.week_number}.`,
+        [{ text: 'OK', onPress: () => router.replace('/fantasy') }]
       );
-      
-      // Navegar al dashboard de Fantasy
-      router.replace('/fantasy');
       
     } catch (error: any) {
       console.error('Error saving lineup:', error);
-      if (error.response?.status !== 401) {
-        const errorMessage = error.response?.data?.detail || 'Error al guardar alineación. Intenta de nuevo.';
-        Alert.alert('Error', errorMessage);
-      }
+      const errorMessage = error.response?.data?.detail || error.message || 'Error al guardar alineación. Intenta de nuevo.';
+      Alert.alert('Error', errorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -268,6 +325,44 @@ export default function LineupScreen() {
   // Contar jugadores seleccionados
   const selectedCount = Object.keys(lineup).length;
 
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centered, { paddingTop: insets.top }]}>
+        <ActivityIndicator size="large" color="#DC143C" />
+        <Text style={styles.loadingText}>Cargando alineación...</Text>
+      </View>
+    );
+  }
+
+  if (alreadySubmitted) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={handleGoBack} activeOpacity={0.7}>
+            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Alineación</Text>
+          <View style={styles.headerRight}>
+            <Text style={styles.countText}>✓</Text>
+          </View>
+        </View>
+        <View style={styles.centered}>
+          <Ionicons name="checkmark-circle" size={80} color="#00A551" />
+          <Text style={styles.submittedTitle}>¡Alineación Enviada!</Text>
+          <Text style={styles.submittedSubtitle}>
+            Ya enviaste tu alineación para{'\n'}Jornada {currentJornada?.week_number}
+          </Text>
+          <TouchableOpacity
+            style={[styles.submitButton, { marginTop: 32, width: 250 }]}
+            onPress={() => router.replace('/fantasy')}
+          >
+            <Text style={styles.submitButtonText}>IR AL DASHBOARD</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header con botón de regresar */}
@@ -279,7 +374,9 @@ export default function LineupScreen() {
         >
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Armar Alineación</Text>
+        <Text style={styles.headerTitle}>
+          {currentJornada ? `J${currentJornada.week_number} - Alineación` : 'Armar Alineación'}
+        </Text>
         <View style={styles.headerRight}>
           <Text style={styles.countText}>{selectedCount}/11</Text>
         </View>
@@ -489,6 +586,31 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000000',
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  loadingText: {
+    color: '#999',
+    fontSize: 14,
+    marginTop: 12,
+  },
+  submittedTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  submittedSubtitle: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 8,
+    textAlign: 'center',
+    lineHeight: 22,
   },
   header: {
     flexDirection: 'row',

@@ -706,15 +706,16 @@ async def get_current_jornada():
     # Step 5: Get matches for this jornada
     matches = await db.matches.find({"jornada_id": jornada["_id"]}).to_list(100)
     
-    # Step 5b: Auto-advance if ALL matches are finished
+    # Step 5b: Auto-advance if ALL matches are finished AND end_date has passed
     if matches:
         finished_count = sum(1 for m in matches if m.get("status") == "finished")
         total_count = len(matches)
+        end_date_passed = jornada.get("end_date") and jornada["end_date"] < now
         
-        if total_count > 0 and finished_count == total_count:
+        if total_count > 0 and finished_count == total_count and end_date_passed:
             logger.info(
                 f"Jornada {jornada['week_number']}: todos {total_count} partidos finalizados "
-                f"({finished_count}/{total_count}). Avanzando automáticamente..."
+                f"y fecha fin pasada. Avanzando automáticamente..."
             )
             # Mark current jornada as finished
             await db.jornadas.update_one(

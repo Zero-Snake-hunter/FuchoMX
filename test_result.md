@@ -424,30 +424,44 @@ frontend:
           agent: "testing"
           comment: "✅ FRONTEND TESTING COMPLETED: Navigation login→home→quiniela→leagues fully working. Leagues screen shows '👥 1/25' capacity indicator in league cards. Progress bar visible. 👑 Admin badge shown for owners. League code displayed. Second league creation error received from backend (400 + plan gratuito message) and Alert.alert called correctly with proper message. LLENA badge code verified correct but untestable without 25+ members. Minor warning: AuthContext.tsx/FantasyContext.tsx causing Expo Router 'missing default export' warnings (non-blocking)."
 
+  - task: "Fantasy Lineup Save Bug - Frontend Fix"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/fantasy/lineup.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: false
+          agent: "main"
+          comment: "BUG REPORTADO: Usuario selecciona 11 jugadores + DT pero la alineación no se guarda. Diagnóstico: 1) Backend funciona perfectamente (verificado con curl). 2) Jornada auto-avanzaba en cada llamada porque todos los partidos de datos mock tienen status 'finished' - esto causaba que el jornadaId cambiara entre la carga de la pantalla y el submit. FIXES APLICADOS: 1) Backend: Auto-advance ahora requiere que end_date también haya pasado (no solo que todos los matches estén finished). 2) Frontend lineup.tsx: Carga jornada y verifica equipo/alineación existente en initScreen() al montar. 3) submitLineup usa currentJornada cacheada (no re-fetching). 4) Detección de jugadores duplicados. 5) Estado 'already_submitted' muestra pantalla informativa en vez de permitir doble envío. 6) Mejor manejo de errores (todos visibles al usuario)."
+
+  - task: "Backend Jornada Auto-Advance Fix"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: false
+          agent: "main"
+          comment: "BUG: Jornada se auto-avanzaba en CADA llamada a /api/jornadas/current porque todos los partidos mock tienen status='finished'. Esto causaba que submitLineup en el frontend obtenía un jornadaId diferente al que se mostró al usuario. FIX: Ahora solo se avanza si (1) todos los partidos están finished Y (2) el end_date de la jornada también ha pasado. Verificado con 3 llamadas consecutivas: jornada ahora es estable."
+
 metadata:
   created_by: "main_agent"
   version: "1.0"
-  test_sequence: 3
+  test_sequence: 4
   run_ui: true
 
 test_plan:
   current_focus:
-    - "League Limits - Plan Gratuito (1 liga, max 25 miembros)"
-    - "Frontend leagues.tsx - Indicador de capacidad"
+    - "Fantasy Lineup Save Bug - Frontend Fix"
+    - "Backend Jornada Auto-Advance Fix"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
 
 agent_communication:
     - agent: "main"
-      message: "FASE 1 completada. Implementado sistema completo de autenticación, navegación con tabs, y pantallas básicas. Backend con JWT, bcrypt, MongoDB. Frontend con expo-router, AuthContext, pantallas de auth y tabs. Datos mock de Liga MX seeded. Necesito testing completo del backend primero (todos los endpoints de auth y admin). NO TESTING DE FRONTEND AÚN."
-    - agent: "testing"
-      message: "BACKEND TESTING COMPLETADO. RESULTADOS: ✅ Seed endpoints funcionando perfectamente (teams, jornada). ✅ MongoDB models y relaciones correctas. ✅ Autenticación básica funciona (register, login, valid tokens). ❌ CRITICAL BUG: JWT error handling roto - usa 'jwt.JWTError' que no existe en PyJWT. Debe ser 'jwt.InvalidTokenError'. Tokens inválidos causan 500 en lugar de 401. REQUIERE FIX INMEDIATO en server.py línea 96."
-    - agent: "main"
-      message: "BUG FIX SESSION: Fixed 2 critical P0 bugs. BUG 1 (Auth 401): Root cause was multiple frontend files using direct axios instead of centralized api instance. Fixed AuthContext.tsx, FantasyContext.tsx, select-player.tsx, join-league.tsx, league-results.tsx, recover.tsx. All now use centralized api instance with interceptors. Added isReady guard in _layout.tsx to prevent race conditions. Added comprehensive logging throughout token flow. BUG 2 (Quiniela Jornada): Backend now has is_active field, automatic state transitions based on dates, admin endpoints for closing jornadas and seeding full seasons. PLEASE TEST: 1) Auth flow (register, login, then authenticated endpoints), 2) Jornada CRUD (seed-teams, seed-season, list jornadas, cerrar-jornada, get current), 3) Quiniela submit with authenticated token."
-    - agent: "testing"
-      message: "🎉 COMPREHENSIVE BACKEND TESTING COMPLETED - ALL SYSTEMS FUNCTIONAL! ✅ Authentication: Register, login, JWT token validation (401 for invalid, 403 for missing). ✅ Jornada Management: Seed teams (18), seed season (17 jornadas), automatic state transitions, close/activate jornadas. ✅ Auto-increment: Seed-jornada creates week 18 automatically. ✅ Quiniela System: Full authenticated submission flow working (get jornada, submit selections, verify). All critical backend flows tested and working perfectly. Ready for production use!"
-    - agent: "testing"
-      message: "✅ FULL REGRESSION TEST COMPLETED SUCCESSFULLY - ALL 15 STEPS PASSED! 🎯 Authentication: User registration, login, profile retrieval all working perfectly. 🎯 Quiniela Flow: Jornada retrieval, submission, verification working end-to-end. 🎯 League System: Fantasy/Quiniela league creation and joining working correctly. 🎯 Data Retrieval: Teams (18), players (378), rankings, admin jornadas all functional. 🎯 API Security: No 401 errors on authenticated endpoints, proper token handling. Backend is production-ready with comprehensive API coverage!"
-    - agent: "main"
-      message: "LEAGUE LIMITS FEATURE IMPLEMENTADA. Backend: 1) Límite 1 liga por usuario (owner), 2) Límite 25 miembros por liga, 3) Campo max_members en league_doc, 4) Nuevo endpoint /leagues/{id}/availability, 5) my-leagues retorna max_members/is_full. Frontend: leagues.tsx muestra '👥 X/25', badge LLENA, barra de progreso de capacidad. CURL TESTS ALL PASSED. NECESITO: testing del agente de testing para validar backend (API availability, límites) y frontend (indicador visual de capacidad en pantalla de ligas)."
+      message: "FANTASY LINEUP BUG FIX SESSION. Diagnóstico y corrección del bug P0 'alineación no se guarda'. ROOT CAUSE 1: Jornada se auto-avanzaba en cada llamada a /api/jornadas/current porque todos los partidos mock tienen status='finished'. FIX BACKEND: Auto-advance ahora solo ocurre si end_date también ha pasado. ROOT CAUSE 2 (probable): submitLineup re-fetcheaba la jornada al momento del submit (potencial jornada diferente). FIX FRONTEND: lineup.tsx ahora carga jornada en initScreen() y usa la cached version para submit. TAMBIÉN AGREGADO: Verificación si ya hay alineación enviada (muestra pantalla informativa), verificación si usuario tiene equipo fantasy, detección de jugadores duplicados, mejor manejo de errores. NECESITO TESTING: 1) Flujo completo de Fantasy (crear equipo → seleccionar jugadores → guardar alineación). 2) Verificar que jornada es estable entre pantallas. 3) Verificar que pantalla 'ya enviaste' aparece correctamente para usuarios con alineación existente."
