@@ -10,6 +10,7 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
@@ -69,9 +70,13 @@ export default function RegisterScreen() {
         </TouchableOpacity>
 
         <View style={styles.header}>
-          <Ionicons name="football" size={60} color="#DC143C" />
-          <Text style={styles.title}>CREAR CUENTA</Text>
-          <Text style={styles.subtitle}>Únete a la quiniela</Text>
+          <Image
+            source={require('../../assets/images/FuchoMX.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <Text style={styles.title}>FUCHO MX</Text>
+          <Text style={styles.subtitle}>Tu fut, con tus cuates</Text>
         </View>
 
         <View style={styles.form}>
@@ -181,6 +186,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 40,
     marginTop: 20,
+  },
+  logo: {
+    width: 120,
+    height: 120,
   },
   title: {
     fontSize: 28,

@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StatusBar,
   ScrollView,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -79,9 +80,13 @@ export default function HomeScreen() {
               onPress={handleQuinielaPress}
             >
               <View style={[styles.cardIconContainer, { backgroundColor: '#DC143C' }]}>
-                <Ionicons name="checkmark-circle" size={48} color="#FFFFFF" />
+                <Image
+                  source={require('../../assets/images/FuchoQuiniela.png')}
+                  style={styles.cardLogo}
+                  resizeMode="contain"
+                />
               </View>
-              <Text style={styles.cardTitle}>QUINIELA{' \n'}TRADICIONAL</Text>
+              <Text style={styles.cardTitle}>FUCHOQUINIELA</Text>
               <Text style={styles.cardDescription}>
                 Predice los resultados de cada partido y gana puntos
               </Text>
@@ -95,15 +100,19 @@ export default function HomeScreen() {
               activeOpacity={0.8}
               onPress={handleFantasyPress}
             >
-              <View style={[styles.cardIconContainer, { backgroundColor: '#0047AB' }]}>
-                <Ionicons name="people" size={48} color="#FFFFFF" />
+              <View style={[styles.cardIconContainer, { backgroundColor: '#DC143C' }]}>
+                <Image
+                  source={require('../../assets/images/FuchoOnce.png')}
+                  style={styles.cardLogo}
+                  resizeMode="contain"
+                />
               </View>
-              <Text style={styles.cardTitle}>FANTASY{' \n'}FÚTBOL</Text>
+              <Text style={styles.cardTitle}>FUCHOONCE</Text>
               <Text style={styles.cardDescription}>
-                Arma tu equipo ideal y compite con otros managers
+                Arma tu once ideal de la jornada
               </Text>
               <View style={styles.cardFooter}>
-                <Ionicons name="arrow-forward" size={24} color="#0047AB" />
+                <Ionicons name="arrow-forward" size={24} color="#DC143C" />
               </View>
             </TouchableOpacity>
           </View>
@@ -204,6 +213,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
+    overflow: 'hidden',
+  },
+  cardLogo: {
+    width: 70,
+    height: 70,
   },
   cardTitle: {
     fontSize: 22,

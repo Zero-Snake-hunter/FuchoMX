@@ -10,6 +10,7 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
@@ -50,9 +51,13 @@ export default function LoginScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
-          <Ionicons name="football" size={80} color="#DC143C" />
-          <Text style={styles.title}>QUINIELA LIGA MX</Text>
-          <Text style={styles.subtitle}>Inicia sesión para continuar</Text>
+          <Image
+            source={require('../../assets/images/FuchoMX.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <Text style={styles.title}>FUCHO MX</Text>
+          <Text style={styles.subtitle}>Tu fut, con tus cuates</Text>
         </View>
 
         <View style={styles.form}>
@@ -137,6 +142,10 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     marginBottom: 48,
+  },
+  logo: {
+    width: 120,
+    height: 120,
   },
   title: {
     fontSize: 28,
