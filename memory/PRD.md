@@ -42,6 +42,8 @@ Aplicación móvil multiplataforma (iOS/Android) de pool de fútbol con dos moda
 ### Bug Fixes Críticos
 - **Auth 401 en móvil**: Centralización de Axios + interceptors en `lib/api.ts`
 - **Quiniela atascada en Jornada 1**: Sistema de progresión automática por fechas
+- **Jornada auto-avanzando con datos mock**: Auto-advance ahora requiere que `end_date` haya pasado además de que todos los partidos estén terminados (fix 2026-04)
+- **Fantasy Lineup no guardaba**: submitLineup ahora usa jornada cacheada del mount (no re-fetch), detección de duplicados, pantalla "ya enviaste", verificación de equipo existente (fix 2026-04)
 
 ### Datos Reales Liga MX
 - Script de seed con equipos y jugadores reales (`real_liga_mx_data.py`)

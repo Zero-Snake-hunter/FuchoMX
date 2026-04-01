@@ -114,13 +114,9 @@ export default function LineupScreen() {
       const jornada = jornadaRes.data.jornada;
       setCurrentJornada(jornada);
 
-      // 2. Check if user has a fantasy team
+      // 2. Check if user has a fantasy team - redirect immediately (Alert doesn't block on web)
       if (!teamRes.data.exists) {
-        Alert.alert(
-          'Equipo requerido',
-          'Primero debes crear tu equipo fantasy',
-          [{ text: 'Crear equipo', onPress: () => router.replace('/fantasy/create-team') }]
-        );
+        router.replace('/fantasy/create-team');
         return;
       }
 

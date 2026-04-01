@@ -426,27 +426,33 @@ frontend:
 
   - task: "Fantasy Lineup Save Bug - Frontend Fix"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/frontend/app/fantasy/lineup.tsx"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: false
           agent: "main"
-          comment: "BUG REPORTADO: Usuario selecciona 11 jugadores + DT pero la alineación no se guarda. Diagnóstico: 1) Backend funciona perfectamente (verificado con curl). 2) Jornada auto-avanzaba en cada llamada porque todos los partidos de datos mock tienen status 'finished' - esto causaba que el jornadaId cambiara entre la carga de la pantalla y el submit. FIXES APLICADOS: 1) Backend: Auto-advance ahora requiere que end_date también haya pasado (no solo que todos los matches estén finished). 2) Frontend lineup.tsx: Carga jornada y verifica equipo/alineación existente en initScreen() al montar. 3) submitLineup usa currentJornada cacheada (no re-fetching). 4) Detección de jugadores duplicados. 5) Estado 'already_submitted' muestra pantalla informativa en vez de permitir doble envío. 6) Mejor manejo de errores (todos visibles al usuario)."
-
+          comment: "BUG REPORTADO: Usuario selecciona 11 jugadores + DT pero la alineación no se guarda."
+        - working: true
+          agent: "testing"
+          comment: "✅ Testing agent: Backend 100% (15/15). Frontend: fantasytest2 ve pantalla '¡Alineación Enviada!' correctamente. Flujo completo de nuevo usuario (registro → crear equipo → submit 11 jugadores → 200 OK) funciona. MINOR FIX APLICADO: redirect a create-team en lugar de Alert para usuarios sin equipo (mejor compatibilidad web)."
+          
   - task: "Backend Jornada Auto-Advance Fix"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: false
           agent: "main"
-          comment: "BUG: Jornada se auto-avanzaba en CADA llamada a /api/jornadas/current porque todos los partidos mock tienen status='finished'. Esto causaba que submitLineup en el frontend obtenía un jornadaId diferente al que se mostró al usuario. FIX: Ahora solo se avanza si (1) todos los partidos están finished Y (2) el end_date de la jornada también ha pasado. Verificado con 3 llamadas consecutivas: jornada ahora es estable."
+          comment: "BUG: Jornada se auto-avanzaba en CADA llamada a /api/jornadas/current."
+        - working: true
+          agent: "testing"
+          comment: "✅ Testing agent: Jornada llamada 3 veces → mismo ID cada vez. end_date 2026-07-02 (futuro) previene el auto-advance. Fix confirmado como correcto."
 
 metadata:
   created_by: "main_agent"
