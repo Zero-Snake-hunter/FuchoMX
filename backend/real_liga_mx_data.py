@@ -38,7 +38,7 @@ LIGA_MX_TEAMS = [
         "name": "Guadalajara",
         "short_name": "GDL",
         "color": "#CC0000",
-        "shield_url": "https://media.api-sports.io/football/teams/1327.png",
+        "shield_url": "https://r2.thesportsdb.com/images/media/team/badge/mp1box1593452087.png/medium",
         "players": [
             {"name": "Raúl Gudiño",           "number": 1,  "position": "POR"},
             {"name": "Miguel Jiménez",         "number": 13, "position": "POR"},
@@ -63,7 +63,7 @@ LIGA_MX_TEAMS = [
         "name": "Cruz Azul",
         "short_name": "CAZ",
         "color": "#0047AB",
-        "shield_url": "https://media.api-sports.io/football/teams/1329.png",
+        "shield_url": "https://r2.thesportsdb.com/images/media/team/badge/cf4ozx1655760184.png/medium",
         "players": [
             {"name": "Sebastián Jurado",   "number": 1,  "position": "POR"},
             {"name": "José de Jesús Corona","number": 13, "position": "POR"},
@@ -88,7 +88,7 @@ LIGA_MX_TEAMS = [
         "name": "Tigres UANL",
         "short_name": "TIG",
         "color": "#FFD700",
-        "shield_url": "https://media.api-sports.io/football/teams/1330.png",
+        "shield_url": "https://r2.thesportsdb.com/images/media/team/badge/lh80fx1701423708.png/medium",
         "players": [
             {"name": "Nahuel Guzmán",      "number": 1,  "position": "POR"},
             {"name": "Tiago Volpi",        "number": 25, "position": "POR"},
@@ -113,7 +113,7 @@ LIGA_MX_TEAMS = [
         "name": "Monterrey",
         "short_name": "MTY",
         "color": "#003087",
-        "shield_url": "https://media.api-sports.io/football/teams/1331.png",
+        "shield_url": "https://r2.thesportsdb.com/images/media/team/badge/yglj911721542561.png/medium",
         "players": [
             {"name": "Esteban Andrada",    "number": 1,  "position": "POR"},
             {"name": "Luis Cárdenas",      "number": 13, "position": "POR"},
@@ -138,7 +138,7 @@ LIGA_MX_TEAMS = [
         "name": "Pumas UNAM",
         "short_name": "PUM",
         "color": "#003D79",
-        "shield_url": "https://media.api-sports.io/football/teams/1332.png",
+        "shield_url": "https://r2.thesportsdb.com/images/media/team/badge/o01nvl1695734937.png/medium",
         "players": [
             {"name": "Julio González",     "number": 1,  "position": "POR"},
             {"name": "Alfredo Talavera",   "number": 25, "position": "POR"},
@@ -162,7 +162,7 @@ LIGA_MX_TEAMS = [
         "name": "Santos Laguna",
         "short_name": "SAN",
         "color": "#00A551",
-        "shield_url": "https://media.api-sports.io/football/teams/1334.png",
+        "shield_url": "https://r2.thesportsdb.com/images/media/team/badge/nq32gy1557078230.png/medium",
         "players": [
             {"name": "Carlos Acevedo",     "number": 1,  "position": "POR"},
             {"name": "Jonathan Orozco",    "number": 13, "position": "POR"},
@@ -186,7 +186,7 @@ LIGA_MX_TEAMS = [
         "name": "Toluca",
         "short_name": "TOL",
         "color": "#DC143C",
-        "shield_url": "https://media.api-sports.io/football/teams/1335.png",
+        "shield_url": "https://r2.thesportsdb.com/images/media/team/badge/y64wy91523913186.png/medium",
         "players": [
             {"name": "Tiago Volpi",        "number": 1,  "position": "POR"},
             {"name": "Renato Paiva",       "number": 13, "position": "POR"},
@@ -210,7 +210,7 @@ LIGA_MX_TEAMS = [
         "name": "León",
         "short_name": "LEO",
         "color": "#00A551",
-        "shield_url": "https://media.api-sports.io/football/teams/1336.png",
+        "shield_url": "https://r2.thesportsdb.com/images/media/team/badge/pc9gro1752393439.png/medium",
         "players": [
             {"name": "Rodolfo Cota",       "number": 1,  "position": "POR"},
             {"name": "Pedro Munhoz",       "number": 25, "position": "POR"},
@@ -234,7 +234,7 @@ LIGA_MX_TEAMS = [
         "name": "Atlas",
         "short_name": "ATL",
         "color": "#8B0000",
-        "shield_url": "https://media.api-sports.io/football/teams/1338.png",
+        "shield_url": "https://r2.thesportsdb.com/images/media/team/badge/svvyvw1473541813.png/medium",
         "players": [
             {"name": "Camilo Vargas",      "number": 1,  "position": "POR"},
             {"name": "Aldo Rocha",         "number": 6,  "position": "MED"},
@@ -258,7 +258,7 @@ LIGA_MX_TEAMS = [
         "name": "Pachuca",
         "short_name": "PAC",
         "color": "#0047AB",
-        "shield_url": "https://media.api-sports.io/football/teams/1339.png",
+        "shield_url": "https://r2.thesportsdb.com/images/media/team/badge/k9duyw1747334895.png/medium",
         "players": [
             {"name": "Oscar Ustari",       "number": 1,  "position": "POR"},
             {"name": "Rodolfo Marín",      "number": 13, "position": "POR"},
@@ -282,7 +282,7 @@ LIGA_MX_TEAMS = [
         "name": "Tijuana",
         "short_name": "TIJ",
         "color": "#000000",
-        "shield_url": "https://media.api-sports.io/football/teams/1341.png",
+        "shield_url": "https://r2.thesportsdb.com/images/media/team/badge/uwxpwp1473541917.png/medium",
         "players": [
             {"name": "Jonathan Orozco",    "number": 1,  "position": "POR"},
             {"name": "Ricardo Gutiérrez",  "number": 13, "position": "POR"},
@@ -306,7 +306,7 @@ LIGA_MX_TEAMS = [
         "name": "Necaxa",
         "short_name": "NEC",
         "color": "#DC143C",
-        "shield_url": "https://media.api-sports.io/football/teams/1343.png",
+        "shield_url": "https://r2.thesportsdb.com/images/media/team/badge/7jqidg1601923283.png/medium",
         "players": [
             {"name": "Luis Malagon",       "number": 1,  "position": "POR"},
             {"name": "Hugo González",      "number": 13, "position": "POR"},
@@ -330,7 +330,7 @@ LIGA_MX_TEAMS = [
         "name": "Querétaro",
         "short_name": "QRO",
         "color": "#003087",
-        "shield_url": "https://media.api-sports.io/football/teams/1344.png",
+        "shield_url": "https://r2.thesportsdb.com/images/media/team/badge/ev79tu1752393416.png/medium",
         "players": [
             {"name": "Washington Aguerre", "number": 1,  "position": "POR"},
             {"name": "Tiago Cantoro",      "number": 13, "position": "POR"},
@@ -354,7 +354,7 @@ LIGA_MX_TEAMS = [
         "name": "Mazatlán",
         "short_name": "MAZ",
         "color": "#663399",
-        "shield_url": "https://media.api-sports.io/football/teams/5765.png",
+        "shield_url": "https://r2.thesportsdb.com/images/media/team/badge/fgpobf1593446489.png/medium",
         "players": [
             {"name": "Pablo Míguez",       "number": 1,  "position": "POR"},
             {"name": "Rafael García",      "number": 13, "position": "POR"},
@@ -378,7 +378,7 @@ LIGA_MX_TEAMS = [
         "name": "Puebla",
         "short_name": "PUE",
         "color": "#003087",
-        "shield_url": "https://media.api-sports.io/football/teams/1342.png",
+        "shield_url": "https://r2.thesportsdb.com/images/media/team/badge/h0jgg51593451845.png/medium",
         "players": [
             {"name": "Nicolás Vikonis",    "number": 1,  "position": "POR"},
             {"name": "Ángel Rodríguez",    "number": 13, "position": "POR"},
@@ -402,7 +402,7 @@ LIGA_MX_TEAMS = [
         "name": "Juárez",
         "short_name": "JUA",
         "color": "#008000",
-        "shield_url": "https://media.api-sports.io/football/teams/6678.png",
+        "shield_url": "https://r2.thesportsdb.com/images/media/team/badge/b4oy071567446336.png/medium",
         "players": [
             {"name": "Leonardo Morales",   "number": 1,  "position": "POR"},
             {"name": "Julio Furch",        "number": 9,  "position": "DEL"},
@@ -426,7 +426,7 @@ LIGA_MX_TEAMS = [
         "name": "Atlético San Luis",
         "short_name": "ASL",
         "color": "#DC143C",
-        "shield_url": "https://media.api-sports.io/football/teams/6677.png",
+        "shield_url": "https://r2.thesportsdb.com/images/media/team/badge/9kgjme1593448412.png/medium",
         "players": [
             {"name": "Alfonso Blanco",     "number": 1,  "position": "POR"},
             {"name": "Guillermo Allison",  "number": 13, "position": "POR"},
