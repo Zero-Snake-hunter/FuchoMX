@@ -8,7 +8,7 @@ LIGA_MX_TEAMS = [
         "name": "Club América",
         "short_name": "AME",
         "color": "#FFD700",
-        "shield_url": "https://media.api-sports.io/football/teams/1326.png",
+        "shield_url": "https://r2.thesportsdb.com/images/media/team/badge/amy1xs1581857392.png/medium",
         "players": [
             # Porteros
             {"name": "Memo Ochoa",         "number": 13, "position": "POR"},
