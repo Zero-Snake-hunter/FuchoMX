@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { StreakWidget } from '../../components/StreakWidget';
 import { AchievementToast } from '../../components/AchievementToast';
 import api from '../lib/api';
+import { SPONSORS, getNombreTorneo } from '../config/sponsors';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -69,6 +70,26 @@ export default function HomeScreen() {
           onPress={() => router.push('/profile/achievements')}
         />
 
+        {/* ── Sponsor Splash Banner (solo si activo) ── */}
+        {SPONSORS.oro.splash.activo && (
+          <View style={styles.sponsorBanner}>
+            {SPONSORS.oro.splash.logo && (
+              <Image
+                source={SPONSORS.oro.splash.logo}
+                style={styles.sponsorBannerLogo}
+                resizeMode="contain"
+              />
+            )}
+            <View style={{ flex: 1 }}>
+              <Text style={styles.sponsorBannerLabel}>PATROCINADOR OFICIAL</Text>
+              <Text style={styles.sponsorBannerMarca}>{SPONSORS.oro.splash.marca}</Text>
+            </View>
+            {SPONSORS.oro.splash.cta_texto ? (
+              <Text style={styles.sponsorBannerCta}>{SPONSORS.oro.splash.cta_texto}</Text>
+            ) : null}
+          </View>
+        )}
+
         <View style={styles.content}>
           <Text style={styles.title}>SELECCIONA UN MODO</Text>
           <Text style={styles.subtitle}>Elige cómo quieres jugar</Text>
@@ -86,7 +107,7 @@ export default function HomeScreen() {
                   resizeMode="contain"
                 />
               </View>
-              <Text style={styles.cardTitle}>FUCHOQUINIELA</Text>
+              <Text style={styles.cardTitle}>{getNombreTorneo()}</Text>
               <Text style={styles.cardDescription}>
                 Predice los resultados de cada partido y gana puntos
               </Text>
@@ -250,5 +271,40 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     marginLeft: 12,
     lineHeight: 18,
+  },
+  // ── Sponsor Banner ─────────────────────────────────────
+  sponsorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#111',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FFD70033',
+    marginHorizontal: 24,
+    marginBottom: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    gap: 10,
+  },
+  sponsorBannerLogo: {
+    width: 36,
+    height: 36,
+    borderRadius: 6,
+  },
+  sponsorBannerLabel: {
+    fontSize: 9,
+    color: '#FFD700',
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  sponsorBannerMarca: {
+    fontSize: 13,
+    color: '#FFF',
+    fontWeight: '700',
+  },
+  sponsorBannerCta: {
+    fontSize: 11,
+    color: '#FFD700',
+    fontWeight: '600',
   },
 });

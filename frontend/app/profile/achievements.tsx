@@ -9,6 +9,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import api from '../lib/api';
+import { SPONSORS } from '../config/sponsors';
 import ShareResultCard, { ShareResultData } from '../components/ShareResultCard';
 
 const { width } = Dimensions.get('window');
@@ -275,6 +276,18 @@ export default function AchievementsScreen() {
 
         {/* ── Logros ────────────────────────────── */}
         <Text style={[s.sectionTitle, { marginTop: 24 }]}>🏅 Logros</Text>
+
+        {/* Sponsor logros (si activo) */}
+        {(SPONSORS.oro.logros.activo || SPONSORS.bronce.logros.activo) && (
+          <View style={{ paddingHorizontal: 16, marginBottom: 4 }}>
+            <Text style={{ color: '#555', fontSize: 11, letterSpacing: 0.5 }}>
+              PATROCINADO POR{' '}
+              <Text style={{ color: '#FFD700', fontWeight: '700' }}>
+                {SPONSORS.oro.logros.activo ? SPONSORS.oro.logros.marca : SPONSORS.bronce.logros.marca}
+              </Text>
+            </Text>
+          </View>
+        )}
 
         {/* Filtros */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false}

@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../lib/api';
+import { SPONSORS } from '../config/sponsors';
 
 interface MyStats {
   total_puntos: number;
@@ -85,6 +86,16 @@ export default function ProfileScreen() {
           </View>
           <Text style={styles.displayName}>{user?.display_name}</Text>
           <Text style={styles.email}>{user?.email}</Text>
+
+          {/* ── Sponsor badge (solo si activo) ── */}
+          {SPONSORS.bronce.badge_perfil.activo && (
+            <View style={styles.sponsorBadge}>
+              <Text style={styles.sponsorBadgeText}>
+                🤝 Con el apoyo de{' '}
+                <Text style={styles.sponsorBadgeMarca}>{SPONSORS.bronce.badge_perfil.marca}</Text>
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* ── MI ESTADÍSTICA ── */}
@@ -198,6 +209,19 @@ export default function ProfileScreen() {
           <Ionicons name="log-out-outline" size={24} color="#DC143C" />
           <Text style={styles.logoutText}>Cerrar sesión</Text>
         </TouchableOpacity>
+
+        {/* ── Aliados (solo si hay) ── */}
+        {SPONSORS.bronce.aliados.length > 0 && (
+          <View style={styles.aliadosSection}>
+            <Text style={styles.aliadosTitle}>ALIADOS</Text>
+            {SPONSORS.bronce.aliados.map((aliado, i) => (
+              <View key={i} style={styles.aliadoRow}>
+                <Text style={styles.aliadoNombre}>{aliado.nombre}</Text>
+                <Text style={styles.aliadoUrl}>{aliado.url}</Text>
+              </View>
+            ))}
+          </View>
+        )}
 
         <Text style={styles.version}>Versión 1.0.0</Text>
       </ScrollView>

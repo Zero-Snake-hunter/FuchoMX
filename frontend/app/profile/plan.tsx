@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { SPONSORS } from '../config/sponsors';
 
 const FREE_PERKS = [
   { icon: '📝', text: 'Quiniela tradicional',           sub: 'Todas las jornadas de Liga MX' },
@@ -108,6 +109,19 @@ export default function PlanScreen() {
             serán opcionales y no afectarán el juego gratuito.
           </Text>
         </View>
+
+        {/* ── Aliados (solo si hay) ── */}
+        {SPONSORS.bronce.aliados.length > 0 && (
+          <View style={st.aliadosBox}>
+            <Text style={st.aliadosTitle}>🤝 ALIADOS</Text>
+            {SPONSORS.bronce.aliados.map((a, i) => (
+              <View key={i} style={st.aliadoRow}>
+                <Text style={st.aliadoNombre}>{a.nombre}</Text>
+                <Text style={st.aliadoUrl}>{a.url}</Text>
+              </View>
+            ))}
+          </View>
+        )}
 
       </ScrollView>
     </SafeAreaView>
