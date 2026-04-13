@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "frontend",
+    "name": "Fucho MX",
     "slug": "frontend",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/FuchoMX.png",
     "scheme": "frontend",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -13,7 +13,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/images/FuchoMX.png",
         "backgroundColor": "#000"
       },
       "edgeToEdgeEnabled": true
@@ -21,14 +21,14 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/FuchoMX.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/FuchoMX.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#000"

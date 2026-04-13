@@ -3019,6 +3019,82 @@ async def trigger_achievement_check(jornada_id: str):
     }
 
 
+# ============ USER STATS ============
+
+@api_router.get("/stats/my")
+async def get_my_stats(current_user: dict = Depends(get_current_user)):
+    """Retorna estadísticas completas del usuario autenticado para la temporada."""
+    user_id = current_user["_id"]
+
+    # 1. Quiniela points logs
+    quiniela_logs = await db.points_log.find(
+        {"user_id": user_id, "source": "QUINIELA"}
+    ).to_list(1000)
+
+    total_quiniela_pts = sum(log.get("points", 0) for log in quiniela_logs)
+    jornada_ids_quiniela = list(set(log["jornada_id"] for log in quiniela_logs))
+    jornadas_quiniela = len(jornada_ids_quiniela)
+    mejor_jornada = max((log.get("points", 0) for log in quiniela_logs), default=0)
+    # Cada punto = 1 acierto en quiniela
+    total_aciertos = total_quiniela_pts
+    promedio_aciertos = round(total_aciertos / jornadas_quiniela, 1) if jornadas_quiniela > 0 else 0
+
+    # 2. Fantasy participation
+    fantasy_jornadas = await db.fantasy_lineups.distinct("jornada_id", {"user_id": user_id})
+    jornadas_fantasy = len(fantasy_jornadas)
+
+    # 3. Fantasy points
+    fantasy_pts_pipeline = [
+        {"$match": {"user_id": user_id}},
+        {"$group": {"_id": None, "total": {"$sum": "$total_points"}}}
+    ]
+    fantasy_pts_result = await db.fantasy_points_log.aggregate(fantasy_pts_pipeline).to_list(1)
+    total_fantasy_pts = fantasy_pts_result[0]["total"] if fantasy_pts_result else 0
+
+    # 4. Total de puntos acumulados (quiniela + fantasy)
+    total_puntos = total_quiniela_pts + total_fantasy_pts
+
+    # 5. Win rate - % de jornadas donde quedó en Top 3 (global)
+    top3_count = 0
+    mejor_posicion = None
+    if jornada_ids_quiniela:
+        for jornada_id in jornada_ids_quiniela:
+            user_pts = sum(
+                log.get("points", 0)
+                for log in quiniela_logs
+                if log["jornada_id"] == jornada_id
+            )
+            all_for_jornada = await db.points_log.aggregate([
+                {"$match": {"jornada_id": jornada_id, "source": "QUINIELA"}},
+                {"$group": {"_id": "$user_id", "total": {"$sum": "$points"}}},
+                {"$sort": {"total": -1}},
+            ]).to_list(200)
+            position = next(
+                (i + 1 for i, p in enumerate(all_for_jornada) if str(p["_id"]) == str(user_id)),
+                None
+            )
+            if position and position <= 3:
+                top3_count += 1
+            if position and (mejor_posicion is None or position < mejor_posicion):
+                mejor_posicion = position
+
+    win_rate = round((top3_count / jornadas_quiniela * 100)) if jornadas_quiniela > 0 else 0
+
+    # 6. Ligas activas
+    ligas_activas = await db.league_members.count_documents({"user_id": user_id})
+
+    return {
+        "total_puntos": total_puntos,
+        "jornadas_quiniela": jornadas_quiniela,
+        "mejor_jornada": mejor_jornada,
+        "win_rate": win_rate,
+        "total_aciertos": total_aciertos,
+        "promedio_aciertos": promedio_aciertos,
+        "jornadas_fantasy": jornadas_fantasy,
+        "mejor_posicion": mejor_posicion,
+        "ligas_activas": ligas_activas,
+    }
+
 # ============ ROOT ============
 
 @api_router.get("/")

@@ -4,7 +4,7 @@
 import React, { useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  Dimensions, Animated, FlatList, StatusBar,
+  Dimensions, Animated, FlatList, StatusBar, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -16,7 +16,7 @@ const { width, height } = Dimensions.get('window');
 const SLIDES = [
   {
     id: '1',
-    emoji: '⚽',
+    useLogo: true,  // Usa FuchoMX.png en lugar de emoji
     tag: 'LIGA MX · QUINIELA · FANTASY',
     title: 'La quiniela\nde tus cuates',
     subtitle: 'No la de todos.\nTu grupo, tus reglas, tu liga privada.',
@@ -99,12 +99,25 @@ const Slide = ({ item, index }: { item: typeof SLIDES[0]; index: number }) => {
         </View>
       </Animated.View>
 
-      <Animated.Text style={[slide.bigEmoji, {
-        opacity: fadeAnim,
-        transform: [{ translateY: slideAnim }],
-      }]}>
-        {item.emoji}
-      </Animated.Text>
+      {item.useLogo ? (
+        <Animated.View style={[slide.logoContainer, {
+          opacity: fadeAnim,
+          transform: [{ translateY: slideAnim }],
+        }]}>
+          <Image
+            source={require('../../assets/images/FuchoMX.png')}
+            style={slide.logoImage}
+            resizeMode="contain"
+          />
+        </Animated.View>
+      ) : (
+        <Animated.Text style={[slide.bigEmoji, {
+          opacity: fadeAnim,
+          transform: [{ translateY: slideAnim }],
+        }]}>
+          {item.emoji}
+        </Animated.Text>
+      )}
 
       <Animated.Text style={[slide.title, {
         opacity: fadeAnim,
@@ -270,6 +283,8 @@ const slide = StyleSheet.create({
   tagPill:    { borderWidth: 1, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 5 },
   tagText:    { fontSize: 10, fontWeight: '800', letterSpacing: 2 },
   bigEmoji:   { fontSize: 80, marginBottom: 20, textAlign: 'center' },
+  logoContainer: { marginBottom: 20, alignItems: 'center', justifyContent: 'center' },
+  logoImage:  { width: 140, height: 140 },
   title:      { fontSize: 34, fontWeight: '900', color: '#FFFFFF', textAlign: 'center', lineHeight: 40, marginBottom: 16, letterSpacing: -0.5 },
   subtitle:   { fontSize: 16, color: '#888', textAlign: 'center', lineHeight: 24 },
   stepsBox:   { width: '100%', marginTop: 8 },

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,14 +8,45 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
+import api from '../lib/api';
+
+interface MyStats {
+  total_puntos: number;
+  jornadas_quiniela: number;
+  mejor_jornada: number;
+  win_rate: number;
+  total_aciertos: number;
+  promedio_aciertos: number;
+  jornadas_fantasy: number;
+  mejor_posicion: number | null;
+  ligas_activas: number;
+}
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, logout } = useAuth();
+  const [stats, setStats] = useState<MyStats | null>(null);
+  const [loadingStats, setLoadingStats] = useState(true);
+
+  useEffect(() => {
+    loadStats();
+  }, []);
+
+  const loadStats = async () => {
+    try {
+      const res = await api.get('/api/stats/my');
+      setStats(res.data);
+    } catch (err) {
+      console.log('Stats not available:', err);
+    } finally {
+      setLoadingStats(false);
+    }
+  };
 
   const handleLogout = () => {
     Alert.alert(
@@ -35,6 +66,14 @@ export default function ProfileScreen() {
     );
   };
 
+  const StatCard = ({ label, value, icon }: { label: string; value: string; icon: string }) => (
+    <View style={styles.statCard}>
+      <Text style={styles.statCardIcon}>{icon}</Text>
+      <Text style={styles.statCardValue}>{value}</Text>
+      <Text style={styles.statCardLabel}>{label}</Text>
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" />
@@ -46,18 +85,57 @@ export default function ProfileScreen() {
           </View>
           <Text style={styles.displayName}>{user?.display_name}</Text>
           <Text style={styles.email}>{user?.email}</Text>
-          
-          <View style={styles.statsContainer}>
-            <View style={styles.statBox}>
-              <Text style={styles.statValue}>{user?.total_points || 0}</Text>
-              <Text style={styles.statLabel}>Puntos</Text>
+        </View>
+
+        {/* ── MI ESTADÍSTICA ── */}
+        <View style={styles.statsSection}>
+          <Text style={styles.sectionTitle}>MI ESTADÍSTICA</Text>
+          {loadingStats ? (
+            <ActivityIndicator color="#DC143C" style={{ marginVertical: 16 }} />
+          ) : (
+            <View style={styles.statsGrid}>
+              <StatCard
+                icon="⚡"
+                label="Puntos totales"
+                value={String(stats?.total_puntos ?? 0)}
+              />
+              <StatCard
+                icon="📅"
+                label="Jornadas jugadas"
+                value={String(stats?.jornadas_quiniela ?? 0)}
+              />
+              <StatCard
+                icon="🏆"
+                label="Mejor jornada"
+                value={String(stats?.mejor_jornada ?? 0)} 
+              />
+              <StatCard
+                icon="🎯"
+                label="Win rate"
+                value={`${stats?.win_rate ?? 0}%`}
+              />
+              <StatCard
+                icon="✅"
+                label="Total aciertos"
+                value={String(stats?.total_aciertos ?? 0)}
+              />
+              <StatCard
+                icon="📊"
+                label="Prom. aciertos"
+                value={String(stats?.promedio_aciertos ?? 0)}
+              />
+              <StatCard
+                icon="⚽"
+                label="J. FuchoOnce"
+                value={String(stats?.jornadas_fantasy ?? 0)}
+              />
+              <StatCard
+                icon="🥇"
+                label="Mejor posición"
+                value={stats?.mejor_posicion ? `#${stats.mejor_posicion}` : '-'}
+              />
             </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statBox}>
-              <Text style={styles.statValue}>0</Text>
-              <Text style={styles.statLabel}>Ligas</Text>
-            </View>
-          </View>
+          )}
         </View>
 
         <View style={styles.menuSection}>
@@ -137,7 +215,7 @@ const styles = StyleSheet.create({
   },
   profileHeader: {
     alignItems: 'center',
-    paddingVertical: 40,
+    paddingVertical: 32,
     paddingHorizontal: 24,
     borderBottomWidth: 1,
     borderBottomColor: '#1a1a1a',
@@ -162,37 +240,52 @@ const styles = StyleSheet.create({
   email: {
     fontSize: 14,
     color: '#999',
-    marginBottom: 24,
+    marginBottom: 0,
   },
-  statsContainer: {
+  // ── Stats Section ──────────────────────────
+  statsSection: {
+    paddingHorizontal: 16,
+    paddingTop: 24,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1a1a1a',
+  },
+  statsGrid: {
     flexDirection: 'row',
-    backgroundColor: '#1a1a1a',
-    borderRadius: 12,
-    padding: 20,
-    width: '100%',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 12,
   },
-  statBox: {
-    flex: 1,
+  statCard: {
+    backgroundColor: '#111',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#1E1E1E',
+    width: '48%',
+    padding: 14,
     alignItems: 'center',
   },
-  statValue: {
-    fontSize: 28,
-    fontWeight: 'bold',
+  statCardIcon: {
+    fontSize: 22,
+    marginBottom: 6,
+  },
+  statCardValue: {
+    fontSize: 22,
+    fontWeight: '900',
     color: '#DC143C',
-    marginBottom: 4,
+    marginBottom: 2,
   },
-  statLabel: {
-    fontSize: 14,
-    color: '#999',
+  statCardLabel: {
+    fontSize: 11,
+    color: '#666',
+    textAlign: 'center',
+    fontWeight: '600',
+    letterSpacing: 0.3,
   },
-  statDivider: {
-    width: 1,
-    backgroundColor: '#333',
-    marginHorizontal: 20,
-  },
+  // ── Menu ──────────────────────────────────
   menuSection: {
     paddingHorizontal: 24,
-    paddingTop: 32,
+    paddingTop: 28,
   },
   sectionTitle: {
     fontSize: 12,
