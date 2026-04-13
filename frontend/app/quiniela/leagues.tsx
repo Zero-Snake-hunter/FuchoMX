@@ -346,17 +346,29 @@ export default function LeaguesScreen() {
         }
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <Ionicons 
-              name={activeTab === 'fantasy' ? 'football-outline' : 'trophy-outline'} 
-              size={80} 
-              color="#333" 
-            />
-            <Text style={styles.emptyTitle}>
-              Sin ligas de {activeTab === 'fantasy' ? 'Fantasy' : 'Quiniela'}
+            <Text style={styles.emptyStadiumIcon}>🏟️</Text>
+            <Text style={styles.emptyTitle}>Aún no tienes ninguna liga</Text>
+            <Text style={styles.emptySubtitle}>
+              Crea la tuya o únete a la de tus cuates
             </Text>
-            <Text style={styles.emptyText}>
-              Crea una liga y comparte el código con tus amigos para competir juntos
-            </Text>
+            <TouchableOpacity
+              style={styles.emptyCreateButton}
+              onPress={() => {
+                setNewLeagueMode(activeTab);
+                setShowCreateModal(true);
+              }}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="add-circle" size={20} color="#FFFFFF" />
+              <Text style={styles.emptyCreateButtonText}>Crear liga</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.emptyJoinLink}
+              onPress={() => setShowJoinModal(true)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.emptyJoinLinkText}>Unirme a una liga</Text>
+            </TouchableOpacity>
           </View>
         }
         contentContainerStyle={filteredLeagues.length === 0 ? styles.emptyList : styles.list}
@@ -750,14 +762,53 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 48,
+    paddingHorizontal: 40,
+    paddingTop: 60,
+    paddingBottom: 40,
+  },
+  emptyStadiumIcon: {
+    fontSize: 72,
+    marginBottom: 16,
   },
   emptyTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#FFFFFF',
-    marginTop: 24,
-    marginBottom: 12,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 32,
+  },
+  emptyCreateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#DC143C',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    gap: 8,
+    width: '100%',
+    marginBottom: 16,
+  },
+  emptyCreateButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  emptyJoinLink: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  emptyJoinLinkText: {
+    color: '#666',
+    fontSize: 14,
+    textDecorationLine: 'underline',
   },
   emptyText: {
     fontSize: 14,

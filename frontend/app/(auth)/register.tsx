@@ -45,7 +45,10 @@ export default function RegisterScreen() {
     setLoading(true);
     try {
       await register(email.toLowerCase().trim(), password, displayName.trim());
-      router.replace('/(tabs)/home');
+      router.replace({
+        pathname: '/(auth)/welcome',
+        params: { name: displayName.trim() },
+      });
     } catch (error: any) {
       Alert.alert('Error', error.message);
     } finally {

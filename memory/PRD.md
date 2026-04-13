@@ -67,6 +67,18 @@ Aplicación móvil multiplataforma (iOS/Android) de pool de fútbol con dos moda
 
 ---
 
+### Sesión Abril 2026 — UI/UX Mejoras
+- **Sponsors Config**: `app/config/sponsors.ts` centralizado con sistema de niveles Oro/Plata/Bronce; integrado en Home, Perfil, Logros, Plan
+- **MI ESTADÍSTICA**: Sección nueva en Perfil con grid 2 columnas: puntos, jornadas, mejor jornada, win rate, aciertos, FuchoOnce, mejor posición
+- **Branding FuchoMX**: Logo/icono aplicado globalmente en Login, Registro, Onboarding, App Icon
+- **Datos reales Liga MX**: Pull de GitHub + re-seed con URLs TheSportsDB (escudos reales)
+- **Endpoint stats**: `GET /api/stats/my` — agrega datos de predicciones, fantasy, ligas
+
+### Sesión Abril 2026 (cont.) — Welcome Screen + Empty States
+- **P3 Welcome Screen**: `/(auth)/welcome.tsx` — pantalla post-registro con nombre en rojo, botón "Crear mi liga" y "Unirme a una liga", link "Explorar primero"
+- **P4 Empty State Ligas**: `leagues.tsx` mejorado con emoji 🏟️, texto contextual, botón rojo "Crear liga", link "Unirme a una liga"
+- **P2 Dark Mode**: Verificación visual de todas las pantallas solicitadas — todas respetan paleta #000000/#DC143C correctamente
+
 ## Backlog Priorizado
 
 ### P0 (Crítico - Próximo)

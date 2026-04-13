@@ -468,6 +468,44 @@ test_plan:
   test_all: false
   test_priority: "high_first"
 
+  - task: "P3 - Pantalla de bienvenida post-registro"
+    implemented: true
+    working: true
+    file: "/app/frontend/app/(auth)/welcome.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "main"
+          comment: "NUEVO: Creada pantalla welcome.tsx en (auth)/. Muestra logo FuchoMX + confetti + '¡Bienvenido a FuchoMX, [nombre]!' con nombre en rojo. Botón primario rojo 'Crear mi liga' → /quiniela/create-league. Botón secundario oscuro 'Unirme a una liga' → /quiniela/join-league. Link 'Explorar primero' → /(tabs)/home. Actualizado register.tsx para navegar a esta pantalla con params {name}. Screenshot tomado y verificado visualmente."
+
+  - task: "P4 - Empty state mejorado en ligas"
+    implemented: true
+    working: true
+    file: "/app/frontend/app/quiniela/leagues.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "main"
+          comment: "ACTUALIZADO: Empty state en leagues.tsx ahora muestra ícono de estadio (🏟️), texto 'Aún no tienes ninguna liga', subtítulo 'Crea la tuya o únete a la de tus cuates', botón rojo 'Crear liga' que abre el modal, y link secundario 'Unirme a una liga'. Screenshot tomado y verificado."
+
+  - task: "P2 - Verificación modo oscuro pantallas clave"
+    implemented: true
+    working: true
+    file: "Multiple screens"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "main"
+          comment: "VERIFICADO: Screenshots tomados de todas las pantallas pedidas. league-results.tsx, rankings.tsx, league-detail.tsx, lineup.tsx (FuchoOnce), create-league.tsx, join-league.tsx - TODAS usan #000000 background, #1a1a1a cards, #FFFFFF texto, #DC143C accents. Paleta negro/rojo respetada correctamente."
+
 agent_communication:
     - agent: "main"
       message: "FANTASY LINEUP BUG FIX SESSION. Diagnóstico y corrección del bug P0 'alineación no se guarda'. ROOT CAUSE 1: Jornada se auto-avanzaba en cada llamada a /api/jornadas/current porque todos los partidos mock tienen status='finished'. FIX BACKEND: Auto-advance ahora solo ocurre si end_date también ha pasado. ROOT CAUSE 2 (probable): submitLineup re-fetcheaba la jornada al momento del submit (potencial jornada diferente). FIX FRONTEND: lineup.tsx ahora carga jornada en initScreen() y usa la cached version para submit. TAMBIÉN AGREGADO: Verificación si ya hay alineación enviada (muestra pantalla informativa), verificación si usuario tiene equipo fantasy, detección de jugadores duplicados, mejor manejo de errores. NECESITO TESTING: 1) Flujo completo de Fantasy (crear equipo → seleccionar jugadores → guardar alineación). 2) Verificar que jornada es estable entre pantallas. 3) Verificar que pantalla 'ya enviaste' aparece correctamente para usuarios con alineación existente."
+    - agent: "main"
+      message: "NUEVO AGENTE - SESIÓN DE MEJORAS UI. Implementados: P3 (welcome screen post-registro: /(auth)/welcome.tsx con nombre en rojo y 2 botones de acción), P4 (empty state mejorado en leagues.tsx con estadio emoji + botones de acción), P2 (verificación visual de modo oscuro en todas las pantallas requeridas - todas correctas). Screenshots tomados de: Home, Perfil (MI ESTADÍSTICA grid 2 cols), Welcome screen, Leagues empty state, Create Liga, Join Liga, Rankings, FuchoOnce/Lineup. Todo verificado visualmente."
