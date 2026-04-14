@@ -1,11 +1,11 @@
 {
   "expo": {
     "name": "Fucho MX",
-    "slug": "frontend",
+    "slug": "fuchomx",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/FuchoMX.png",
-    "scheme": "frontend",
+    "scheme": "fuchomx",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
