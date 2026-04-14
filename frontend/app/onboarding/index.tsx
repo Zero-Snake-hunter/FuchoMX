@@ -17,7 +17,7 @@ const SLIDES = [
   {
     id: '1',
     useLogo: true,  // Usa FuchoMX.png en lugar de emoji
-    tag: 'LIGA MX · QUINIELA · FANTASY',
+    tag: 'LIGA MX · QUINIELA · ONCE',
     title: 'La quiniela\nde tus cuates',
     subtitle: 'No la de todos.\nTu grupo, tus reglas, tu liga privada.',
     bg: '#0A0A0A',
@@ -52,8 +52,8 @@ const SLIDES = [
       },
       {
         icon: '⚽',
-        name: 'FANTASY',
-        desc: 'Arma tu equipo ideal con jugadores reales. Ganas puntos con sus stats.',
+        name: 'ONCE IDEAL',
+        desc: 'Arma tu once ideal con jugadores reales. Ganas puntos con sus stats.',
         color: '#1D88E5',
       },
     ],

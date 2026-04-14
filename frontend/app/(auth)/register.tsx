@@ -27,7 +27,9 @@ export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
 
   const handleRegister = async () => {
-    if (!displayName || !email || !password || !confirmPassword) {
+    console.log('[Register] handleRegister ejecutado', { displayName, email, password: password.length });
+
+    if (!displayName.trim() || !email.trim() || !password || !confirmPassword) {
       Alert.alert('Error', 'Por favor completa todos los campos');
       return;
     }
@@ -44,13 +46,16 @@ export default function RegisterScreen() {
 
     setLoading(true);
     try {
+      console.log('[Register] Llamando a register()...');
       await register(email.toLowerCase().trim(), password, displayName.trim());
+      console.log('[Register] Registro exitoso, navegando a welcome');
       router.replace({
         pathname: '/(auth)/welcome',
         params: { name: displayName.trim() },
       });
     } catch (error: any) {
-      Alert.alert('Error', error.message);
+      console.log('[Register] Error:', error.message);
+      Alert.alert('Error al registrarse', error.message || 'No se pudo crear la cuenta. Intenta de nuevo.');
     } finally {
       setLoading(false);
     }
@@ -67,7 +72,14 @@ export default function RegisterScreen() {
       >
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => router.back()}
+          onPress={() => {
+            // router.back() puede fallar en web sin historial → fallback a login
+            try {
+              router.back();
+            } catch {
+              router.replace('/(auth)/login');
+            }
+          }}
         >
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
@@ -149,11 +161,12 @@ export default function RegisterScreen() {
             style={[styles.registerButton, loading && styles.buttonDisabled]}
             onPress={handleRegister}
             disabled={loading}
+            activeOpacity={0.85}
           >
             {loading ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.registerButtonText}>REGISTRARSE</Text>
+              <Text style={styles.registerButtonText}>CREAR CUENTA</Text>
             )}
           </TouchableOpacity>
 
