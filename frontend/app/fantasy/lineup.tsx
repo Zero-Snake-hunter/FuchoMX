@@ -379,8 +379,22 @@ export default function LineupScreen() {
       </View>
 
       <ScrollView style={styles.scrollView}>
-        {/* Field */}
+        {/* Field con líneas de cancha reales */}
         <View style={styles.field}>
+          {/* ── Líneas de la cancha (absolutas, debajo de los jugadores) ── */}
+          {/* Línea central */}
+          <View style={styles.fieldCenterLine} />
+          {/* Círculo central */}
+          <View style={styles.fieldCenterCircle} />
+          {/* Área grande arriba */}
+          <View style={styles.fieldTopPenaltyBox} />
+          {/* Área chica arriba */}
+          <View style={styles.fieldTopGoalBox} />
+          {/* Área grande abajo */}
+          <View style={styles.fieldBottomPenaltyBox} />
+          {/* Área chica abajo */}
+          <View style={styles.fieldBottomGoalBox} />
+
           {/* Delanteros */}
           <View style={styles.line}>
             {FORMATION.DEL.map(f => renderPlayerSlot(f.slot, f.position, f.label))}
@@ -641,9 +655,73 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   field: {
-    backgroundColor: '#2d7a3f',
+    backgroundColor: '#1a5c2a',
     padding: 20,
     minHeight: 450,
+    position: 'relative',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.6)',
+  },
+  // ── Líneas de la cancha ──
+  fieldCenterLine: {
+    position: 'absolute',
+    top: '50%',
+    left: 0,
+    right: 0,
+    height: 2,
+    backgroundColor: 'rgba(255,255,255,0.4)',
+  },
+  fieldCenterCircle: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    width: 80,
+    height: 80,
+    marginTop: -40,
+    marginLeft: -40,
+    borderRadius: 40,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.4)',
+  },
+  fieldTopPenaltyBox: {
+    position: 'absolute',
+    top: 0,
+    left: '20%',
+    right: '20%',
+    height: '18%',
+    borderWidth: 2,
+    borderTopWidth: 0,
+    borderColor: 'rgba(255,255,255,0.4)',
+  },
+  fieldTopGoalBox: {
+    position: 'absolute',
+    top: 0,
+    left: '35%',
+    right: '35%',
+    height: '8%',
+    borderWidth: 2,
+    borderTopWidth: 0,
+    borderColor: 'rgba(255,255,255,0.4)',
+  },
+  fieldBottomPenaltyBox: {
+    position: 'absolute',
+    bottom: 0,
+    left: '20%',
+    right: '20%',
+    height: '18%',
+    borderWidth: 2,
+    borderBottomWidth: 0,
+    borderColor: 'rgba(255,255,255,0.4)',
+  },
+  fieldBottomGoalBox: {
+    position: 'absolute',
+    bottom: 0,
+    left: '35%',
+    right: '35%',
+    height: '8%',
+    borderWidth: 2,
+    borderBottomWidth: 0,
+    borderColor: 'rgba(255,255,255,0.4)',
   },
   line: {
     flexDirection: 'row',

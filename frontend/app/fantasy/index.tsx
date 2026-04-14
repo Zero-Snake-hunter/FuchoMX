@@ -8,6 +8,7 @@ import {
   Alert,
   SafeAreaView,
   ScrollView,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
@@ -84,9 +85,13 @@ export default function FantasyDashboardScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Ionicons name="people" size={80} color="#0047AB" />
-          <Text style={styles.title}>FANTASY FÚTBOL</Text>
-          <Text style={styles.subtitle}>Arma tu equipo ideal de la Liga MX</Text>
+          <Image
+            source={require('../../assets/images/FuchoOnce.png')}
+            style={{ width: 100, height: 100, marginBottom: 16 }}
+            resizeMode="contain"
+          />
+          <Text style={styles.title}>FUCHOONCE</Text>
+          <Text style={styles.subtitle}>Arma tu once ideal de la jornada</Text>
         </View>
 
         <View style={styles.content}>
@@ -96,7 +101,7 @@ export default function FantasyDashboardScreen() {
                 <Ionicons name="shield" size={48} color="#DC143C" />
                 <View style={styles.teamInfo}>
                   <Text style={styles.teamName}>{team.name}</Text>
-                  <Text style={styles.teamSubtitle}>Tu equipo fantasy</Text>
+                  <Text style={styles.teamSubtitle}>Tu equipo ONCE</Text>
                 </View>
               </View>
 
@@ -163,7 +168,7 @@ export default function FantasyDashboardScreen() {
             <View style={styles.welcomeCard}>
               <Text style={styles.welcomeTitle}>¡Bienvenido!</Text>
               <Text style={styles.welcomeText}>
-                Crea tu equipo fantasy para comenzar a competir
+                Crea tu equipo para comenzar a competir
               </Text>
               <Text style={styles.welcomeDefault}>Nombre sugerido: {team?.default_name}</Text>
 

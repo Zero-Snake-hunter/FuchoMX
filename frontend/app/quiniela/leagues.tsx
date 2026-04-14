@@ -147,7 +147,7 @@ export default function LeaguesScreen() {
   };
 
   const shareCode = async (league: League) => {
-    const modeText = league.mode === 'fantasy' ? 'Fantasy Fútbol' : 'Quiniela';
+    const modeText = league.mode === 'fantasy' ? 'FuchoOnce' : 'Quiniela';
     try {
       await Share.share({
         message: `¡Únete a mi liga "${league.name}" de ${modeText}!\n\nCódigo: ${league.code}\n\nDescarga la app y usa este código para unirte.`,
@@ -302,7 +302,7 @@ export default function LeaguesScreen() {
             color={activeTab === 'fantasy' ? '#FFFFFF' : '#666'} 
           />
           <Text style={[styles.tabText, activeTab === 'fantasy' && styles.tabTextActive]}>
-            Fantasy
+            ONCE
           </Text>
           {leagues.filter(l => l.mode === 'fantasy').length > 0 && (
             <View style={[styles.tabBadge, activeTab === 'fantasy' && styles.tabBadgeActiveFantasy]}>
@@ -441,10 +441,10 @@ export default function LeaguesScreen() {
                   styles.modeOptionText,
                   newLeagueMode === 'fantasy' && styles.modeOptionTextActive
                 ]}>
-                  Fantasy
+                  ONCE
                 </Text>
                 <Text style={styles.modeDescription}>
-                  Arma tu equipo
+                  Arma tu once
                 </Text>
               </TouchableOpacity>
             </View>

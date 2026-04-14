@@ -67,7 +67,7 @@ const SLIDES = [
     title: '100% gratis.\nSiempre.',
     subtitle: null,
     perks: [
-      { icon: '✅', text: 'Quiniela y Fantasy sin costo' },
+      { icon: '✅', text: 'Quiniela y ONCE sin costo' },
       { icon: '✅', text: 'Crea tu liga con hasta 25 amigos' },
       { icon: '✅', text: 'Únete a ligas ilimitadas' },
       { icon: '✅', text: 'Rankings, logros y rachas' },

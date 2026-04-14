@@ -123,9 +123,9 @@ export default function MatchCard({ match, selection, onSelect, disabled }: Matc
       {/* Selection Options */}
       {!isFinished && (
         <View style={styles.options}>
-          {renderOption('HOME', `Gana ${match.home_team.short_name}`)}
+          {renderOption('HOME', `Gana ${match.home_team.name}`)}
           {renderOption('DRAW', 'Empate')}
-          {renderOption('AWAY', `Gana ${match.away_team.short_name}`)}
+          {renderOption('AWAY', `Gana ${match.away_team.name}`)}
         </View>
       )}
 

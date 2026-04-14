@@ -33,7 +33,7 @@ const CAT_COLOR: Record<string, string> = {
   social:   '#2A9D8F', general: '#F4A261',
 };
 const CAT_LABEL: Record<string, string> = {
-  quiniela: 'Quiniela', fantasy: 'Fantasy',
+  quiniela: 'Quiniela', fantasy: 'FuchoOnce',
   social: 'Social',     general: 'General',
 };
 
@@ -268,7 +268,7 @@ export default function AchievementsScreen() {
             color="#2A9D8F" milestone={10}
           />
           <StreakCard
-            emoji="⚽" label="Fantasy seguidas"
+            emoji="⚽" label="ONCE seguidas"
             current={streaks.fantasy_current} best={streaks.fantasy_current || 5}
             color="#1D88E5" milestone={5}
           />

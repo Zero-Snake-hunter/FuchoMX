@@ -827,9 +827,14 @@ async def submit_quiniela(
     now = datetime.utcnow()
     for match in matches:
         if match["start_at"] < now:
+            # Look up team names for readable error message
+            home_team = await db.teams.find_one({"_id": match.get("home_team_id")})
+            away_team = await db.teams.find_one({"_id": match.get("away_team_id")})
+            home_name = home_team.get("short_name", "Local") if home_team else "Local"
+            away_name = away_team.get("short_name", "Visitante") if away_team else "Visitante"
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"El partido {match.get('home_team_id')} vs {match.get('away_team_id')} ya comenzó"
+                detail=f"El partido {home_name} vs {away_name} ya comenzó"
             )
     
     # Validate selections

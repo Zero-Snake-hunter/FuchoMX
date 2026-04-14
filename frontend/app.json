@@ -4,7 +4,7 @@
     "slug": "fuchomx",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/FuchoMX.png",
+    "icon": "./assets/images/icon.png",
     "scheme": "fuchomx",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -13,15 +13,15 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/FuchoMX.png",
-        "backgroundColor": "#000"
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#000000"
       },
       "edgeToEdgeEnabled": true
     },
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/FuchoMX.png"
+      "favicon": "./assets/images/icon.png"
     },
     "plugins": [
       "expo-router",

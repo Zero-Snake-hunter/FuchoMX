@@ -13,7 +13,7 @@ export default function FantasyLayout() {
         },
       }}
     >
-      <Stack.Screen name="index" options={{ title: 'Fantasy Fútbol' }} />
+      <Stack.Screen name="index" options={{ title: 'FuchoOnce' }} />
       <Stack.Screen name="create-team" options={{ title: 'Crear Equipo' }} />
       <Stack.Screen name="lineup" options={{ headerShown: false }} />
       <Stack.Screen name="field" options={{ title: 'Armar Alineación' }} />

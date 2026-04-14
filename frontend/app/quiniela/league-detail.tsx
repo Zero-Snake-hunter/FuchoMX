@@ -123,7 +123,7 @@ export default function LeagueDetailScreen() {
   };
 
   const shareLeague = async () => {
-    const modeText = isFantasy ? 'Fantasy Fútbol' : 'Quiniela';
+    const modeText = isFantasy ? 'FuchoOnce' : 'Quiniela';
     try {
       await Share.share({
         message: `¡Únete a mi liga "${league.name}" de ${modeText}!\n\nCódigo: ${league.code}\n\nDescarga la app y usa este código para unirte.`,

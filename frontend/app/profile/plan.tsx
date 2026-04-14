@@ -12,10 +12,10 @@ import { SPONSORS } from '../config/sponsors';
 
 const FREE_PERKS = [
   { icon: '📝', text: 'Quiniela tradicional',           sub: 'Todas las jornadas de Liga MX' },
-  { icon: '⚽', text: 'Fantasy fútbol',                 sub: 'Formación 4-4-2 con jugadores reales' },
+  { icon: '⚽', text: 'FuchoOnce',                      sub: 'Formación 4-4-2 con jugadores reales' },
   { icon: '🏟️', text: 'Crea ligas ilimitadas',          sub: 'Hasta 25 amigos por liga' },
   { icon: '🤝', text: 'Únete a ligas ilimitadas',       sub: 'Sin límite de ligas ajenas' },
-  { icon: '🔀', text: 'Quiniela y Fantasy en una liga', sub: 'Ambos modos disponibles' },
+  { icon: '🔀', text: 'Quiniela y ONCE en una liga', sub: 'Ambos modos disponibles' },
   { icon: '🏆', text: 'Rankings globales',              sub: 'Compite con todos los usuarios' },
   { icon: '🔥', text: 'Rachas y logros',                sub: '20 logros desbloqueables' },
   { icon: '🔔', text: 'Notificaciones de jornada',      sub: 'Recordatorios automáticos' },
