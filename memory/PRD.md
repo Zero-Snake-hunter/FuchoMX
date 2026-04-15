@@ -79,7 +79,14 @@ Aplicación móvil multiplataforma (iOS/Android) de pool de fútbol con dos moda
 - **P4 Empty State Ligas**: `leagues.tsx` mejorado con emoji 🏟️, texto contextual, botón rojo "Crear liga", link "Unirme a una liga"
 - **P2 Dark Mode**: Verificación visual de todas las pantallas solicitadas — todas respetan paleta #000000/#DC143C correctamente
 
-### Sesión Abril 2026 (cont.) — Bug Fixes E2E + Branding
+### Sesión Abril 2026 — Bug Crítico Backend: Quiniela Submit
+- **FIXED quiniela/submit**: Validación cambiada de `start_at < now` a `status in ['live','finished']`. Los partidos con fechas pasadas pero status='scheduled' YA NO bloquean el submit.
+- **FIXED seed-season** (ambos endpoints): Ahora usan `ACTIVE_WEEK=11` con fechas relativas a HOY:
+  - Jornadas 1-10: pasadas (finished), matches status=finished
+  - Jornada 11: activa (in_progress), matches status=scheduled, fechas esta semana
+  - Jornadas 12-17: futuras (upcoming), matches status=scheduled
+- **Ejecutado seed-season**: DB regenerada. Jornada 11 tiene 9 partidos del 15-22 abril 2026.
+- **Verificado con curl**: 200 OK submit + 400 correcto para partido 'finished'
 - **FIXED register.tsx**: Botón atrás ← movido FUERA del ScrollView (era position:absolute dentro causando fallos touch en móvil). Ambos botones usan `router.replace('/(auth)/login')`
 - **FIXED plan.tsx**: Archivo tenía DOS export default completos — el segundo con sección "🔒 Próximamente Premium". Reescrito con solo la versión correcta (149 líneas, 100% gratuito, sin Premium)
 - **FIXED quiniela/index.tsx**: `ShareResultCard` onClose ahora ejecuta `router.replace('/quiniela/rankings')` — redirige a rankings al cerrar la tarjeta

@@ -579,13 +579,24 @@ test_plan:
           agent: "testing"
           comment: "✅ CODE VERIFIED: lineup.tsx usa Alert.alert con '✅ ¡Alineación Guardada!' y botón 'Ver Rankings' → router.replace('/fantasy/rankings'). Cambio aplicado correctamente en líneas 268-273."
 
+  - task: "BUG CRÍTICO: POST /api/quiniela/submit rechazaba todas las quinielas por fechas pasadas"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "P0"
+    needs_retesting: false
+    status_history:
+        - working: false
+          agent: "main"
+          comment: "BUG CRÍTICO: El endpoint POST /api/quiniela/submit comparaba match['start_at'] < datetime.utcnow() y RECHAZABA TODAS las quinielas porque los partidos del seed tenían fechas de 2025 (pasadas). ROOT CAUSE: Validación por fecha en lugar de por status del partido."
+        - working: true
+          agent: "main"
+          comment: "FIX APLICADO: 1) Cambié validación de 'start_at < now' a 'status in [live, finished]' en /api/quiniela/submit (server.py líneas 827-838). 2) Actualicé AMBOS endpoints de seed (/admin/seed-season y /admin/seed-real-data) para usar fechas RELATIVAS A HOY con ACTIVE_WEEK=11 - jornadas 1-10 pasadas, jornada 11 activa (esta semana), jornadas 12-17 futuras. 3) Ejecuté seed-season para regenerar la DB. 4) Verificado con curl: POST /api/quiniela/submit → 200 OK 'Quiniela enviada exitosamente, selections_count:9'. 5) Verificado rechazo correcto con match status='finished' → 400 'El partido PAC vs GDL ya comenzó'. Fantasy/lineup NO tenía validación de fechas (ya correcto)."
+
 test_plan:
   current_focus:
-    - "BUG 1 - Botón atrás en register.tsx usa router.replace"
-    - "BUG 2 - Link Inicia sesión en register.tsx responde al toque"
-    - "BUG 3 - plan.tsx eliminar sección Premium bloqueada"
-    - "Quiniela submit → redirigir a rankings"
-    - "FuchoOnce lineup submit → redirigir a rankings"
+    - "BUG CRÍTICO: POST /api/quiniela/submit rechazaba todas las quinielas por fechas pasadas"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -597,3 +608,5 @@ agent_communication:
       message: "NUEVO AGENTE - SESIÓN DE MEJORAS UI. Implementados: P3 (welcome screen post-registro: /(auth)/welcome.tsx con nombre en rojo y 2 botones de acción), P4 (empty state mejorado en leagues.tsx con estadio emoji + botones de acción), P2 (verificación visual de modo oscuro en todas las pantallas requeridas - todas correctas). Screenshots tomados de: Home, Perfil (MI ESTADÍSTICA grid 2 cols), Welcome screen, Leagues empty state, Create Liga, Join Liga, Rankings, FuchoOnce/Lineup. Todo verificado visualmente."
     - agent: "main"
       message: "SESIÓN DE CORRECCIÓN DE BUGS REPORTADOS EN DISPOSITIVO REAL. 4 fixes aplicados: 1) BUG 1+2 register.tsx - El botón atrás y el link 'Inicia sesión' tenían problemas de touch en móvil porque el botón estaba en ScrollView con position:absolute. FIX: Movido fuera del ScrollView, ambos usan router.replace('/(auth)/login'). 2) BUG 3 plan.tsx - Archivo tenía DOS export default completos, el segundo con sección '🔒 Próximamente Premium'. FIX: Reescrito con solo la versión correcta (100% gratuito, 149 líneas). 3) quiniela/index.tsx - onClose de ShareResultCard ahora ejecuta router.replace('/quiniela/rankings'). 4) fantasy/lineup.tsx - Alert 'OK' cambiado a '✅ ¡Alineación Guardada!' con botón 'Ver Rankings' → router.replace('/fantasy/rankings'). Frontend reiniciado. NECESITA: testing visual de los 5 bugs."
+    - agent: "main"
+      message: "SESIÓN BUG CRÍTICO BACKEND: quiniela/submit rechazaba todas las predicciones por validación de fechas. ROOT CAUSE: El endpoint comparaba match['start_at'] < datetime.utcnow() → todos los partidos del seed tenían fechas de 2025 (pasadas). FIXES: 1) Cambié validación a status-based: solo bloquea si match.status in ['live','finished']. 2) Actualicé AMBOS seeds (seed-season y seed-real-data) con ACTIVE_WEEK=11 para fechas relativas a HOY. Jornadas 1-10 = pasadas/finished, jornada 11 = activa/in_progress (esta semana), 12-17 = futuras/upcoming. 3) Ejecuté seed-season → Jornada 11 ahora tiene 9 partidos del 15-22 abril 2026, todos status='scheduled'. 4) Prueba curl: 200 OK con 9 selecciones aceptadas. 5) Prueba rechazo: 400 con mensaje correcto para partido 'finished'. Fantasy/lineup no tenía este bug."

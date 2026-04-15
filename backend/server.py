@@ -345,17 +345,28 @@ async def seed_full_season():
     
     created_jornadas = []
     now = datetime.utcnow()
+    ACTIVE_WEEK = 11  # La temporada va por la jornada 11 (mitad de temporada)
     
     for week in range(1, 18):  # 17 jornadas
-        week_start = now + timedelta(weeks=week - 1)
-        week_end = week_start + timedelta(days=2)
+        # Las fechas son siempre relativas a HOY:
+        # Jornadas pasadas (1-10) → semanas anteriores a hoy
+        # Jornada activa (11) → esta semana (hoy a hoy+7)
+        # Jornadas futuras (12-17) → próximas semanas
+        weeks_from_active = week - ACTIVE_WEEK
+        week_start = now + timedelta(weeks=weeks_from_active)
+        week_end = week_start + timedelta(days=7)
+        
+        is_past = weeks_from_active < 0
+        is_current = weeks_from_active == 0
+        week_status = "finished" if is_past else ("in_progress" if is_current else "upcoming")
+        match_status_val = "finished" if is_past else "scheduled"
         
         jornada_data = {
             "week_number": week,
             "start_date": week_start,
             "end_date": week_end,
-            "status": "upcoming" if week > 1 else "upcoming",
-            "is_active": week == 1,  # Only first jornada is active
+            "status": week_status,
+            "is_active": is_current,  # Solo jornada 11 activa
             "created_at": now
         }
         
@@ -374,7 +385,7 @@ async def seed_full_season():
                     "home_team_id": shuffled_teams[i]["_id"],
                     "away_team_id": shuffled_teams[i + 1]["_id"],
                     "start_at": week_start + timedelta(hours=i),
-                    "status": "scheduled",
+                    "status": match_status_val,
                     "home_score": None,
                     "away_score": None,
                     "created_at": now
@@ -387,7 +398,8 @@ async def seed_full_season():
         created_jornadas.append({
             "week_number": week,
             "jornada_id": str(jornada_id),
-            "is_active": week == 1,
+            "is_active": is_current,
+            "status": week_status,
             "matches_count": len(matches)
         })
     
@@ -823,10 +835,9 @@ async def submit_quiniela(
     # Get all matches for this jornada
     matches = await db.matches.find({"jornada_id": jornada_id}).to_list(100)
     
-    # Check if any match has started
-    now = datetime.utcnow()
+    # Check if any match has already started (por status, NO por fecha)
     for match in matches:
-        if match["start_at"] < now:
+        if match.get("status") in ["live", "finished"]:
             # Look up team names for readable error message
             home_team = await db.teams.find_one({"_id": match.get("home_team_id")})
             away_team = await db.teams.find_one({"_id": match.get("away_team_id")})
@@ -2586,20 +2597,28 @@ async def seed_real_data():
             await db.players.insert_one(player_doc)
             players_created += 1
     
-    # Create 17 jornadas for the season
+    # Create 17 jornadas for the season with dates relative to TODAY
     now = datetime.utcnow()
+    ACTIVE_WEEK = 11  # La temporada va por la jornada 11 (mitad de temporada)
     jornadas_created = 0
     
     for week in range(1, 18):
-        week_start = now + timedelta(weeks=week - 1)
-        week_end = week_start + timedelta(days=2)
+        # Fechas relativas a hoy: jornada 11 = esta semana, anteriores = pasadas, siguientes = futuras
+        weeks_from_active = week - ACTIVE_WEEK
+        week_start = now + timedelta(weeks=weeks_from_active)
+        week_end = week_start + timedelta(days=7)
+        
+        is_past = weeks_from_active < 0
+        is_current = weeks_from_active == 0
+        week_status = "finished" if is_past else ("in_progress" if is_current else "upcoming")
+        match_status_val = "finished" if is_past else "scheduled"
         
         jornada_data = {
             "week_number": week,
             "start_date": week_start,
             "end_date": week_end,
-            "status": "upcoming",
-            "is_active": week == 1,
+            "status": week_status,
+            "is_active": is_current,  # Solo jornada 11 activa
             "created_at": now
         }
         
@@ -2618,7 +2637,7 @@ async def seed_real_data():
                     "home_team_id": shuffled[i],
                     "away_team_id": shuffled[i + 1],
                     "start_at": week_start + timedelta(hours=i),
-                    "status": "scheduled",
+                    "status": match_status_val,
                     "home_score": None,
                     "away_score": None,
                     "created_at": now
