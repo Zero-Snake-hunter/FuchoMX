@@ -229,7 +229,10 @@ export default function QuinielaScreen() {
       {shareData && (
         <ShareResultCard
           data={shareData}
-          onClose={() => setShareData(null)}
+          onClose={() => {
+            setShareData(null);
+            router.replace('/quiniela/rankings');
+          }}
         />
       )}
 

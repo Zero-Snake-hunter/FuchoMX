@@ -504,8 +504,81 @@ test_plan:
           agent: "main"
           comment: "VERIFICADO: Screenshots tomados de todas las pantallas pedidas. league-results.tsx, rankings.tsx, league-detail.tsx, lineup.tsx (FuchoOnce), create-league.tsx, join-league.tsx - TODAS usan #000000 background, #1a1a1a cards, #FFFFFF texto, #DC143C accents. Paleta negro/rojo respetada correctamente."
 
+  - task: "BUG 1 - Botón atrás en register.tsx usa router.replace"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/(auth)/register.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: false
+          agent: "main"
+          comment: "BUG REPORTADO POR USUARIO en dispositivo real: 'GO_BACK was not handled by any navigator'. El botón ← en register.tsx estaba dentro del ScrollView con position:absolute causando problemas de touch events en móvil. FIX: Movido el TouchableOpacity del back button FUERA del ScrollView como hijo directo del KeyboardAvoidingView. Usa router.replace('/(auth)/login'). Necesita validación."
+
+  - task: "BUG 2 - Link Inicia sesión en register.tsx responde al toque"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/(auth)/register.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: false
+          agent: "main"
+          comment: "BUG REPORTADO: El link 'Inicia sesión' no responde al toque. Código ya usa onPress={() => router.replace('/(auth)/login')} correctamente. El fix del BUG 1 (mover back button fuera del ScrollView) también debe resolver posibles conflictos de touch en el área del scroll. Necesita validación en el dispositivo."
+
+  - task: "BUG 3 - plan.tsx eliminar sección Premium bloqueada"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/profile/plan.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: false
+          agent: "main"
+          comment: "BUG CRÍTICO ENCONTRADO: plan.tsx tenía DOS export default function PlanScreen() completas. La primera (correcta, sin Premium) y la segunda (con sección '🔒 Próximamente Premium') sobreescribía la primera. CAUSA: Agente anterior concatenó el archivo duplicándolo. FIX: Reescrito el archivo con envcore__bulk_file_writer dejando solo la primera versión correcta (149 líneas). El archivo ahora tiene UN SOLO export default, sin ninguna sección bloqueada, sin candado 🔒, mensaje '100% gratuito' prominente."
+
+  - task: "Quiniela submit → redirigir a rankings"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/quiniela/index.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: false
+          agent: "main"
+          comment: "BUG: Después de enviar la Quiniela, la app no redirigía automáticamente a Rankings. Solo mostraba el ShareResultCard como overlay. FIX: Modificado onClose del ShareResultCard para ejecutar router.replace('/quiniela/rankings') cuando el usuario cierra la tarjeta. El flujo ahora es: submit → shareCard aparece → usuario cierra → redirige a /quiniela/rankings."
+
+  - task: "FuchoOnce lineup submit → redirigir a rankings"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/fantasy/lineup.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: false
+          agent: "main"
+          comment: "BUG: Después de guardar la alineación ONCE, el Alert redirigia a '/fantasy' (dashboard) en lugar de '/fantasy/rankings'. FIX: Cambiado Alert.alert a mostrar '✅ ¡Alineación Guardada!' y botón 'Ver Rankings' que usa router.replace('/fantasy/rankings')."
+
+test_plan:
+  current_focus:
+    - "BUG 1 - Botón atrás en register.tsx usa router.replace"
+    - "BUG 2 - Link Inicia sesión en register.tsx responde al toque"
+    - "BUG 3 - plan.tsx eliminar sección Premium bloqueada"
+    - "Quiniela submit → redirigir a rankings"
+    - "FuchoOnce lineup submit → redirigir a rankings"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
 agent_communication:
     - agent: "main"
       message: "FANTASY LINEUP BUG FIX SESSION. Diagnóstico y corrección del bug P0 'alineación no se guarda'. ROOT CAUSE 1: Jornada se auto-avanzaba en cada llamada a /api/jornadas/current porque todos los partidos mock tienen status='finished'. FIX BACKEND: Auto-advance ahora solo ocurre si end_date también ha pasado. ROOT CAUSE 2 (probable): submitLineup re-fetcheaba la jornada al momento del submit (potencial jornada diferente). FIX FRONTEND: lineup.tsx ahora carga jornada en initScreen() y usa la cached version para submit. TAMBIÉN AGREGADO: Verificación si ya hay alineación enviada (muestra pantalla informativa), verificación si usuario tiene equipo fantasy, detección de jugadores duplicados, mejor manejo de errores. NECESITO TESTING: 1) Flujo completo de Fantasy (crear equipo → seleccionar jugadores → guardar alineación). 2) Verificar que jornada es estable entre pantallas. 3) Verificar que pantalla 'ya enviaste' aparece correctamente para usuarios con alineación existente."
     - agent: "main"
       message: "NUEVO AGENTE - SESIÓN DE MEJORAS UI. Implementados: P3 (welcome screen post-registro: /(auth)/welcome.tsx con nombre en rojo y 2 botones de acción), P4 (empty state mejorado en leagues.tsx con estadio emoji + botones de acción), P2 (verificación visual de modo oscuro en todas las pantallas requeridas - todas correctas). Screenshots tomados de: Home, Perfil (MI ESTADÍSTICA grid 2 cols), Welcome screen, Leagues empty state, Create Liga, Join Liga, Rankings, FuchoOnce/Lineup. Todo verificado visualmente."
+    - agent: "main"
+      message: "SESIÓN DE CORRECCIÓN DE BUGS REPORTADOS EN DISPOSITIVO REAL. 4 fixes aplicados: 1) BUG 1+2 register.tsx - El botón atrás y el link 'Inicia sesión' tenían problemas de touch en móvil porque el botón estaba en ScrollView con position:absolute. FIX: Movido fuera del ScrollView, ambos usan router.replace('/(auth)/login'). 2) BUG 3 plan.tsx - Archivo tenía DOS export default completos, el segundo con sección '🔒 Próximamente Premium'. FIX: Reescrito con solo la versión correcta (100% gratuito, 149 líneas). 3) quiniela/index.tsx - onClose de ShareResultCard ahora ejecuta router.replace('/quiniela/rankings'). 4) fantasy/lineup.tsx - Alert 'OK' cambiado a '✅ ¡Alineación Guardada!' con botón 'Ver Rankings' → router.replace('/fantasy/rankings'). Frontend reiniciado. NECESITA: testing visual de los 5 bugs."

@@ -66,17 +66,19 @@ export default function RegisterScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
     >
+      {/* Botón atrás FUERA del ScrollView para garantizar eventos touch en móvil */}
+      <TouchableOpacity
+        style={styles.backButton}
+        onPress={() => router.replace('/(auth)/login')}
+        activeOpacity={0.7}
+      >
+        <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+      </TouchableOpacity>
+
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.replace('/(auth)/login')}
-        >
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-
         <View style={styles.header}>
           <Image
             source={require('../../assets/images/FuchoMX.png')}

@@ -1,0 +1,35 @@
+{
+  "summary": "Iteration 7: Visual verification of 3 reported bugs (register.tsx back button, register link, plan.tsx premium removal) + quiniela prediction flow + profile→plan navigation. All 5 test cases PASSED.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "MINOR: Home screen shows 'Usuario' as display name instead of the registered display name 'TestUser T1' - the user_profile might not be returning display_name correctly after registration flow (check AuthContext bootstrap after register). Not a blocking issue.",
+    "INFO: test_credentials.md is missing at /app/memory/test_credentials.md - recommend creating it with test user credentials for future testing agents."
+  ],
+  "critical_code_review_comments": [
+    "BUG 1 FIXED: register.tsx back button correctly placed OUTSIDE ScrollView as direct child of KeyboardAvoidingView at lines 70-76. Confirmed via click at x=35,y=60 - navigates to /login without GO_BACK error.",
+    "BUG 2 FIXED: '¿Ya tienes cuenta? Inicia sesión' TouchableOpacity in register.tsx uses router.replace('/(auth)/login'). Link found at x=207,y=696, scrolled into view and clicked - successfully navigates to /login.",
+    "BUG 3 FIXED: plan.tsx (149 lines) - programmatic check confirmed NO 'Premium', 'Próximamente', or '🔒' text anywhere. Only FREE_PERKS with ✅ checkmarks. '💚 FuchoMX es y será siempre 100% gratuito.' footer shown.",
+    "Quiniela flow: All 9 Liga MX matches render with Gana X / Empate / Gana Y options. Selections use filled red circles. Counter updates ('Faltan N partidos'). After all 9 selections: 'Todos los partidos seleccionados' shown. ENVIAR QUINIELA button activates (bright red, not greyed).",
+    "Profile→Plan navigation: 'Tu Plan Gratuito' button found at y=848 on profile screen. Clicking navigates to /profile/plan correctly. Plan screen shows Plan Gratuito badge + 8 free perks - no premium content."
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "N/A (frontend-only testing)",
+    "frontend": "100% (5/5 test cases passed)"
+  },
+  "seed_data_creation": "Registered test user: testuser_t1_1776226875@example.com / Test1234! / TestUser T1",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All 3 bugs from iteration 7 are confirmed fixed: (1) register.tsx back button outside ScrollView - click at (35,60) navigates to login. (2) 'Inicia sesión' link in register works. (3) plan.tsx has NO Premium section - only FREE_PERKS with checkmarks. Quiniela: 9 matches in Jornada 1 (Tijuana, Monterrey, Querétaro, Cruz Azul, Atlético San Luis, Santos Laguna, Juárez, Necaxa, Mazatlán as home teams). Profile tab accessible via bottom nav. Minor: home shows 'Usuario' instead of registered display name - potential AuthContext display_name mapping issue post-registration. test_credentials.md missing.",
+  "rca_of_issue": "N/A - all 3 reported bugs verified as fixed. BUG1 RCA: back button was inside ScrollView causing touch event interception on mobile - fixed by moving to KeyboardAvoidingView direct child with position:absolute zIndex:10. BUG2 RCA: none reported, link was functional. BUG3 RCA: plan.tsx had dual export default; second one had Premium section - fixed by rewriting file to 149 lines with only free plan content."
+}

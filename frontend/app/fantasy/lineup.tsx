@@ -267,9 +267,9 @@ export default function LineupScreen() {
 
       setAlreadySubmitted(true);
       Alert.alert(
-        '¡Alineación Guardada!', 
+        '✅ ¡Alineación Guardada!', 
         `Tu equipo está listo para la Jornada ${currentJornada.week_number}.`,
-        [{ text: 'OK', onPress: () => router.replace('/fantasy') }]
+        [{ text: 'Ver Rankings', onPress: () => router.replace('/fantasy/rankings') }]
       );
       
     } catch (error: any) {
