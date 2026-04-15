@@ -410,6 +410,92 @@ async def seed_full_season():
         "jornadas": created_jornadas
     }
 
+
+@api_router.post("/admin/reset-jornada")
+async def reset_jornada(week: int = None):
+    """
+    Utilidad para demos y pruebas.
+    - Sin parámetros: cierra la jornada activa y activa la siguiente.
+    - ?week=N: activa directamente la jornada N (desactiva cualquier otra).
+    """
+    now = datetime.utcnow()
+
+    if week is not None:
+        # Modo directo: activar jornada específica
+        target = await db.jornadas.find_one({"week_number": week})
+        if not target:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Jornada {week} no encontrada"
+            )
+        # Desactivar todas
+        await db.jornadas.update_many({}, {"$set": {"is_active": False}})
+        # Activar la pedida
+        await db.jornadas.update_one(
+            {"_id": target["_id"]},
+            {"$set": {
+                "is_active": True,
+                "status": "in_progress",
+                "start_date": now,
+                "end_date": now + timedelta(days=7)
+            }}
+        )
+        logger.info(f"Admin reset-jornada: jornada {week} activada directamente")
+        return {
+            "message": f"✅ Jornada {week} activada",
+            "week_number": week,
+            "jornada_id": str(target["_id"])
+        }
+
+    # Modo avance: cerrar activa → activar siguiente
+    current = await db.jornadas.find_one({"is_active": True})
+    if not current:
+        # Fallback: buscar la de menor week_number con status != finished
+        current = await db.jornadas.find_one(
+            {"status": {"$ne": "finished"}},
+            sort=[("week_number", 1)]
+        )
+    if not current:
+        raise HTTPException(
+            status_code=404,
+            detail="No hay jornadas disponibles. Ejecuta /api/admin/seed-season primero."
+        )
+
+    closed_week = current["week_number"]
+
+    # Cerrar jornada actual
+    await db.jornadas.update_one(
+        {"_id": current["_id"]},
+        {"$set": {"is_active": False, "status": "finished"}}
+    )
+
+    # Buscar y activar la siguiente
+    next_j = await db.jornadas.find_one({"week_number": closed_week + 1})
+    if not next_j:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No hay jornada después de la {closed_week}. Esa era la última."
+        )
+
+    await db.jornadas.update_one(
+        {"_id": next_j["_id"]},
+        {"$set": {
+            "is_active": True,
+            "status": "in_progress",
+            "start_date": now,
+            "end_date": now + timedelta(days=7)
+        }}
+    )
+
+    logger.info(f"Admin reset-jornada: {closed_week} → {closed_week + 1}")
+    return {
+        "message": f"✅ Jornada {closed_week} cerrada → Jornada {closed_week + 1} activa",
+        "closed_week": closed_week,
+        "active_week": closed_week + 1,
+        "jornada_id": str(next_j["_id"])
+    }
+
+
 @api_router.post("/admin/quiniela/cerrar-jornada/{jornada_id}")
 async def close_jornada(jornada_id: str):
     """Admin: Close a jornada and activate the next one"""
