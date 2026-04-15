@@ -72,14 +72,7 @@ export default function RegisterScreen() {
       >
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => {
-            // router.back() puede fallar en web sin historial → fallback a login
-            try {
-              router.back();
-            } catch {
-              router.replace('/(auth)/login');
-            }
-          }}
+          onPress={() => router.replace('/(auth)/login')}
         >
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
@@ -172,7 +165,7 @@ export default function RegisterScreen() {
 
           <View style={styles.loginContainer}>
             <Text style={styles.loginText}>¿Ya tienes cuenta? </Text>
-            <TouchableOpacity onPress={() => router.back()}>
+            <TouchableOpacity onPress={() => router.replace('/(auth)/login')}>
               <Text style={styles.loginLink}>Inicia sesión</Text>
             </TouchableOpacity>
           </View>

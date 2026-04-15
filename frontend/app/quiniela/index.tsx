@@ -56,6 +56,7 @@ export default function QuinielaScreen() {
   const [selections, setSelections] = useState<{ [matchId: string]: string }>({});
   const [submitting, setSubmitting] = useState(false);
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
   const [shareData, setShareData] = useState<ShareResultData | null>(null);
 
   useEffect(() => {

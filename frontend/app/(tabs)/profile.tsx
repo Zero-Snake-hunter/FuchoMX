@@ -187,12 +187,6 @@ export default function ProfileScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem}>
-            <Ionicons name="card-outline" size={24} color="#FFFFFF" />
-            <Text style={styles.menuText}>Suscripción</Text>
-            <Ionicons name="chevron-forward" size={24} color="#666" />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem}>
             <Ionicons name="help-circle-outline" size={24} color="#FFFFFF" />
             <Text style={styles.menuText}>Ayuda</Text>
             <Ionicons name="chevron-forward" size={24} color="#666" />

@@ -81,6 +81,7 @@ export default function LineupScreen() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
   const [currentJornada, setCurrentJornada] = useState<any>(null);
 
   // Modal states
