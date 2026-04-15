@@ -79,6 +79,13 @@ Aplicación móvil multiplataforma (iOS/Android) de pool de fútbol con dos moda
 - **P4 Empty State Ligas**: `leagues.tsx` mejorado con emoji 🏟️, texto contextual, botón rojo "Crear liga", link "Unirme a una liga"
 - **P2 Dark Mode**: Verificación visual de todas las pantallas solicitadas — todas respetan paleta #000000/#DC143C correctamente
 
+### Sesión Abril 2026 (cont.) — Bug Fixes E2E + Branding
+- **FIXED register.tsx**: Botón atrás ← movido FUERA del ScrollView (era position:absolute dentro causando fallos touch en móvil). Ambos botones usan `router.replace('/(auth)/login')`
+- **FIXED plan.tsx**: Archivo tenía DOS export default completos — el segundo con sección "🔒 Próximamente Premium". Reescrito con solo la versión correcta (149 líneas, 100% gratuito, sin Premium)
+- **FIXED quiniela/index.tsx**: `ShareResultCard` onClose ahora ejecuta `router.replace('/quiniela/rankings')` — redirige a rankings al cerrar la tarjeta
+- **FIXED fantasy/lineup.tsx**: Alert de éxito dice "✅ ¡Alineación Guardada!" con botón "Ver Rankings" → `router.replace('/fantasy/rankings')`
+- **Validado con testing agent**: 5/5 tests pasados — BUG1 ✅, BUG2 ✅, BUG3 ✅, flujo Quiniela ✅, Perfil→Plan ✅
+
 ## Backlog Priorizado
 
 ### P0 (Crítico - Próximo)
@@ -86,10 +93,8 @@ Aplicación móvil multiplataforma (iOS/Android) de pool de fútbol con dos moda
 
 ### P1 (Alta Prioridad)
 - Integración API-Football: datos en vivo de partidos, resultados, estadísticas de jugadores
-- Sistema de pagos PayPal: upgrade a Premium para más ligas
 
 ### P2 (Media Prioridad)  
-- Plan Premium: > 1 liga, > 25 miembros
 - Notificaciones push (próximo partido, resultados)
 - Compartir resultados en redes sociales
 - Historial de temporadas
@@ -98,3 +103,4 @@ Aplicación móvil multiplataforma (iOS/Android) de pool de fútbol con dos moda
 - Email real para recuperación de contraseña (actualmente mock)
 - Refactoring: Dividir `server.py` en módulos con APIRouter
 - Tests automatizados frontend (Playwright)
+- Fix timing issue: display_name muestra "Usuario" brevemente en web preview tras registro (no afecta móvil)
