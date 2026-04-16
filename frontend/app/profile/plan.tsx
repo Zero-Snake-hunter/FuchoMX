@@ -19,6 +19,7 @@ const FREE_PERKS = [
   { icon: '🏆', text: 'Rankings globales',              sub: 'Compite con todos los usuarios' },
   { icon: '🔥', text: 'Rachas y logros',                sub: '20 logros desbloqueables' },
   { icon: '🔔', text: 'Notificaciones de jornada',      sub: 'Recordatorios automáticos' },
+  { icon: '🏆', text: 'Bracket de Liguilla',            sub: 'Predice al campeón del Clausura 2026' },
 ];
 
 const PerkRow = ({ icon, text, sub }: { icon: string; text: string; sub: string }) => (

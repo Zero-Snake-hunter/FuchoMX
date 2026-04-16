@@ -20,6 +20,8 @@ export default function QuinielaLayout() {
       <Stack.Screen name="league-detail" options={{ headerShown: false }} />
       <Stack.Screen name="league-results" options={{ title: 'Resultados' }} />
       <Stack.Screen name="history" options={{ title: 'Mis Quinielas' }} />
+      <Stack.Screen name="bracket" options={{ headerShown: false }} />
+      <Stack.Screen name="bracket-results" options={{ headerShown: false }} />
       <Stack.Screen name="rankings" options={{ title: 'Rankings' }} />
     </Stack>
   );

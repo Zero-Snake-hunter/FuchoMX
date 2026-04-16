@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional
 import uuid
 from datetime import datetime, timedelta
-from real_liga_mx_data import LIGA_MX_TEAMS
+from real_liga_mx_data import LIGA_MX_TEAMS, CLAUSURA_2026_DATES, CLAUSURA_2026_J13_MATCHES, LIGUILLA_CLAUSURA_2026_TEAMS
 import bcrypt
 import jwt
 from bson import ObjectId
@@ -119,6 +119,22 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         )
     
     return user
+
+
+async def get_optional_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False))
+) -> Optional[dict]:
+    """Optional auth — retorna None si no hay token en lugar de lanzar error."""
+    if not credentials:
+        return None
+    try:
+        payload = decode_token(credentials.credentials)
+        user_id = payload.get("sub")
+        if not user_id:
+            return None
+        return await db.users.find_one({"_id": ObjectId(user_id)})
+    except Exception:
+        return None
 
 def serialize_user(user: dict) -> UserResponse:
     """Serialize user document to response model"""
@@ -345,61 +361,76 @@ async def seed_full_season():
     
     created_jornadas = []
     now = datetime.utcnow()
-    ACTIVE_WEEK = 11  # La temporada va por la jornada 11 (mitad de temporada)
-    
+    ACTIVE_WEEK = 13  # Clausura 2026 — Jornada 13 activa (18-20 abril 2026)
+
+    # Construir lookup de equipos por nombre para J13
+    teams_by_name = {t["name"]: t["_id"] for t in teams}
+
     for week in range(1, 18):  # 17 jornadas
-        # Las fechas son siempre relativas a HOY:
-        # Jornadas pasadas (1-10) → semanas anteriores a hoy
-        # Jornada activa (11) → esta semana (hoy a hoy+7)
-        # Jornadas futuras (12-17) → próximas semanas
-        weeks_from_active = week - ACTIVE_WEEK
-        week_start = now + timedelta(weeks=weeks_from_active)
-        week_end = week_start + timedelta(days=7)
-        
-        is_past = weeks_from_active < 0
-        is_current = weeks_from_active == 0
-        week_status = "finished" if is_past else ("in_progress" if is_current else "upcoming")
+        # Usar fechas reales del Clausura 2026
+        week_start = CLAUSURA_2026_DATES.get(week, now + timedelta(weeks=week - ACTIVE_WEEK))
+        week_end   = week_start + timedelta(days=7)
+
+        is_past    = week < ACTIVE_WEEK
+        is_current = week == ACTIVE_WEEK
+        week_status    = "finished" if is_past else ("in_progress" if is_current else "upcoming")
         match_status_val = "finished" if is_past else "scheduled"
-        
+
         jornada_data = {
             "week_number": week,
-            "start_date": week_start,
-            "end_date": week_end,
-            "status": week_status,
-            "is_active": is_current,  # Solo jornada 11 activa
-            "created_at": now
+            "start_date":  week_start,
+            "end_date":    week_end,
+            "status":      week_status,
+            "is_active":   is_current,
+            "created_at":  now
         }
-        
+
         jornada_result = await db.jornadas.insert_one(jornada_data)
         jornada_id = jornada_result.inserted_id
-        
-        # Shuffle teams for this week
-        shuffled_teams = list(teams)
-        random.shuffle(shuffled_teams)
-        
-        matches = []
-        for i in range(0, min(18, len(shuffled_teams)), 2):
-            if i + 1 < len(shuffled_teams):
-                match = {
-                    "jornada_id": jornada_id,
-                    "home_team_id": shuffled_teams[i]["_id"],
-                    "away_team_id": shuffled_teams[i + 1]["_id"],
-                    "start_at": week_start + timedelta(hours=i),
-                    "status": match_status_val,
-                    "home_score": None,
-                    "away_score": None,
-                    "created_at": now
-                }
-                matches.append(match)
-        
+
+        # ── Jornada 13: partidos reales del Clausura 2026 ──
+        if is_current:
+            matches = []
+            for (home_name, away_name, match_dt) in CLAUSURA_2026_J13_MATCHES:
+                home_id = teams_by_name.get(home_name)
+                away_id = teams_by_name.get(away_name)
+                if home_id and away_id:
+                    matches.append({
+                        "jornada_id": jornada_id,
+                        "home_team_id": home_id,
+                        "away_team_id": away_id,
+                        "start_at": match_dt,
+                        "status":   "scheduled",
+                        "home_score": None,
+                        "away_score": None,
+                        "created_at": now
+                    })
+        else:
+            # ── Otras jornadas: sorteo aleatorio ──
+            shuffled_teams = list(teams)
+            random.shuffle(shuffled_teams)
+            matches = []
+            for i in range(0, min(18, len(shuffled_teams)), 2):
+                if i + 1 < len(shuffled_teams):
+                    matches.append({
+                        "jornada_id": jornada_id,
+                        "home_team_id": shuffled_teams[i]["_id"],
+                        "away_team_id": shuffled_teams[i + 1]["_id"],
+                        "start_at": week_start + timedelta(hours=i),
+                        "status":   match_status_val,
+                        "home_score": None,
+                        "away_score": None,
+                        "created_at": now
+                    })
+
         if matches:
             await db.matches.insert_many(matches)
-        
+
         created_jornadas.append({
             "week_number": week,
             "jornada_id": str(jornada_id),
-            "is_active": is_current,
-            "status": week_status,
+            "is_active":  is_current,
+            "status":     week_status,
             "matches_count": len(matches)
         })
     
@@ -496,6 +527,80 @@ async def reset_jornada(week: int = None):
     }
 
 
+# ─────────────────────────────────────────────────────────────────────────
+#  LIGUILLA CLAUSURA 2026
+# ─────────────────────────────────────────────────────────────────────────
+
+@api_router.get("/liguilla/bracket")
+async def get_liguilla_bracket(current_user: dict = Depends(get_optional_user)):
+    """Retorna la estructura del bracket de liguilla con los 8 equipos clasificados."""
+    teams_data = []
+    for entry in LIGUILLA_CLAUSURA_2026_TEAMS:
+        team = await db.teams.find_one({"name": entry["name"]})
+        if team:
+            teams_data.append({
+                "position":  entry["position"],
+                "id":        str(team["_id"]),
+                "name":      team["name"],
+                "short_name": team.get("short_name", team["name"][:3].upper()),
+                "shield_url": team.get("shield_url", ""),
+            })
+
+    # Mapear por posición para construir cuartos
+    by_pos = {t["position"]: t for t in teams_data}
+
+    bracket = {
+        "temporada":      "Clausura 2026",
+        "status":         "pendiente",
+        "is_provisional": True,  # Todavía en temporada regular (J13 de 17)
+        "teams":          teams_data,
+        "cuartos": [
+            {"match": 1, "side": "left",  "home": by_pos.get(1), "away": by_pos.get(8)},
+            {"match": 2, "side": "left",  "home": by_pos.get(4), "away": by_pos.get(5)},
+            {"match": 3, "side": "right", "home": by_pos.get(2), "away": by_pos.get(7)},
+            {"match": 4, "side": "right", "home": by_pos.get(3), "away": by_pos.get(6)},
+        ],
+        "scoring": {
+            "cuartos": 5,
+            "semis":   10,
+            "campeon": 25,
+        },
+        "my_prediction": None,
+    }
+
+    # Predicción guardada del usuario (si hay sesión)
+    if current_user:
+        pred = await db.bracket_predictions.find_one({"user_id": current_user["_id"]})
+        if pred:
+            bracket["my_prediction"] = {
+                "cuartos_picks": pred.get("cuartos_picks", []),
+                "semis_picks":   pred.get("semis_picks", []),
+                "champion":      pred.get("champion"),
+            }
+
+    return bracket
+
+
+@api_router.post("/liguilla/bracket/submit")
+async def submit_bracket_prediction(
+    prediction: dict,
+    current_user: dict = Depends(get_current_user),
+):
+    """Guarda o actualiza la predicción de bracket del usuario."""
+    await db.bracket_predictions.update_one(
+        {"user_id": current_user["_id"]},
+        {"$set": {
+            "user_id":       current_user["_id"],
+            "cuartos_picks": prediction.get("cuartos_picks", []),
+            "semis_picks":   prediction.get("semis_picks", []),
+            "champion":      prediction.get("champion"),
+            "updated_at":    datetime.utcnow(),
+        }},
+        upsert=True,
+    )
+    return {"message": "✅ Bracket guardado exitosamente"}
+
+
 @api_router.post("/admin/quiniela/cerrar-jornada/{jornada_id}")
 async def close_jornada(jornada_id: str):
     """Admin: Close a jornada and activate the next one"""
@@ -583,15 +688,8 @@ async def sync_fixtures():
         "Atletico San Luis": "Atlético San Luis",
     }
 
-    # Clausura 2025 real jornada start dates
-    CLAUSURA_2025_DATES = {
-        1: datetime(2025, 1, 10), 2: datetime(2025, 1, 17), 3: datetime(2025, 1, 24),
-        4: datetime(2025, 1, 31), 5: datetime(2025, 2, 7),  6: datetime(2025, 2, 14),
-        7: datetime(2025, 2, 21), 8: datetime(2025, 2, 28), 9: datetime(2025, 3, 7),
-        10: datetime(2025, 3, 14), 11: datetime(2025, 3, 21), 12: datetime(2025, 3, 28),
-        13: datetime(2025, 4, 4),  14: datetime(2025, 4, 11), 15: datetime(2025, 4, 25),
-        16: datetime(2025, 5, 2),  17: datetime(2025, 5, 9),
-    }
+    # Clausura 2026 real jornada start dates
+    CLAUSURA_2025_DATES = CLAUSURA_2026_DATES
 
     events_fetched = 0
     matches_updated = 0

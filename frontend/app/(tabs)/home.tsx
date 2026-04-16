@@ -144,6 +144,22 @@ export default function HomeScreen() {
               Ambos modos están disponibles. Puedes jugar uno o ambos simultáneamente.
             </Text>
           </View>
+
+          {/* ── Liguilla Card ── */}
+          <TouchableOpacity
+            style={styles.liguillaBannerCard}
+            activeOpacity={0.8}
+            onPress={() => router.push('/quiniela/bracket')}
+          >
+            <View style={styles.liguillaBannerLeft}>
+              <Text style={styles.liguillaBannerEmoji}>🏆</Text>
+              <View>
+                <Text style={styles.liguillaBannerTitle}>BRACKET DE LIGUILLA</Text>
+                <Text style={styles.liguillaBannerSub}>Predice al campeón del Clausura 2026</Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#E63946" />
+          </TouchableOpacity>
         </View>
       </ScrollView>
 
@@ -271,6 +287,40 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     marginLeft: 12,
     lineHeight: 18,
+  },
+  // ── Liguilla Banner Card ────────────────────────────────
+  liguillaBannerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#0D0D0D',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E6394633',
+    marginHorizontal: 24,
+    marginTop: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  liguillaBannerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  liguillaBannerEmoji: {
+    fontSize: 28,
+  },
+  liguillaBannerTitle: {
+    color: '#FFF',
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  liguillaBannerSub: {
+    color: '#888',
+    fontSize: 11,
+    marginTop: 2,
   },
   // ── Sponsor Banner ─────────────────────────────────────
   sponsorBanner: {

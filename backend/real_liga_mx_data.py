@@ -447,3 +447,59 @@ LIGA_MX_TEAMS = [
         ]
     },
 ]
+
+# ──────────────────────────────────────────────
+#  CLAUSURA 2026 — Fechas reales de jornadas
+# ──────────────────────────────────────────────
+from datetime import datetime
+
+CLAUSURA_2026_DATES = {
+    1:  datetime(2026, 1, 10),   # Ene 10–12
+    2:  datetime(2026, 1, 17),   # Ene 17–19
+    3:  datetime(2026, 1, 24),   # Ene 24–26
+    4:  datetime(2026, 1, 31),   # Ene 31 – Feb 2
+    5:  datetime(2026, 2, 7),    # Feb 7–9
+    6:  datetime(2026, 2, 14),   # Feb 14–16
+    7:  datetime(2026, 2, 21),   # Feb 21–23
+    8:  datetime(2026, 2, 28),   # Feb 28 – Mar 2
+    9:  datetime(2026, 3, 7),    # Mar 7–9
+    10: datetime(2026, 3, 14),   # Mar 14–16
+    11: datetime(2026, 3, 21),   # Mar 21–23
+    12: datetime(2026, 4, 4),    # Abr 4–6
+    13: datetime(2026, 4, 18),   # Abr 18–20  ← JORNADA ACTUAL
+    14: datetime(2026, 4, 25),   # Abr 25–27
+    15: datetime(2026, 5, 2),    # May 2–4
+    16: datetime(2026, 5, 8),    # May 8–10
+    17: datetime(2026, 5, 15),   # May 15–17  ← Última jornada regular
+}
+
+# ──────────────────────────────────────────────
+#  JORNADA 13 — Partidos reales Clausura 2026
+#  (home_name, away_name, datetime_utc)
+# ──────────────────────────────────────────────
+CLAUSURA_2026_J13_MATCHES = [
+    ("Atlético San Luis", "Pumas UNAM",  datetime(2026, 4, 18, 23,  5)),  # Sáb 18 abr 18:05 CT
+    ("Mazatlán",          "Querétaro",   datetime(2026, 4, 19,  1,  5)),  # Sáb 18 abr 20:05 CT
+    ("Necaxa",            "Tigres UANL", datetime(2026, 4, 19, 22,  5)),  # Dom 19 abr 17:05 CT
+    ("Cruz Azul",         "Tijuana",     datetime(2026, 4, 20,  0,  5)),  # Dom 19 abr 19:05 CT
+    ("Monterrey",         "Pachuca",     datetime(2026, 4, 20,  0, 10)),  # Dom 19 abr 19:10 CT
+    ("Guadalajara",       "Puebla",      datetime(2026, 4, 20,  2,  5)),  # Dom 19 abr 21:05 CT
+    ("León",              "Juárez",      datetime(2026, 4, 20,  2, 10)),  # Dom 19 abr 21:10 CT
+    ("Club América",      "Toluca",      datetime(2026, 4, 20,  2, 15)),  # Dom 19 abr 21:15 CT
+    ("Santos Laguna",     "Atlas",       datetime(2026, 4, 20, 22,  5)),  # Lun 20 abr 17:05 CT
+]
+
+# ──────────────────────────────────────────────
+#  LIGUILLA CLAUSURA 2026 — Tabla provisional
+#  (al 15 de abril 2026, antes de J13)
+# ──────────────────────────────────────────────
+LIGUILLA_CLAUSURA_2026_TEAMS = [
+    {"position": 1, "name": "Guadalajara"},
+    {"position": 2, "name": "Cruz Azul"},
+    {"position": 3, "name": "Toluca"},
+    {"position": 4, "name": "Pumas UNAM"},
+    {"position": 5, "name": "Pachuca"},
+    {"position": 6, "name": "Atlas"},
+    {"position": 7, "name": "Tigres UANL"},
+    {"position": 8, "name": "Club América"},
+]
