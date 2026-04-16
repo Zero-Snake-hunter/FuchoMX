@@ -93,21 +93,32 @@ Aplicación móvil multiplataforma (iOS/Android) de pool de fútbol con dos moda
 - **FIXED fantasy/lineup.tsx**: Alert de éxito dice "✅ ¡Alineación Guardada!" con botón "Ver Rankings" → `router.replace('/fantasy/rankings')`
 - **Validado con testing agent**: 5/5 tests pasados — BUG1 ✅, BUG2 ✅, BUG3 ✅, flujo Quiniela ✅, Perfil→Plan ✅
 
+### Sesión Abril 2026 — Bracket Interactivo de Liguilla
+- **NUEVO `GET /api/liguilla/bracket`**: Retorna los 8 equipos clasificados (provisionales) con `name`, `short_name`, `shield_url`, `position` y la estructura de cuartos de final. is_provisional=true hasta fin de J17.
+- **NUEVO `POST /api/liguilla/bracket/submit`**: Guarda predicciones del bracket (cuartos_picks, semis_picks, champion).
+- **NUEVO `bracket.tsx`**: UI interactiva de bracket con fondo `#090909`, bordes `#E63946`, escudos reales, badge Provisional, sistema de picks progresivo (Cuartos→Semis→Final), botón "GUARDAR MI BRACKET" en rojo.
+- **NUEVO `bracket-results.tsx`**: Pantalla de resultados/estado del bracket guardado.
+- **ACTUALIZADO `home.tsx`**: Card 🏆 "BRACKET DE LIGUILLA" — "Predice al campeón del Clausura 2026" que navega a `/quiniela/bracket`.
+- **DATOS REALES CLAUSURA 2026**: `real_liga_mx_data.py` actualizado con fixtures reales de La Liga MX Clausura 2026 (J1-J17). `ACTIVE_WEEK=13`, jornada activa 18-25 abril 2026.
+- **VERIFICADO** (Abril 2026): Todos los 5 puntos del checklist del usuario pasados. Screenshots tomados de home card, bracket vacío, bracket con selección, bracket completo con botón GUARDAR.
+
 ## Backlog Priorizado
 
 ### P0 (Crítico - Próximo)
-- Flujo onboarding completo para nuevos usuarios (pantalla de bienvenida en primer login)
+- COMPLETADO: Bracket Interactivo de Liguilla ✅
 
 ### P1 (Alta Prioridad)
 - Integración API-Football: datos en vivo de partidos, resultados, estadísticas de jugadores
+- Live Standings Scraping: `GET /api/liguilla/bracket` → scraping de `ligamx.net/cancha/posiciones` para top 8 real
 
 ### P2 (Media Prioridad)  
 - Notificaciones push (próximo partido, resultados)
 - Compartir resultados en redes sociales
 - Historial de temporadas
+- Scraping de posiciones reales para el bracket de Liguilla
 
 ### P3 (Baja Prioridad)
 - Email real para recuperación de contraseña (actualmente mock)
-- Refactoring: Dividir `server.py` en módulos con APIRouter
+- Refactoring: Dividir `server.py` (>3200 líneas) en módulos con APIRouter
 - Tests automatizados frontend (Playwright)
 - Fix timing issue: display_name muestra "Usuario" brevemente en web preview tras registro (no afecta móvil)
