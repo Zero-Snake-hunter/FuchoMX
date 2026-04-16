@@ -1,11 +1,13 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  Image, StatusBar, ActivityIndicator, Alert, Modal,
+  Image, StatusBar, ActivityIndicator, Alert, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { captureRef } from 'react-native-view-shot';
+import * as Sharing from 'expo-sharing';
 import api from '../lib/api';
 import { SPONSORS } from '../config/sponsors';
 
@@ -105,9 +107,12 @@ export default function BracketScreen() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [bracketData, setBracketData] = useState<any>(null);
   const [picks, setPicks] = useState<BracketPicks>(EMPTY);
   const [byPos, setByPos] = useState<Record<number, TeamInfo>>({});
+  const shareCardRef = useRef<View>(null);
 
   useEffect(() => {
     api.get('/api/liguilla/bracket').then(res => {
@@ -130,6 +135,7 @@ export default function BracketScreen() {
           sfR: findTeam(mp.semis_picks?.[1]),
           champion: findTeam(mp.champion),
         });
+        setSaved(true); // Ya tenía predicción guardada
       }
     }).catch(() => {
       Alert.alert('Error', 'No se pudo cargar el bracket');
@@ -180,11 +186,46 @@ export default function BracketScreen() {
         semis_picks:   [picks.sfL?.id, picks.sfR?.id].filter(Boolean),
         champion:      picks.champion?.id,
       });
-      Alert.alert('✅ Bracket guardado', `Tu campeón: ${picks.champion.name}`);
+      setSaved(true);
+      Alert.alert('✅ Bracket guardado', `Tu campeón: ${picks.champion.name}\n\n¡Ahora comparte tu bracket!`);
     } catch {
       Alert.alert('Error', 'No se pudo guardar el bracket');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleShare = async () => {
+    if (!picks.champion) return;
+    setSharing(true);
+    try {
+      const uri = await captureRef(shareCardRef, {
+        format: 'png',
+        quality: 0.92,
+        result: 'tmpfile',
+      });
+      const shareText =
+        `Mi bracket del Clausura 2026 🏆\nMi campeón: ${picks.champion.name}\n¿Quién ganará? Haz tu predicción en FuchoMX\n#FuchoMX #LigaMX #Clausura2026`;
+
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (isAvailable) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'image/png',
+          dialogTitle: 'Mi Bracket del Clausura 2026',
+          UTI: 'public.png',
+        });
+      } else {
+        // Web fallback: show the text to copy
+        Alert.alert(
+          '📤 Tu bracket',
+          shareText,
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (e) {
+      Alert.alert('Error', 'No se pudo generar la imagen del bracket. Intenta de nuevo.');
+    } finally {
+      setSharing(false);
     }
   };
 
@@ -362,9 +403,10 @@ export default function BracketScreen() {
         </View>
       </ScrollView>
 
-      {/* Submit button */}
+      {/* Submit / Share bar */}
       {picks.champion && (
         <View style={s.submitBar}>
+          {/* Save button — always visible when champion is picked */}
           <TouchableOpacity
             style={s.submitBtn}
             onPress={saveBracket}
@@ -375,6 +417,92 @@ export default function BracketScreen() {
               ? <ActivityIndicator color="#FFF" />
               : <Text style={s.submitText}>GUARDAR MI BRACKET</Text>}
           </TouchableOpacity>
+
+          {/* Share button — visible after saving */}
+          {saved && (
+            <TouchableOpacity
+              style={s.shareBtn}
+              onPress={handleShare}
+              disabled={sharing}
+              activeOpacity={0.8}
+            >
+              {sharing
+                ? <ActivityIndicator color="#E63946" size="small" />
+                : <Text style={s.shareText}>📤 Compartir mi bracket</Text>}
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
+      {/* Off-screen share card (for captureRef) */}
+      {picks.champion && (
+        <View
+          ref={shareCardRef}
+          collapsable={false}
+          style={sc.cardWrapper}
+        >
+          {/* Header */}
+          <View style={sc.header}>
+            <Text style={sc.headerEmoji}>🏆</Text>
+            <Text style={sc.headerTitle}>LIGUILLA CLAUSURA 2026</Text>
+            <Text style={sc.headerSub}>FuchoMX</Text>
+          </View>
+
+          {/* Cuartos de Final */}
+          <Text style={sc.sectionLabel}>CUARTOS DE FINAL</Text>
+          <View style={sc.cuartosGrid}>
+            {[
+              { pos: 1, match: '1° vs 8°', pick: picks.qL1 },
+              { pos: 2, match: '4° vs 5°', pick: picks.qL2 },
+              { pos: 3, match: '2° vs 7°', pick: picks.qR1 },
+              { pos: 4, match: '3° vs 6°', pick: picks.qR2 },
+            ].map(({ pos, match, pick }) => (
+              <View key={pos} style={sc.cuartoRow}>
+                <Text style={sc.matchLabel}>{match}</Text>
+                <View style={[sc.pickRow, !!pick && sc.pickRowActive]}>
+                  {pick?.shield_url
+                    ? <Image source={{ uri: pick.shield_url }} style={sc.shield} />
+                    : <View style={sc.shieldPlaceholder} />
+                  }
+                  <Text style={[sc.pickName, !!pick && sc.pickNameActive]}>
+                    {pick ? pick.short_name : '?'}
+                  </Text>
+                  {pick && <Text style={sc.checkmark}>✓</Text>}
+                </View>
+              </View>
+            ))}
+          </View>
+
+          {/* Semis */}
+          <Text style={sc.sectionLabel}>SEMIFINALES</Text>
+          <View style={sc.semisRow}>
+            {[picks.sfL, picks.sfR].map((team, i) => (
+              <View key={i} style={[sc.semiCard, !!team && sc.semiCardActive]}>
+                {team?.shield_url
+                  ? <Image source={{ uri: team.shield_url }} style={sc.semiShield} />
+                  : <View style={sc.semiShieldPh} />
+                }
+                <Text style={[sc.semiName, !!team && sc.semiNameActive]}>
+                  {team ? team.short_name : '?'}
+                </Text>
+              </View>
+            ))}
+          </View>
+
+          {/* Campeón */}
+          <View style={sc.champSection}>
+            <Text style={sc.champLabel}>🏆 MI CAMPEÓN</Text>
+            <View style={sc.champCard}>
+              {picks.champion?.shield_url
+                ? <Image source={{ uri: picks.champion.shield_url }} style={sc.champShield} />
+                : null
+              }
+              <Text style={sc.champName}>{picks.champion?.name ?? '?'}</Text>
+            </View>
+          </View>
+
+          {/* Footer */}
+          <Text style={sc.footer}>fuchomx.mx  •  #FuchoMX #LigaMX #Clausura2026</Text>
         </View>
       )}
     </SafeAreaView>
@@ -401,9 +529,11 @@ const s = StyleSheet.create({
   trophyCenter: { alignItems: 'center', paddingVertical: 12 },
   trophyEmoji:  { fontSize: 32 },
   finalLabel:   { color: '#E63946', fontSize: 11, fontWeight: '800', letterSpacing: 2, marginTop: 4 },
-  submitBar:    { paddingHorizontal: 16, paddingBottom: 16, paddingTop: 8, backgroundColor: '#090909', borderTopWidth: 1, borderTopColor: '#1A1A1A' },
+  submitBar:    { paddingHorizontal: 16, paddingBottom: 16, paddingTop: 8, backgroundColor: '#090909', borderTopWidth: 1, borderTopColor: '#1A1A1A', gap: 10 },
   submitBtn:    { backgroundColor: '#E63946', borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
   submitText:   { color: '#FFF', fontSize: 15, fontWeight: '800', letterSpacing: 1 },
+  shareBtn:     { backgroundColor: '#111', borderRadius: 12, paddingVertical: 13, alignItems: 'center', borderWidth: 1, borderColor: '#E63946' },
+  shareText:    { color: '#E63946', fontSize: 15, fontWeight: '700', letterSpacing: 0.5 },
 });
 
 const mc = StyleSheet.create({
@@ -423,4 +553,49 @@ const ts = StyleSheet.create({
   nameWinner: { color: '#FFF', fontWeight: '800' },
   check:      { color: '#E63946', fontSize: 14, fontWeight: '900' },
   emptyText:  { color: '#333', fontSize: 18, flex: 1, textAlign: 'center' },
+});
+
+// ── Share Card Styles (off-screen capture target) ─────────────────────────
+const sc = StyleSheet.create({
+  cardWrapper: {
+    position: 'absolute',
+    top: -2000,          // Off-screen but rendered
+    left: 0,
+    width: 360,
+    backgroundColor: '#090909',
+    paddingBottom: 20,
+  },
+  header: {
+    backgroundColor: '#E63946',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+  },
+  headerEmoji:  { fontSize: 32, marginBottom: 4 },
+  headerTitle:  { color: '#FFF', fontSize: 17, fontWeight: '900', letterSpacing: 1 },
+  headerSub:    { color: 'rgba(255,255,255,0.8)', fontSize: 12, fontWeight: '600', marginTop: 2 },
+  sectionLabel: { color: '#E63946', fontSize: 11, fontWeight: '800', letterSpacing: 1.2, textAlign: 'center', paddingTop: 14, paddingBottom: 6 },
+  cuartosGrid:  { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 12, gap: 8 },
+  cuartoRow:    { width: '47%', backgroundColor: '#111', borderRadius: 8, padding: 8 },
+  matchLabel:   { color: '#555', fontSize: 10, fontWeight: '600', marginBottom: 4 },
+  pickRow:      { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  pickRowActive: { backgroundColor: '#E6394614', borderRadius: 4, paddingHorizontal: 4 },
+  shield:       { width: 22, height: 22, borderRadius: 3 },
+  shieldPlaceholder: { width: 22, height: 22, borderRadius: 3, backgroundColor: '#222' },
+  pickName:     { color: '#666', fontSize: 12, fontWeight: '600', flex: 1 },
+  pickNameActive: { color: '#FFF', fontWeight: '800' },
+  checkmark:    { color: '#E63946', fontSize: 13, fontWeight: '900' },
+  semisRow:     { flexDirection: 'row', justifyContent: 'center', gap: 16, paddingHorizontal: 20 },
+  semiCard:     { flex: 1, backgroundColor: '#111', borderRadius: 10, padding: 10, alignItems: 'center', gap: 6 },
+  semiCardActive: { borderWidth: 1, borderColor: '#E63946' },
+  semiShield:   { width: 36, height: 36, borderRadius: 6 },
+  semiShieldPh: { width: 36, height: 36, borderRadius: 6, backgroundColor: '#222' },
+  semiName:     { color: '#555', fontSize: 13, fontWeight: '700' },
+  semiNameActive: { color: '#FFF' },
+  champSection: { alignItems: 'center', paddingHorizontal: 40, paddingTop: 8 },
+  champLabel:   { color: '#FFC300', fontSize: 13, fontWeight: '800', letterSpacing: 0.5, marginBottom: 8 },
+  champCard:    { backgroundColor: '#E63946', borderRadius: 12, padding: 14, alignItems: 'center', width: '100%', gap: 8 },
+  champShield:  { width: 52, height: 52, borderRadius: 8 },
+  champName:    { color: '#FFF', fontSize: 16, fontWeight: '900', letterSpacing: 0.5 },
+  footer:       { color: '#333', fontSize: 11, textAlign: 'center', paddingTop: 14, paddingHorizontal: 12 },
 });

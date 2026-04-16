@@ -102,6 +102,12 @@ Aplicación móvil multiplataforma (iOS/Android) de pool de fútbol con dos moda
 - **DATOS REALES CLAUSURA 2026**: `real_liga_mx_data.py` actualizado con fixtures reales de La Liga MX Clausura 2026 (J1-J17). `ACTIVE_WEEK=13`, jornada activa 18-25 abril 2026.
 - **VERIFICADO** (Abril 2026): Todos los 5 puntos del checklist del usuario pasados. Screenshots tomados de home card, bracket vacío, bracket con selección, bracket completo con botón GUARDAR.
 
+### Sesión Abril 2026 — Compartir Bracket + ESPN en Vivo
+- **Compartir Bracket (Feature 1)**: Agregado `captureRef` (react-native-view-shot) + `expo-sharing`. BracketShareCard off-screen con header rojo, cuartos con escudos, semis, campeón, footer "fuchomx.mx". Botón "📤 Compartir mi bracket" aparece tras guardar. Texto: "Mi bracket del Clausura 2026 🏆 Mi campeón: [equipo] #FuchoMX #LigaMX #Clausura2026".
+- **ESPN API en Vivo (Feature 2)**: Backend ahora llama a `site.api.espn.com/apis/v2/sports/soccer/mex.1/standings`. Cache de 1 hora, fallback al hardcode. `is_provisional: false` cuando ESPN responde. Tabla actual: GDL 31pts, CAZ 28pts, PAC 28pts, PUM 27pts, TOL 27pts, TIG 20pts, AME 19pts, ATL 19pts.
+- **`setSaved(true)`**: Al cargar bracket con predicción previa, el botón Compartir aparece automáticamente.
+- **Verificado**: Screenshots de share card, botones GUARDAR + Compartir, curl ESPN en vivo confirmado.
+
 ## Backlog Priorizado
 
 ### P0 (Crítico - Próximo)

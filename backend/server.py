@@ -14,6 +14,7 @@ from real_liga_mx_data import LIGA_MX_TEAMS, CLAUSURA_2026_DATES, CLAUSURA_2026_
 import bcrypt
 import jwt
 from bson import ObjectId
+import httpx
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -531,20 +532,103 @@ async def reset_jornada(week: int = None):
 #  LIGUILLA CLAUSURA 2026
 # ─────────────────────────────────────────────────────────────────────────
 
+# ESPN → DB name mapping (names that differ)
+_ESPN_TO_DB: dict = {
+    "América": "Club América",
+    "Atlético de San Luis": "Atlético San Luis",
+    "San Luis": "Atlético San Luis",
+    "Xolos": "Tijuana",
+}
+
+# Module-level cache for ESPN standings (1 hour TTL)
+_espn_cache: dict = {"data": None, "fetched_at": None}
+_ESPN_CACHE_TTL = 3600  # seconds
+
+
+async def _fetch_espn_standings() -> Optional[List[dict]]:
+    """Fetch Liga MX top-8 from ESPN API; returns list of dicts or None on failure."""
+    global _espn_cache
+    now = datetime.utcnow()
+
+    # Check cache
+    if _espn_cache["data"] and _espn_cache["fetched_at"]:
+        age = (now - _espn_cache["fetched_at"]).total_seconds()
+        if age < _ESPN_CACHE_TTL:
+            logger.info(f"ESPN cache hit (age {age:.0f}s)")
+            return _espn_cache["data"]
+
+    try:
+        url = "https://site.api.espn.com/apis/v2/sports/soccer/mex.1/standings"
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            resp = await client.get(url)
+        if resp.status_code != 200:
+            logger.warning(f"ESPN API → {resp.status_code}")
+            return None
+
+        data = resp.json()
+        entries = data["children"][0]["standings"]["entries"]
+        top8 = []
+        for i, entry in enumerate(entries[:8]):
+            team = entry["team"]
+            espn_name = team.get("displayName", "")
+            db_name = _ESPN_TO_DB.get(espn_name, espn_name)
+            top8.append({"position": i + 1, "espn_name": espn_name, "db_name": db_name})
+
+        _espn_cache["data"] = top8
+        _espn_cache["fetched_at"] = now
+        logger.info(f"✅ ESPN standings: {[t['espn_name'] for t in top8]}")
+        return top8
+
+    except Exception as exc:
+        logger.error(f"❌ ESPN standings error: {exc}")
+        return None
+
 @api_router.get("/liguilla/bracket")
 async def get_liguilla_bracket(current_user: dict = Depends(get_optional_user)):
-    """Retorna la estructura del bracket de liguilla con los 8 equipos clasificados."""
+    """Retorna la estructura del bracket de liguilla con los 8 equipos clasificados.
+    Intenta obtener la tabla en vivo desde la ESPN API; si falla usa la lista provisional hardcodeada.
+    """
+    is_provisional = True
     teams_data = []
-    for entry in LIGUILLA_CLAUSURA_2026_TEAMS:
-        team = await db.teams.find_one({"name": entry["name"]})
-        if team:
-            teams_data.append({
-                "position":  entry["position"],
-                "id":        str(team["_id"]),
-                "name":      team["name"],
-                "short_name": team.get("short_name", team["name"][:3].upper()),
-                "shield_url": team.get("shield_url", ""),
-            })
+
+    # ── Intento 1: ESPN API (datos en vivo) ──────────────────────────────
+    espn_top8 = await _fetch_espn_standings()
+    if espn_top8:
+        for entry in espn_top8:
+            # Buscar en DB por nombre exacto, luego parcial
+            team = await db.teams.find_one({"name": entry["db_name"]})
+            if not team:
+                team = await db.teams.find_one(
+                    {"name": {"$regex": entry["db_name"][:4], "$options": "i"}}
+                )
+            if team:
+                teams_data.append({
+                    "position":  entry["position"],
+                    "id":        str(team["_id"]),
+                    "name":      team["name"],
+                    "short_name": team.get("short_name", team["name"][:3].upper()),
+                    "shield_url": team.get("shield_url", ""),
+                })
+        if len(teams_data) >= 8:
+            is_provisional = False
+            logger.info("✅ Bracket usando datos ESPN en vivo")
+        else:
+            logger.warning(f"ESPN incompleto ({len(teams_data)}/8), usando fallback")
+            teams_data = []
+
+    # ── Fallback: lista hardcodeada provisional ───────────────────────────
+    if not teams_data:
+        for entry in LIGUILLA_CLAUSURA_2026_TEAMS:
+            team = await db.teams.find_one({"name": entry["name"]})
+            if team:
+                teams_data.append({
+                    "position":  entry["position"],
+                    "id":        str(team["_id"]),
+                    "name":      team["name"],
+                    "short_name": team.get("short_name", team["name"][:3].upper()),
+                    "shield_url": team.get("shield_url", ""),
+                })
+        is_provisional = True
 
     # Mapear por posición para construir cuartos
     by_pos = {t["position"]: t for t in teams_data}
@@ -552,7 +636,7 @@ async def get_liguilla_bracket(current_user: dict = Depends(get_optional_user)):
     bracket = {
         "temporada":      "Clausura 2026",
         "status":         "pendiente",
-        "is_provisional": True,  # Todavía en temporada regular (J13 de 17)
+        "is_provisional": is_provisional,
         "teams":          teams_data,
         "cuartos": [
             {"match": 1, "side": "left",  "home": by_pos.get(1), "away": by_pos.get(8)},
