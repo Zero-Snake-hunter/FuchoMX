@@ -2837,7 +2837,168 @@ async def get_fantasy_lineup(
         "lineup": formatted_lineup
     }
 
-@api_router.get("/fantasy/rankings")
+
+@api_router.get("/fantasy/results/{jornada_id}")
+async def get_fantasy_results(
+    jornada_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Retorna la alineación del usuario con puntos desglosados por jugador
+    para la jornada especificada.
+    Usa fantasy_points_log si ya fue procesado, o calcula en tiempo real.
+    """
+    jornada_obj_id = ObjectId(jornada_id)
+    team = await db.fantasy_teams.find_one({"user_id": current_user["_id"]})
+    if not team:
+        return {"has_lineup": False, "players": [], "total_points": 0}
+
+    # ── 1. Buscar en fantasy_points_log (ya procesado) ───────────────────
+    log = await db.fantasy_points_log.find_one({
+        "fantasy_team_id": team["_id"],
+        "jornada_id": jornada_obj_id,
+    })
+    if log:
+        return {
+            "has_lineup":    True,
+            "team_name":     team.get("name", "Mi Equipo"),
+            "total_points":  log.get("total_points", 0),
+            "dt_points":     log.get("dt_points", 0),
+            "players":       log.get("players_breakdown", []),
+            "processed":     True,
+            "jornada_id":    jornada_id,
+        }
+
+    # ── 2. Calcular en tiempo real si no está procesado ──────────────────
+    lineup_items = await db.fantasy_lineups.find({
+        "fantasy_team_id": team["_id"],
+        "jornada_id": jornada_obj_id,
+    }).to_list(100)
+
+    if not lineup_items:
+        return {"has_lineup": False, "players": [], "total_points": 0}
+
+    # Load all player stats for the jornada
+    all_stats = await db.player_match_stats.find(
+        {"jornada_id": jornada_obj_id}
+    ).to_list(5000)
+    stats_by_player_id = {s["player_id"]: s for s in all_stats}
+
+    players_result = []
+    total_pts = 0
+
+    for item in lineup_items:
+        if item.get("is_dt"):
+            continue  # Skip DT for per-player breakdown
+
+        player_id = item.get("player_id")
+        player = await db.players.find_one({"_id": player_id}) if player_id else None
+        if not player:
+            continue
+
+        player_team = await db.teams.find_one({"_id": player["team_id"]})
+        position = player.get("position", "MED")
+        stats = stats_by_player_id.get(player_id, {})
+
+        result = calculate_player_points(stats, position)
+        total_pts += result["total_points"]
+
+        players_result.append({
+            "player_id":     str(player_id),
+            "player_name":   player.get("name", "?"),
+            "position":      position,
+            "position_slot": item.get("position_slot"),
+            "points":        result["total_points"],
+            "breakdown":     result["breakdown"],
+            "is_mvp":        stats.get("is_mvp", False),
+            "minutes":       stats.get("minutes", 0),
+            "goals":         stats.get("goals", 0),
+            "assists":       stats.get("assists", 0),
+            "team_shield":   player_team.get("shield_url", "") if player_team else "",
+            "team_name":     player_team.get("short_name", "") if player_team else "",
+        })
+
+    return {
+        "has_lineup":   True,
+        "team_name":    team.get("name", "Mi Equipo"),
+        "total_points": total_pts,
+        "dt_points":    0,
+        "players":      players_result,
+        "processed":    len(all_stats) > 0,
+        "jornada_id":   jornada_id,
+    }
+
+# ──────────────────────────────────────────────────────────────────────────────
+#  LIVE SCORES — Caché 55 segundos
+# ──────────────────────────────────────────────────────────────────────────────
+_live_scores_cache: dict = {"data": None, "fetched_at": None}
+_LIVE_CACHE_TTL = 55  # seconds
+
+@api_router.get("/jornadas/current/live-scores")
+async def get_live_scores():
+    """
+    Retorna los partidos en curso o de hoy.
+    Llama a 365Scores API y cachea 55 segundos.
+    """
+    global _live_scores_cache
+    now = datetime.utcnow()
+
+    # Check cache
+    if _live_scores_cache["data"] is not None and _live_scores_cache["fetched_at"]:
+        age = (now - _live_scores_cache["fetched_at"]).total_seconds()
+        if age < _LIVE_CACHE_TTL:
+            return _live_scores_cache["data"]
+
+    # Fetch today's games from 365Scores
+    today_start = now.replace(hour=0, minute=0, second=0)
+    today_end = now.replace(hour=23, minute=59, second=59)
+
+    from services.scores_service import _fetch_365scores, _normalize_name, _STATUS_MAP
+
+    games = await _fetch_365scores(today_start, today_end)
+
+    live_matches = []
+    all_matches = []
+
+    for g in games:
+        status_grp = g.get("statusGroup", 1)
+        status = _STATUS_MAP.get(status_grp, "scheduled")
+
+        home_name = _normalize_name(g.get("homeCompetitor", {}).get("name", ""))
+        away_name = _normalize_name(g.get("awayCompetitor", {}).get("name", ""))
+        home_score = g.get("homeCompetitor", {}).get("score")
+        away_score = g.get("awayCompetitor", {}).get("score")
+        game_time = g.get("gameTimeDisplay", "")
+        start_time = g.get("startTime", "")
+
+        match_data = {
+            "home_name": home_name,
+            "away_name": away_name,
+            "home_score": int(home_score) if home_score is not None else None,
+            "away_score": int(away_score) if away_score is not None else None,
+            "status": status,
+            "game_time": game_time,
+            "start_time": start_time,
+        }
+        all_matches.append(match_data)
+        if status == "live":
+            live_matches.append(match_data)
+
+    result = {
+        "has_live":    len(live_matches) > 0,
+        "live_count":  len(live_matches),
+        "live_matches":  live_matches,
+        "all_today":   all_matches,
+        "fetched_at":  now.isoformat(),
+        "source":      "365scores" if games else "empty",
+    }
+
+    _live_scores_cache["data"] = result
+    _live_scores_cache["fetched_at"] = now
+    return result
+
+
+
 async def get_fantasy_rankings():
     """Get fantasy rankings"""
     # Get all fantasy teams with their users

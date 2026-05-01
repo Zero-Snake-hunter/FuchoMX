@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   StatusBar,
   ScrollView,
   Image,
+  Animated,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -23,12 +24,42 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const [streaks, setStreaks] = useState({ quiniela_current: 0, win_current: 0, correct_current: 0 });
   const [toast, setToast] = useState({ visible: false, emoji: '', title: '', description: '' });
+  const [liveScores, setLiveScores] = useState<{
+    has_live: boolean;
+    live_matches: { home_name: string; away_name: string; home_score: number | null; away_score: number | null; game_time: string; status: string }[];
+  }>({ has_live: false, live_matches: [] });
+  const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     api.get('/api/achievements/my').then(res => {
       setStreaks(res.data.streaks);
     }).catch(() => {});
   }, []);
+
+  // ── EN VIVO polling every 60s ──────────────────────────────────────────
+  useEffect(() => {
+    const fetchLive = () => {
+      api.get('/api/jornadas/current/live-scores')
+        .then(res => setLiveScores(res.data))
+        .catch(() => {});
+    };
+    fetchLive();
+    const interval = setInterval(fetchLive, 60_000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // ── Pulsating animation for EN VIVO badge ─────────────────────────────
+  useEffect(() => {
+    if (!liveScores.has_live) return;
+    const anim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 0.4, duration: 700, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
+      ])
+    );
+    anim.start();
+    return () => anim.stop();
+  }, [liveScores.has_live]);
 
   const handleQuinielaPress = () => {
     console.log('NAVIGATING TO QUINIELA');
@@ -144,6 +175,33 @@ export default function HomeScreen() {
               Ambos modos están disponibles. Puedes jugar uno o ambos simultáneamente.
             </Text>
           </View>
+
+          {/* ── EN VIVO section — solo cuando hay partidos activos ── */}
+          {liveScores.has_live && (
+            <View style={styles.liveSection}>
+              <View style={styles.liveHeader}>
+                <Animated.View style={[styles.liveDot, { opacity: pulseAnim }]} />
+                <Text style={styles.liveLabel}>EN VIVO</Text>
+                <Text style={styles.liveCount}>
+                  {liveScores.live_matches.length} partido{liveScores.live_matches.length !== 1 ? 's' : ''}
+                </Text>
+              </View>
+              {liveScores.live_matches.map((m, i) => (
+                <View key={i} style={styles.liveMatch}>
+                  <Text style={styles.liveMatchHome} numberOfLines={1}>{m.home_name}</Text>
+                  <View style={styles.liveScore}>
+                    <Text style={styles.liveScoreText}>
+                      {m.home_score ?? 0} - {m.away_score ?? 0}
+                    </Text>
+                    {m.game_time ? (
+                      <Text style={styles.liveTime}>{m.game_time}'</Text>
+                    ) : null}
+                  </View>
+                  <Text style={styles.liveMatchAway} numberOfLines={1}>{m.away_name}</Text>
+                </View>
+              ))}
+            </View>
+          )}
 
           {/* ── Liguilla Card ── */}
           <TouchableOpacity
