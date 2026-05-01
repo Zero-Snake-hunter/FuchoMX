@@ -108,6 +108,14 @@ Aplicación móvil multiplataforma (iOS/Android) de pool de fútbol con dos moda
 - **`setSaved(true)`**: Al cargar bracket con predicción previa, el botón Compartir aparece automáticamente.
 - **Verificado**: Screenshots de share card, botones GUARDAR + Compartir, curl ESPN en vivo confirmado.
 
+### Sesión Mayo 2026 — Servicios de Datos en Vivo (scores + player_stats)
+- **`/app/backend/services/scores_service.py`** (NUEVO): Obtiene resultados de partidos desde 365Scores API (`webws.365scores.com`). Normalización de 18+ nombres de equipos. Fallback a ESPN API. Actualiza `db.matches` con `home_score`, `away_score`, `status`.
+- **`/app/backend/services/player_stats_service.py`** (NUEVO): Stats de jugadores desde ESPN Summary API. 185 jugadores por jornada. Calcula `goals`, `assists`, `yellow_cards`, `red_cards`, `saves`, `own_goals`, `is_mvp`, minutos estimados. Guarda en `db.player_match_stats`.
+- **`POST /api/admin/process-jornada/{jornada_id}`** (NUEVO): Orquestador completo — scores + quiniela_points + player_stats + fantasy_points + achievements. Retorna `{scores_updated, quiniela_updated, player_stats_saved, fantasy_updated, achievements_awarded}`.
+- **Auto-proceso en `GET /api/jornadas/current`** (ACTUALIZADO): Cuando una jornada expira (end_date < now) y `processed=False`, llama automáticamente a `_process_jornada_core()` antes de avanzar a la siguiente jornada.
+- **Verificado con datos REALES Jornada 13**: `9/9 partidos actualizados` (GDL 5-0 PUE, MTY 1-3 PAC, etc.), `185 jugadores` con stats reales de ESPN, auto-proceso confirmado.
+- **Dependencias instaladas**: `requests==2.32.5`, `beautifulsoup4==4.14.3`, `lxml==6.1.0`
+
 ## Backlog Priorizado
 
 ### P0 (Crítico - Próximo)

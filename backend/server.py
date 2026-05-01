@@ -15,6 +15,8 @@ import bcrypt
 import jwt
 from bson import ObjectId
 import httpx
+from services.scores_service import get_match_results as _svc_get_match_results
+from services.player_stats_service import get_player_stats as _svc_get_player_stats
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -929,7 +931,25 @@ async def get_current_jornada():
     # Step 2: If active jornada exists and its end_date has passed, transition to next
     if jornada and jornada.get("end_date") and jornada["end_date"] < now:
         logger.info(f"Jornada {jornada['week_number']} expirada (end_date: {jornada['end_date']}). Transitando...")
-        
+
+        # ── Auto-process si no fue procesada antes ────────────────────────
+        if not jornada.get("processed", False):
+            logger.info(
+                f"Jornada {jornada['week_number']} no procesada. "
+                f"Ejecutando process_jornada automáticamente..."
+            )
+            try:
+                proc_result = await _process_jornada_core(str(jornada["_id"]))
+                logger.info(
+                    f"✅ Auto-proceso completado: "
+                    f"scores={proc_result.get('scores_updated')}, "
+                    f"quiniela={proc_result.get('quiniela_updated')} usuarios, "
+                    f"fantasy={proc_result.get('fantasy_updated')} equipos, "
+                    f"logros={proc_result.get('achievements_awarded')}"
+                )
+            except Exception as proc_exc:
+                logger.error(f"❌ Auto-proceso falló: {proc_exc}")
+
         # Close expired jornada
         await db.jornadas.update_one(
             {"_id": jornada["_id"]},
@@ -997,6 +1017,23 @@ async def get_current_jornada():
                 f"Jornada {jornada['week_number']}: todos {total_count} partidos finalizados "
                 f"y fecha fin pasada. Avanzando automáticamente..."
             )
+            # ── Auto-process si no fue procesada antes ────────────────────
+            if not jornada.get("processed", False):
+                logger.info(
+                    f"Jornada {jornada['week_number']} no procesada aún. "
+                    f"Ejecutando process_jornada automáticamente..."
+                )
+                try:
+                    proc_result = await _process_jornada_core(str(jornada["_id"]))
+                    logger.info(
+                        f"✅ Auto-proceso completado: "
+                        f"quiniela={proc_result.get('quiniela_updated')} usuarios, "
+                        f"fantasy={proc_result.get('fantasy_updated')} equipos, "
+                        f"logros={proc_result.get('achievements_awarded')}"
+                    )
+                except Exception as proc_exc:
+                    logger.error(f"❌ Auto-proceso falló: {proc_exc}")
+
             # Mark current jornada as finished
             await db.jornadas.update_one(
                 {"_id": jornada["_id"]},
@@ -1959,6 +1996,141 @@ async def calculate_jornada_points(jornada_id: str):
         "users_updated": users_updated,
         "total_points_awarded": total_points_awarded
     }
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+#  PROCESS JORNADA — Orquestador completo
+# ──────────────────────────────────────────────────────────────────────────────
+
+async def _process_jornada_core(jornada_id: str) -> dict:
+    """
+    Orquesta el procesamiento completo de una jornada:
+    1. Obtiene resultados de partidos (365Scores → ESPN fallback)
+    2. Calcula puntos de Quiniela
+    3. Obtiene stats de jugadores (ESPN Summary)
+    4. Calcula puntos de Fantasy
+    5. Verifica y otorga logros
+    Marca la jornada como processed=True al finalizar.
+    """
+    jornada_obj_id = ObjectId(jornada_id)
+    jornada = await db.jornadas.find_one({"_id": jornada_obj_id})
+    if not jornada:
+        return {"error": "Jornada no encontrada"}
+
+    logger.info(f"🔄 Procesando jornada {jornada.get('week_number')} ({jornada_id})")
+
+    # ── Paso 1: Actualizar resultados de partidos ─────────────────────────
+    scores_result = await _svc_get_match_results(jornada_id, db)
+    logger.info(f"  ✅ Scores: {scores_result.get('matches_updated')}/{scores_result.get('matches_total')} actualizados")
+
+    # ── Paso 2: Calcular puntos de Quiniela ───────────────────────────────
+    quiniela_updated = 0
+    try:
+        matches_done = await db.matches.find(
+            {"jornada_id": jornada_obj_id, "status": "finished"}
+        ).to_list(100)
+
+        if matches_done:
+            match_results_map = {}
+            for m in matches_done:
+                h, a = m.get("home_score", 0), m.get("away_score", 0)
+                if h > a:
+                    result_val = "HOME"
+                elif a > h:
+                    result_val = "AWAY"
+                else:
+                    result_val = "DRAW"
+                match_results_map[m["_id"]] = result_val
+
+            all_selections = await db.quiniela_selections.find(
+                {"jornada_id": jornada_obj_id}
+            ).to_list(10000)
+
+            user_sels: dict = {}
+            for sel in all_selections:
+                user_sels.setdefault(sel["user_id"], []).append(sel)
+
+            for uid, sels in user_sels.items():
+                pts = sum(
+                    1 for s in sels
+                    if s.get("match_id") in match_results_map
+                    and s["selection"] == match_results_map[s["match_id"]]
+                )
+                if pts > 0:
+                    existing = await db.points_log.find_one({
+                        "user_id": uid, "jornada_id": jornada_obj_id, "source": "QUINIELA",
+                    })
+                    if not existing:
+                        await db.points_log.insert_one({
+                            "user_id": uid, "jornada_id": jornada_obj_id,
+                            "source": "QUINIELA", "points": pts,
+                            "created_at": datetime.utcnow(),
+                        })
+                        await db.users.update_one(
+                            {"_id": uid}, {"$inc": {"total_points": pts}}
+                        )
+                        quiniela_updated += 1
+    except Exception as exc:
+        logger.error(f"  ❌ Quiniela points error: {exc}")
+
+    # ── Paso 3: Stats de jugadores ────────────────────────────────────────
+    stats_result = await _svc_get_player_stats(jornada_id, db)
+    logger.info(f"  ✅ Player stats: {stats_result.get('players_saved')} jugadores guardados")
+
+    # ── Paso 4: Calcular puntos Fantasy ───────────────────────────────────
+    fantasy_updated = 0
+    try:
+        f_result = await calculate_fantasy_points(jornada_id)
+        fantasy_updated = f_result.get("teams_processed", 0)
+    except Exception as exc:
+        logger.error(f"  ❌ Fantasy points error: {exc}")
+
+    # ── Paso 5: Logros ────────────────────────────────────────────────────
+    achievements_awarded = 0
+    try:
+        user_ids = await db.users.distinct("_id", {})
+        for uid in user_ids:
+            awarded = await check_and_award_achievements_after_jornada(str(uid), jornada_id)
+            achievements_awarded += len(awarded)
+    except Exception as exc:
+        logger.error(f"  ❌ Achievements error: {exc}")
+
+    # ── Marcar jornada como procesada ─────────────────────────────────────
+    await db.jornadas.update_one(
+        {"_id": jornada_obj_id},
+        {"$set": {"processed": True, "processed_at": datetime.utcnow()}},
+    )
+
+    summary = {
+        "jornada_id":           jornada_id,
+        "week_number":          jornada.get("week_number"),
+        "scores_updated":       scores_result.get("matches_updated", 0),
+        "scores_not_found":     scores_result.get("matches_not_found", []),
+        "quiniela_updated":     quiniela_updated,
+        "player_stats_saved":   stats_result.get("players_saved", 0),
+        "fantasy_updated":      fantasy_updated,
+        "achievements_awarded": achievements_awarded,
+        "processed_at":         datetime.utcnow().isoformat(),
+    }
+    logger.info(f"✅ Jornada {jornada.get('week_number')} procesada: {summary}")
+    return summary
+
+
+@api_router.post("/admin/process-jornada/{jornada_id}")
+async def process_jornada_endpoint(jornada_id: str):
+    """
+    Procesa completamente una jornada:
+    1. Resultados de partidos (365Scores → ESPN fallback)
+    2. Puntos de FuchoQuiniela
+    3. Stats de jugadores (ESPN)
+    4. Puntos de FuchoOnce (Fantasy)
+    5. Logros y achievements
+    """
+    result = await _process_jornada_core(jornada_id)
+    if "error" in result:
+        raise HTTPException(status_code=404, detail=result["error"])
+    return result
+
 
 # ============ FANTASY SCORING SYSTEM ============
 
