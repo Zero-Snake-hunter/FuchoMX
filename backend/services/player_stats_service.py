@@ -1,13 +1,20 @@
 """
 player_stats_service.py
 Obtiene stats individuales de jugadores desde ESPN Summary API.
-Fallback parcial: FBref para minutos jugados.
+Fallback 1: FBref para minutos exactos de sustitución.
 """
 import logging
 import httpx
+import re
 from datetime import datetime, timedelta
 from typing import Optional
 from bson import ObjectId
+
+try:
+    from bs4 import BeautifulSoup
+    _BS4_AVAILABLE = True
+except ImportError:
+    _BS4_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +51,128 @@ def _map_position(espn_pos: str) -> str:
     if pos.startswith("F") or pos.startswith("S"):
         return "DEL"
     return "MED"
+
+
+
+_FBREF_FIXTURES_URL = (
+    "https://fbref.com/en/comps/31/schedule/Liga-MX-Scores-and-Fixtures"
+)
+_FBREF_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    "Accept-Language": "es-MX,es;q=0.9,en;q=0.8",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Cache-Control": "no-cache",
+}
+
+
+async def _get_fbref_minutes(
+    home_name: str, away_name: str, match_date: datetime
+) -> dict[str, int]:
+    """
+    Consulta FBref para obtener minutos exactos de sustitución por jugador.
+    Retorna dict {nombre_jugador_lower: minutos} o dict vacío si falla.
+    Solo se usa cuando ESPN no tiene datos exactos (subbed_out/subbed_in).
+    """
+    if not _BS4_AVAILABLE:
+        return {}
+    try:
+        date_str = match_date.strftime("%Y-%m-%d")
+        async with httpx.AsyncClient(
+            timeout=15.0,
+            follow_redirects=True,
+            headers=_FBREF_HEADERS,
+        ) as client:
+            resp = await client.get(_FBREF_FIXTURES_URL)
+
+        if resp.status_code != 200:
+            logger.warning(f"FBref fixtures → HTTP {resp.status_code}")
+            return {}
+
+        soup = BeautifulSoup(resp.text, "lxml")
+        schedule_table = soup.find("table", id=lambda x: x and "sched" in x.lower())
+        if not schedule_table:
+            logger.warning("FBref: no schedule table found")
+            return {}
+
+        # Normalize helper
+        def _norm(s: str) -> str:
+            return re.sub(r"[^a-z]", "", s.lower())
+
+        home_key = _norm(home_name[:5])
+        away_key = _norm(away_name[:5])
+        match_url = None
+
+        for row in schedule_table.find_all("tr"):
+            cells = row.find_all(["td", "th"])
+            row_text = " ".join(c.get_text(strip=True) for c in cells)
+            # Match by date + partial team names
+            if date_str not in row_text and match_date.strftime("%B") not in row_text:
+                continue
+            # Find match report link
+            report_link = row.find("a", href=re.compile(r"/en/matches/"))
+            if report_link:
+                row_teams = _norm(row_text)
+                if home_key in row_teams and away_key in row_teams:
+                    match_url = "https://fbref.com" + report_link["href"]
+                    break
+
+        if not match_url:
+            logger.info(
+                f"FBref: no match URL found for {home_name} vs {away_name} on {date_str}"
+            )
+            return {}
+
+        logger.info(f"FBref: found match URL {match_url}")
+
+        async with httpx.AsyncClient(
+            timeout=15.0, follow_redirects=True, headers=_FBREF_HEADERS
+        ) as client:
+            resp2 = await client.get(match_url)
+
+        if resp2.status_code != 200:
+            return {}
+
+        soup2 = BeautifulSoup(resp2.text, "lxml")
+
+        # Parse "Events" table — contains minute for each goal/sub
+        # Also look for lineup tables with substitution minutes
+        minutes_map: dict[str, int] = {}
+
+        # Method 1: parse sub events
+        events_div = soup2.find("div", id=lambda x: x and "events_wrap" in (x or ""))
+        if events_div:
+            for ev in events_div.find_all("div", class_=lambda x: x and "event" in (x or "")):
+                text = ev.get_text(separator=" ", strip=True)
+                # Look for substitution pattern: "67' Player Name (sub in)"
+                sub_match = re.search(r"(\d+)'\s+(.+?)(?:\s+Sub|$)", text)
+                if sub_match:
+                    minute = int(sub_match.group(1))
+                    name = sub_match.group(2).strip()
+                    minutes_map[_norm(name[:8])] = minute
+
+        # Method 2: parse lineup tables (rows with data-stat="minutes")
+        for lineup_table in soup2.find_all("table", id=re.compile(r"lineup")):
+            for row in lineup_table.find_all("tr"):
+                min_cell = row.find("td", {"data-stat": "minutes"})
+                name_cell = row.find("td", {"data-stat": "player"})
+                if min_cell and name_cell:
+                    try:
+                        m = int(min_cell.get_text(strip=True))
+                        name = name_cell.get_text(strip=True)
+                        if m > 0:
+                            minutes_map[_norm(name[:8])] = m
+                    except ValueError:
+                        pass
+
+        logger.info(
+            f"FBref: got minutes for {len(minutes_map)} players "
+            f"({home_name} vs {away_name})"
+        )
+        return minutes_map
+
+    except Exception as exc:
+        logger.warning(f"FBref minutes fallback error: {exc}")
+        return {}
 
 
 async def _get_espn_event_ids(
@@ -295,9 +424,37 @@ async def get_player_stats(jornada_id: str, db) -> dict:
         if not players:
             continue
 
+        # ── FBref fallback: obtener minutos exactos para jugadores con estimados ──
+        # Solo si hay jugadores con minutos estimados (65 o 25 = estimados por ESPN)
+        has_estimates = any(p["minutes"] in (65, 25) for p in players)
+        fbref_minutes: dict[str, int] = {}
+        if has_estimates:
+            match_date = match.get("start_at", start_date)
+            fbref_minutes = await _get_fbref_minutes(home_name, away_name, match_date)
+            if fbref_minutes:
+                logger.info(
+                    f"FBref overriding estimated minutes for "
+                    f"{home_name} vs {away_name}: {len(fbref_minutes)} players"
+                )
+
+        def _norm_key(name: str) -> str:
+            import re as _re
+            return _re.sub(r"[^a-z]", "", name.lower())[:8]
+
         # For each player: try to find in DB by name, save stats
         bulk_docs = []
         for p in players:
+            # Apply FBref minutes if ESPN had an estimate
+            if p["minutes"] in (65, 25) and fbref_minutes:
+                key = _norm_key(p["name"])
+                if key in fbref_minutes:
+                    exact_mins = fbref_minutes[key]
+                    logger.info(
+                        f"FBref: {p['name']} → {p['minutes']} (ESPN est) "
+                        f"→ {exact_mins} (FBref exact)"
+                    )
+                    p["minutes"] = exact_mins
+
             if p["minutes"] == 0:
                 continue  # skip unused players
 

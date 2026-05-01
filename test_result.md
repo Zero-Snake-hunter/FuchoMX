@@ -596,7 +596,9 @@ test_plan:
 
 test_plan:
   current_focus:
-    - "BUG CRÍTICO: POST /api/quiniela/submit rechazaba todas las quinielas por fechas pasadas"
+    - "Widget EN VIVO en home.tsx - validación visual"
+    - "Pantalla Fantasy Results - validación MVP badge"
+    - "FBref minutos exactos - player_stats_service.py"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -612,3 +614,5 @@ agent_communication:
       message: "SESIÓN BUG CRÍTICO BACKEND: quiniela/submit rechazaba todas las predicciones por validación de fechas. ROOT CAUSE: El endpoint comparaba match['start_at'] < datetime.utcnow() → todos los partidos del seed tenían fechas de 2025 (pasadas). FIXES: 1) Cambié validación a status-based: solo bloquea si match.status in ['live','finished']. 2) Actualicé AMBOS seeds (seed-season y seed-real-data) con ACTIVE_WEEK=11 para fechas relativas a HOY. Jornadas 1-10 = pasadas/finished, jornada 11 = activa/in_progress (esta semana), 12-17 = futuras/upcoming. 3) Ejecuté seed-season → Jornada 11 ahora tiene 9 partidos del 15-22 abril 2026, todos status='scheduled'. 4) Prueba curl: 200 OK con 9 selecciones aceptadas. 5) Prueba rechazo: 400 con mensaje correcto para partido 'finished'. Fantasy/lineup no tenía este bug."
     - agent: "main"
       message: "SESIÓN VERIFICACIÓN BRACKET LIGUILLA CLAUSURA 2026. Verificación completa de: 1) bracket.tsx - fondo #090909 ✓, bordes #E63946 ✓, escudos via shield_url DB ✓, badge 'Provisional' ✓, botón GUARDAR rojo ✓. 2) home.tsx - card 🏆 BRACKET DE LIGUILLA con subtítulo correcto ✓. 3) GET /api/liguilla/bracket - 8 equipos con name/shield_url/posición ✓, is_provisional:true ✓. 4) bracket-results.tsx - archivo existe, estructura correcta ✓. 5) GET /api/jornadas/current - jornada 13, fechas 18-25 abril 2026, status in_progress ✓. Screenshots tomados: home con card liguilla, bracket vacío (8 escudos), bracket con GDL seleccionado en cuartos, bracket completo con botón GUARDAR MI BRACKET visible en rojo."
+    - agent: "main"
+      message: "SESIÓN VALIDACIÓN VISUAL + 3 MEJORAS: 1) FIXED: Estilos del widget EN VIVO completamente faltaban en home.tsx StyleSheet (liveSection, liveHeader, liveDot, liveLabel, liveCount, liveMatch, liveScore, liveTime). Ahora todos definidos. 2) FIXED: Badge MVP en results.tsx era nearly invisible (backgroundColor: '#FFD70022'). Cambiado a rojo sólido (#E63946) con texto dorado (#FFD700). Separado en mvpBadge (container) + mvpBadgeText. 3) ADDED: Fallback DB en get_live_scores endpoint cuando 365Scores no tiene partidos del día. 4) ADDED: _get_fbref_minutes() en player_stats_service.py para obtener minutos exactos cuando ESPN retorna estimados. Screenshots tomados y validados: EN VIVO widget mostrando 2 partidos live (Pumas 1-0 Atlas 67', Toluca 2-1 AtlSL 88'), Fantasy Results con 11 jugadores reales Liga MX (Memo Ochoa, Fidalgo ⭐MVP, Quiñones hat-trick), badge MVP rojo/dorado claramente visible."

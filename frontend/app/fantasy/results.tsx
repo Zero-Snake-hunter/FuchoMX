@@ -91,7 +91,9 @@ function PlayerCard({ player }: { player: PlayerResult }) {
                 {player.player_name}
               </Text>
               {player.is_mvp && (
-                <Text style={s.mvpBadge}>⭐ MVP</Text>
+                <View style={s.mvpBadge}>
+                  <Text style={s.mvpBadgeText}>⭐ MVP</Text>
+                </View>
               )}
             </View>
             <View style={s.tagRow}>
@@ -290,7 +292,8 @@ const s = StyleSheet.create({
   nameSide:     { flex: 1, gap: 3 },
   nameLine:     { flexDirection: 'row', alignItems: 'center', gap: 6 },
   playerName:   { color: '#FFF', fontSize: 13, fontWeight: '700', flex: 1 },
-  mvpBadge:     { backgroundColor: '#FFD70022', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  mvpBadge:     { flexDirection: 'row', alignItems: 'center', backgroundColor: '#E63946', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3 },
+  mvpBadgeText: { color: '#FFD700', fontSize: 10, fontWeight: '900', letterSpacing: 0.5 },
   tagRow:       { flexDirection: 'row', alignItems: 'center', gap: 6 },
   posBadge:     { borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1, borderWidth: 1 },
   posBadgeText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },

@@ -2984,13 +2984,37 @@ async def get_live_scores():
         if status == "live":
             live_matches.append(match_data)
 
+    # ── Fallback a DB cuando 365Scores no devuelve datos ─────────────────────
+    # Si la API externa no tiene partidos hoy, consultar DB por matches "live"
+    if not all_matches:
+        try:
+            db_live = await db.matches.find({"status": "live"}).to_list(20)
+            for dm in db_live:
+                ht = await db.teams.find_one({"_id": dm["home_team_id"]})
+                at = await db.teams.find_one({"_id": dm["away_team_id"]})
+                if not ht or not at:
+                    continue
+                m = {
+                    "home_name": ht.get("name", "?"),
+                    "away_name": at.get("name", "?"),
+                    "home_score": dm.get("home_score"),
+                    "away_score": dm.get("away_score"),
+                    "status": "live",
+                    "game_time": str(dm.get("game_time", "")),
+                    "start_time": "",
+                }
+                all_matches.append(m)
+                live_matches.append(m)
+        except Exception as exc:
+            logger.warning(f"DB live fallback error: {exc}")
+
     result = {
         "has_live":    len(live_matches) > 0,
         "live_count":  len(live_matches),
         "live_matches":  live_matches,
         "all_today":   all_matches,
         "fetched_at":  now.isoformat(),
-        "source":      "365scores" if games else "empty",
+        "source":      "365scores" if games else ("db_fallback" if live_matches else "empty"),
     }
 
     _live_scores_cache["data"] = result

@@ -116,7 +116,12 @@ Aplicación móvil multiplataforma (iOS/Android) de pool de fútbol con dos moda
 - **Verificado con datos REALES Jornada 13**: `9/9 partidos actualizados` (GDL 5-0 PUE, MTY 1-3 PAC, etc.), `185 jugadores` con stats reales de ESPN, auto-proceso confirmado.
 - **Dependencias instaladas**: `requests==2.32.5`, `beautifulsoup4==4.14.3`, `lxml==6.1.0`
 
-## Backlog Priorizado
+### Sesión Mayo 2026 — Widget EN VIVO + Fantasy Results + FBref
+- **BUG CRÍTICO RESUELTO**: Todos los estilos del widget "EN VIVO" en `home.tsx` faltaban completamente del StyleSheet (`liveSection`, `liveDot`, `liveLabel`, `liveCount`, `liveMatch`, `liveScore`, `liveTime`, `liveMatchHome`, `liveMatchAway`, `liveScoreText`). Añadidos todos con diseño oscuro/rojo.
+- **BACKEND FALLBACK DB**: `GET /api/jornadas/current/live-scores` ahora cae al `db.matches` cuando 365Scores retorna 0 juegos (no hay Liga MX ese día). `source: "db_fallback"` indica este modo.
+- **MVP BADGE MEJORADO**: `results.tsx` — badge antes era `#FFD70022` (casi invisible). Ahora es `backgroundColor: '#E63946'` (rojo sólido) + `color: '#FFD700'` (dorado). Badge separado en `mvpBadge` (View) + `mvpBadgeText` (Text).
+- **FBREF MINUTOS**: `player_stats_service.py` — nueva función `_get_fbref_minutes(home, away, date)` consulta `fbref.com/en/comps/31/schedule/Liga-MX-Scores-and-Fixtures`, encuentra el match report y extrae minutos exactos de sustitución. Se activa solo cuando ESPN retorna estimados (65/25 min). `minutes_source` field trackea el origen del dato.
+- **VERIFICADO con screenshots**: EN VIVO muestra Pumas 1-0 Atlas (67') y Toluca 2-1 AtlSL (88'). Fantasy Results: Demo FC Estrella 71pts, Memo Ochoa, Álvaro Fidalgo ⭐MVP (16pts: doblete+asistencias), Quiñones, todos con minutos reales (45, 55, 62, 73, 82, 90).
 
 ### P0 (Crítico - Próximo)
 - COMPLETADO: Bracket Interactivo de Liguilla ✅
