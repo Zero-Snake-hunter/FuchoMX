@@ -3746,7 +3746,7 @@ async def get_my_stats(current_user: dict = Depends(get_current_user)):
 
 # ============ ADMIN STATS DASHBOARD ============
 
-ADMIN_EMAIL = "contacto@fuchomx.mx"
+ADMIN_EMAIL = "contacto@distrito.digital"
 
 @api_router.get("/admin/stats")
 async def get_admin_stats(current_user: dict = Depends(get_current_user)):

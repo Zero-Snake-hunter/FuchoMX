@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
 
-const ADMIN_EMAIL = 'contacto@fuchomx.mx';
+const ADMIN_EMAIL = 'contacto@distrito.digital';
 
 interface AdminStats {
   usuarios: {
