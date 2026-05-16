@@ -3744,6 +3744,86 @@ async def get_my_stats(current_user: dict = Depends(get_current_user)):
         "ligas_activas": ligas_activas,
     }
 
+# ============ ADMIN STATS DASHBOARD ============
+
+ADMIN_EMAIL = "contacto@fuchomx.mx"
+
+@api_router.get("/admin/stats")
+async def get_admin_stats(current_user: dict = Depends(get_current_user)):
+    """Dashboard de métricas para el admin de FuchoMX"""
+    if current_user.get("email") != ADMIN_EMAIL:
+        raise HTTPException(status_code=403, detail="Acceso restringido")
+
+    from datetime import datetime, timedelta
+    now = datetime.utcnow()
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    week_start = today_start - timedelta(days=7)
+    month_start = today_start - timedelta(days=30)
+
+    # Usuarios
+    total_usuarios = await db.users.count_documents({})
+    nuevos_hoy = await db.users.count_documents({"created_at": {"$gte": today_start.isoformat()}})
+    nuevos_semana = await db.users.count_documents({"created_at": {"$gte": week_start.isoformat()}})
+    nuevos_mes = await db.users.count_documents({"created_at": {"$gte": month_start.isoformat()}})
+
+    # Jornadas
+    total_jornadas = await db.jornadas.count_documents({})
+    jornada_activa = await db.jornadas.find_one({"is_active": True})
+
+    # Quinielas / predicciones
+    total_predicciones = await db.quiniela_selections.count_documents({}) if hasattr(db, 'quiniela_selections') else 0
+    try:
+        total_predicciones = await db.quiniela_selections.count_documents({})
+    except:
+        total_predicciones = 0
+
+    # Ligas
+    try:
+        total_ligas = await db.leagues.count_documents({})
+        ligas_activas = await db.leagues.count_documents({"is_active": True})
+    except:
+        total_ligas = 0
+        ligas_activas = 0
+
+    # Fantasy
+    try:
+        total_fantasy = await db.fantasy_lineups.count_documents({})
+    except:
+        total_fantasy = 0
+
+    # Últimos 5 usuarios registrados
+    ultimos_usuarios = await db.users.find(
+        {}, {"email": 1, "display_name": 1, "created_at": 1, "total_points": 1}
+    ).sort("created_at", -1).limit(5).to_list(5)
+
+    for u in ultimos_usuarios:
+        u["_id"] = str(u["_id"])
+
+    return {
+        "usuarios": {
+            "total": total_usuarios,
+            "nuevos_hoy": nuevos_hoy,
+            "nuevos_semana": nuevos_semana,
+            "nuevos_mes": nuevos_mes,
+            "ultimos": ultimos_usuarios,
+        },
+        "jornadas": {
+            "total": total_jornadas,
+            "activa": jornada_activa.get("week_number") if jornada_activa else None,
+        },
+        "predicciones": {
+            "total": total_predicciones,
+        },
+        "ligas": {
+            "total": total_ligas,
+            "activas": ligas_activas,
+        },
+        "fantasy": {
+            "total_lineups": total_fantasy,
+        },
+    }
+
+
 # ============ ROOT ============
 
 @api_router.get("/")
