@@ -4059,14 +4059,7 @@ app.include_router(api_router)
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=[
-        "https://fuchomx.pages.dev",
-        "https://fucho.com.mx",
-        "https://www.fucho.com.mx",
-        "https://quiniela-fantasy.preview.emergentagent.com",
-        "http://localhost:3000",
-        "http://localhost:8081",
-    ],
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
