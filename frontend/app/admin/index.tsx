@@ -43,6 +43,19 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('resumen');
+  const [syncing, setSyncing] = useState(false);
+
+  const syncPlayers = async () => {
+    setSyncing(true);
+    try {
+      const response = await api.post('/api/admin/sync-players-api-football');
+      Alert.alert('✅ Éxito', `${response.data.players_updated} jugadores sincronizados desde API-Football`);
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'No se pudo sincronizar');
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   useEffect(() => {
     if (user && user.email !== ADMIN_EMAIL) {
@@ -119,6 +132,16 @@ export default function AdminDashboard() {
           {/* TAB RESUMEN */}
           {activeTab === 'resumen' && (
             <>
+              <TouchableOpacity
+                style={[s.syncBtn, syncing && { opacity: 0.6 }]}
+                onPress={syncPlayers}
+                disabled={syncing}
+              >
+                {syncing
+                  ? <ActivityIndicator size="small" color="#FFF" />
+                  : <Text style={s.syncBtnText}>⚽ Sincronizar Jugadores desde API-Football</Text>
+                }
+              </TouchableOpacity>
               <Text style={s.sectionTitle}>👥 Usuarios</Text>
               <View style={s.row}>
                 <StatCard label="Total" value={stats.usuarios.total} icon="people" color="#E63946" />
@@ -297,6 +320,8 @@ const s = StyleSheet.create({
   totalBox:          { backgroundColor: '#E63946', borderRadius: 16, padding: 24, alignItems: 'center', marginBottom: 16 },
   totalNum:          { fontSize: 64, fontWeight: '900', color: '#FFF' },
   totalLabel:        { fontSize: 14, color: 'rgba(255,255,255,0.8)', marginTop: 4 },
+  syncBtn:           { backgroundColor: '#1D88E5', borderRadius: 12, padding: 14, alignItems: 'center', marginBottom: 16, flexDirection: 'row', justifyContent: 'center' },
+  syncBtnText:       { color: '#FFF', fontWeight: '700', fontSize: 14 },
   logoutBtn:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 16, marginTop: 8 },
   logoutText:        { color: '#999', fontSize: 14 },
 });
