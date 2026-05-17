@@ -212,8 +212,8 @@ export default function HomeScreen() {
             <View style={styles.liguillaBannerLeft}>
               <Text style={styles.liguillaBannerEmoji}>🏆</Text>
               <View>
-                <Text style={styles.liguillaBannerTitle}>BRACKET DE LIGUILLA</Text>
-                <Text style={styles.liguillaBannerSub}>Predice al campeón del Clausura 2026</Text>
+                <Text style={styles.liguillaBannerTitle}>LIGUILLA CLAUSURA 2026</Text>
+                <Text style={styles.liguillaBannerSub}>Predice al campeón · Presentado por FuchoMX</Text>
               </View>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#E63946" />
@@ -352,13 +352,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: '#0D0D0D',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#E6394633',
-    marginHorizontal: 24,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#E63946',
+    marginHorizontal: 16,
     marginTop: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    shadowColor: '#E63946',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   liguillaBannerLeft: {
     flexDirection: 'row',
@@ -367,18 +372,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   liguillaBannerEmoji: {
-    fontSize: 28,
+    fontSize: 40,
   },
   liguillaBannerTitle: {
-    color: '#FFF',
-    fontSize: 13,
-    fontWeight: '800',
-    letterSpacing: 0.5,
+    color: '#E63946',
+    fontSize: 16,
+    fontWeight: '900',
+    letterSpacing: 1,
   },
   liguillaBannerSub: {
-    color: '#888',
-    fontSize: 11,
-    marginTop: 2,
+    color: '#AAAAAA',
+    fontSize: 12,
+    marginTop: 4,
   },
   // ── Sponsor Banner ─────────────────────────────────────
   sponsorBanner: {

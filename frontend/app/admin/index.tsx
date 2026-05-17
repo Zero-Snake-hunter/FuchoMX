@@ -45,6 +45,18 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<Tab>('resumen');
   const [syncing, setSyncing] = useState(false);
 
+  const updateBracket = async () => {
+    try {
+      const response = await api.post('/api/admin/bracket/update', {
+        cuartos_winners: ["PUM", "PAC", "GDL", "CAZ"],
+        semis_right_winner: "CAZ",
+      });
+      Alert.alert('✅ Bracket actualizado', 'Cuartos y SF Derecha actualizados');
+    } catch (error: any) {
+      Alert.alert('Error', error.message);
+    }
+  };
+
   const closeJornada = async () => {
     try {
       const response = await api.post('/api/admin/close-all-jornadas');
@@ -158,6 +170,9 @@ export default function AdminDashboard() {
           {activeTab === 'resumen' && (
             <>
               <Text style={s.sectionTitle}>🔧 Herramientas de Admin</Text>
+              <TouchableOpacity style={[s.seedBtn, {backgroundColor: '#FFD700'}]} onPress={updateBracket}>
+                <Text style={[s.syncBtnText, {color: '#000'}]}>🏆 Actualizar resultados Liguilla</Text>
+              </TouchableOpacity>
               <TouchableOpacity style={[s.seedBtn, {backgroundColor: '#E63946'}]} onPress={closeJornada}>
                 <Text style={s.syncBtnText}>🔒 Cerrar todas las jornadas activas</Text>
               </TouchableOpacity>
