@@ -203,21 +203,7 @@ export default function HomeScreen() {
             </View>
           )}
 
-          {/* ── Liguilla Card ── */}
-          <TouchableOpacity
-            style={styles.liguillaBannerCard}
-            activeOpacity={0.8}
-            onPress={() => router.push('/quiniela/bracket')}
-          >
-            <View style={styles.liguillaBannerLeft}>
-              <Text style={styles.liguillaBannerEmoji}>🏆</Text>
-              <View>
-                <Text style={styles.liguillaBannerTitle}>LIGUILLA CLAUSURA 2026</Text>
-                <Text style={styles.liguillaBannerSub}>Predice al campeón · Presentado por FuchoMX</Text>
-              </View>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#E63946" />
-          </TouchableOpacity>
+
         </View>
       </ScrollView>
 

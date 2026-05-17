@@ -336,6 +336,22 @@ export default function LeaguesScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Banner Liguilla */}
+      {activeTab === 'quiniela' && (
+        <TouchableOpacity
+          style={styles.liguillaBanner}
+          activeOpacity={0.8}
+          onPress={() => router.push('/quiniela/bracket')}
+        >
+          <Text style={styles.liguillaBannerEmoji}>🏆</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.liguillaBannerTitle}>LIGUILLA CLAUSURA 2026</Text>
+            <Text style={styles.liguillaBannerSub}>Predice al campeón · Presentado por FuchoMX</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#E63946" />
+        </TouchableOpacity>
+      )}
+
       {/* League List */}
       <FlatList
         data={filteredLeagues}
@@ -920,5 +936,36 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#FFFFFF',
+  },
+  // ── Liguilla Banner ────────────────────────────────
+  liguillaBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0D0D0D',
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#E63946',
+    marginHorizontal: 16,
+    marginBottom: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    gap: 12,
+    shadowColor: '#E63946',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  liguillaBannerEmoji: { fontSize: 36 },
+  liguillaBannerTitle: {
+    color: '#E63946',
+    fontSize: 14,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  liguillaBannerSub: {
+    color: '#AAAAAA',
+    fontSize: 11,
+    marginTop: 2,
   },
 });
