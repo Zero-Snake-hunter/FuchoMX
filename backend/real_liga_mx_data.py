@@ -494,11 +494,11 @@ CLAUSURA_2026_J13_MATCHES = [
 #  (al 15 de abril 2026, antes de J13)
 # ──────────────────────────────────────────────
 LIGUILLA_CLAUSURA_2026_TEAMS = [
-    {"position": 1, "name": "Guadalajara"},
-    {"position": 2, "name": "Cruz Azul"},
-    {"position": 3, "name": "Toluca"},
-    {"position": 4, "name": "Pumas UNAM"},
-    {"position": 5, "name": "Pachuca"},
+    {"position": 1, "name": "Pumas UNAM"},
+    {"position": 2, "name": "Guadalajara"},
+    {"position": 3, "name": "Cruz Azul"},
+    {"position": 4, "name": "Pachuca"},
+    {"position": 5, "name": "Toluca"},
     {"position": 6, "name": "Atlas"},
     {"position": 7, "name": "Tigres UANL"},
     {"position": 8, "name": "Club América"},
