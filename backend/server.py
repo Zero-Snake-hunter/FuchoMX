@@ -19,6 +19,10 @@ from services.scores_service import get_match_results as _svc_get_match_results
 from services.player_stats_service import get_player_stats as _svc_get_player_stats
 
 ROOT_DIR = Path(__file__).parent
+API_FOOTBALL_KEY = os.environ.get('API_FOOTBALL_KEY', '50792ab8857ff066d1df1ccb3366ca38')
+API_FOOTBALL_BASE = 'https://v3.football.api-sports.io'
+API_FOOTBALL_LIGA_MX_ID = 262  # Liga MX en API-Football
+API_FOOTBALL_SEASON = 2025     # Temporada Clausura 2026 = season 2025
 load_dotenv(ROOT_DIR / '.env')
 
 # MongoDB connection
@@ -3891,6 +3895,90 @@ async def get_admin_stats(current_user: dict = Depends(get_current_user)):
         },
     }
 
+
+
+
+# ============ API-FOOTBALL ENDPOINTS ============
+
+from services.api_football_service import (
+    get_players_by_team as _af_get_players,
+    get_live_fixtures as _af_get_live,
+    get_fixtures_by_date as _af_get_by_date,
+)
+
+@api_router.post("/admin/sync-players-api-football")
+async def sync_players_from_api_football(
+    current_user: dict = Depends(get_current_user)
+):
+    """Sincroniza jugadores de todos los equipos desde API-Football (solo admin)"""
+    if current_user.get("email") != "contacto@distrito.digital":
+        raise HTTPException(status_code=403, detail="Acceso restringido")
+
+    total_updated = 0
+    errors = []
+
+    teams = await db.teams.find({}).to_list(20)
+    for team in teams:
+        team_name = team.get("name", "")
+        try:
+            players = await _af_get_players(team_name, API_FOOTBALL_KEY)
+            if not players:
+                continue
+
+            for p in players:
+                await db.players.update_one(
+                    {"api_football_id": p["api_id"]},
+                    {"$set": {
+                        "api_football_id": p["api_id"],
+                        "name":       p["name"],
+                        "firstname":  p["firstname"],
+                        "lastname":   p["lastname"],
+                        "photo":      p["photo"],
+                        "position":   p["position"],
+                        "team_name":  team_name,
+                        "team_id":    str(team["_id"]),
+                        "nationality": p["nationality"],
+                        "goals":      p["goals"],
+                        "assists":    p["assists"],
+                        "appearances": p["appearances"],
+                        "rating":     p["rating"],
+                        "updated_at": datetime.utcnow(),
+                    }},
+                    upsert=True
+                )
+                total_updated += 1
+
+            logger.info(f"✅ {team_name}: {len(players)} jugadores sincronizados")
+        except Exception as e:
+            errors.append(f"{team_name}: {str(e)}")
+            logger.error(f"❌ Error sincronizando {team_name}: {e}")
+
+    return {
+        "message": "Sincronización completada",
+        "players_updated": total_updated,
+        "errors": errors,
+    }
+
+
+@api_router.get("/fixtures/live")
+async def get_live_fixtures_api_football():
+    """Obtiene partidos en vivo de Liga MX desde API-Football"""
+    try:
+        fixtures = await _af_get_live(API_FOOTBALL_KEY)
+        return {"fixtures": fixtures, "source": "api-football"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/fixtures/today")
+async def get_today_fixtures():
+    """Obtiene partidos de hoy de Liga MX desde API-Football"""
+    try:
+        from datetime import date
+        fixtures = await _af_get_by_date(date.today(), API_FOOTBALL_KEY)
+        return {"fixtures": fixtures, "source": "api-football", "date": date.today().isoformat()}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ============ ADMIN BRACKET UPDATE ============
