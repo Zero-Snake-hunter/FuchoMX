@@ -147,6 +147,15 @@ export default function AdminDashboard() {
           {/* TAB USUARIOS */}
           {activeTab === 'usuarios' && (
             <>
+              <View style={s.totalBox}>
+                <Text style={s.totalNum}>{stats.usuarios.total}</Text>
+                <Text style={s.totalLabel}>Usuarios registrados</Text>
+              </View>
+              <View style={s.row}>
+                <StatCard label="Hoy" value={stats.usuarios.nuevos_hoy} icon="today" color="#4CAF50" />
+                <StatCard label="Esta semana" value={stats.usuarios.nuevos_semana} icon="calendar" color="#2196F3" />
+                <StatCard label="Este mes" value={stats.usuarios.nuevos_mes} icon="bar-chart" color="#FF9800" />
+              </View>
               <Text style={s.sectionTitle}>🆕 Últimos registros</Text>
               <View style={s.card}>
                 {stats.usuarios.ultimos.length === 0 ? (
@@ -285,6 +294,9 @@ const s = StyleSheet.create({
   loadingText:       { color: '#AAAAAA', fontSize: 15 },
   retryBtn:          { backgroundColor: '#E63946', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 },
   retryText:         { color: '#FFF', fontWeight: 'bold' },
+  totalBox:          { backgroundColor: '#E63946', borderRadius: 16, padding: 24, alignItems: 'center', marginBottom: 16 },
+  totalNum:          { fontSize: 64, fontWeight: '900', color: '#FFF' },
+  totalLabel:        { fontSize: 14, color: 'rgba(255,255,255,0.8)', marginTop: 4 },
   logoutBtn:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 16, marginTop: 8 },
   logoutText:        { color: '#999', fontSize: 14 },
 });
