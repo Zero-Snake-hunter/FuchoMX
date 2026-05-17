@@ -4025,6 +4025,207 @@ async def close_all_jornadas(current_user: dict = Depends(get_current_user)):
         "modified": result.modified_count
     }
 
+
+# ============ LIGUILLA JORNADAS ============
+
+LIGUILLA_CUARTOS_MATCHES = [
+    # Ida (ya jugados)
+    {"home": "Pumas UNAM",  "away": "Club América",  "home_score": 3, "away_score": 3, "leg": "ida",    "date": "2026-05-08"},
+    {"home": "Pachuca",     "away": "Toluca",         "home_score": 1, "away_score": 0, "leg": "ida",    "date": "2026-05-08"},
+    {"home": "Guadalajara", "away": "Tigres UANL",   "home_score": 1, "away_score": 3, "leg": "ida",    "date": "2026-05-09"},
+    {"home": "Cruz Azul",   "away": "Atlas",          "home_score": 3, "away_score": 2, "leg": "ida",    "date": "2026-05-09"},
+    # Vuelta (ya jugados)
+    {"home": "Club América",  "away": "Pumas UNAM",  "home_score": 3, "away_score": 3, "leg": "vuelta", "date": "2026-05-12"},
+    {"home": "Toluca",        "away": "Pachuca",      "home_score": 0, "away_score": 2, "leg": "vuelta", "date": "2026-05-12"},
+    {"home": "Tigres UANL",  "away": "Guadalajara",  "home_score": 0, "away_score": 2, "leg": "vuelta", "date": "2026-05-13"},
+    {"home": "Atlas",         "away": "Cruz Azul",    "home_score": 0, "away_score": 1, "leg": "vuelta", "date": "2026-05-13"},
+]
+
+LIGUILLA_SEMIS_MATCHES = [
+    # Ida (ya jugados)
+    {"home": "Cruz Azul",   "away": "Guadalajara",  "home_score": 2, "away_score": 2, "leg": "ida",    "date": "2026-05-14"},
+    {"home": "Pumas UNAM",  "away": "Pachuca",       "home_score": 0, "away_score": 1, "leg": "ida",    "date": "2026-05-15"},
+    # Vuelta (hoy y ayer)
+    {"home": "Guadalajara", "away": "Cruz Azul",    "home_score": 1, "away_score": 2, "leg": "vuelta", "date": "2026-05-16"},
+    {"home": "Pachuca",     "away": "Pumas UNAM",   "home_score": None, "away_score": None, "leg": "vuelta", "date": "2026-05-17"},
+]
+
+@api_router.post("/admin/create-liguilla-jornadas")
+async def create_liguilla_jornadas(current_user: dict = Depends(get_current_user)):
+    """Crea las 3 jornadas de liguilla: Cuartos, Semis y Final (solo admin)"""
+    if current_user.get("email") != "contacto@distrito.digital":
+        raise HTTPException(status_code=403, detail="Acceso restringido")
+
+    created = []
+
+    # Verificar que existen equipos
+    teams = await db.teams.find().to_list(100)
+    team_map = {t["name"]: t["_id"] for t in teams}
+
+    # ── 1. CUARTOS ──────────────────────────────────────────
+    existing_cuartos = await db.jornadas.find_one({"type": "liguilla", "phase": "cuartos"})
+    if not existing_cuartos:
+        cuartos_doc = {
+            "week_number": 18,
+            "type": "liguilla",
+            "phase": "cuartos",
+            "title": "Liguilla Clausura 2026 — Cuartos",
+            "active_teams": ["Pumas UNAM", "Guadalajara", "Cruz Azul", "Pachuca",
+                           "Toluca", "Atlas", "Tigres UANL", "Club América"],
+            "start_date": datetime(2026, 5, 8),
+            "end_date": datetime(2026, 5, 13, 23, 59),
+            "status": "finished",
+            "is_active": False,
+            "processed": True,
+            "created_at": datetime.utcnow(),
+        }
+        cuartos_result = await db.jornadas.insert_one(cuartos_doc)
+        cuartos_id = cuartos_result.inserted_id
+
+        # Crear partidos de cuartos
+        for m in LIGUILLA_CUARTOS_MATCHES:
+            home_id = team_map.get(m["home"])
+            away_id = team_map.get(m["away"])
+            if home_id and away_id:
+                await db.matches.insert_one({
+                    "jornada_id": cuartos_id,
+                    "home_team_id": home_id,
+                    "away_team_id": away_id,
+                    "home_score": m["home_score"],
+                    "away_score": m["away_score"],
+                    "status": "finished",
+                    "leg": m["leg"],
+                    "start_at": datetime.fromisoformat(m["date"]),
+                    "created_at": datetime.utcnow(),
+                })
+        created.append("cuartos")
+
+    # ── 2. SEMIS ─────────────────────────────────────────────
+    existing_semis = await db.jornadas.find_one({"type": "liguilla", "phase": "semis"})
+    if not existing_semis:
+        semis_doc = {
+            "week_number": 19,
+            "type": "liguilla",
+            "phase": "semis",
+            "title": "Liguilla Clausura 2026 — Semifinales",
+            "active_teams": ["Pumas UNAM", "Guadalajara", "Cruz Azul", "Pachuca"],
+            "start_date": datetime(2026, 5, 14),
+            "end_date": datetime(2026, 5, 17, 23, 59),
+            "status": "in_progress",
+            "is_active": True,
+            "processed": False,
+            "created_at": datetime.utcnow(),
+        }
+        semis_result = await db.jornadas.insert_one(semis_doc)
+        semis_id = semis_result.inserted_id
+
+        for m in LIGUILLA_SEMIS_MATCHES:
+            home_id = team_map.get(m["home"])
+            away_id = team_map.get(m["away"])
+            if home_id and away_id:
+                await db.matches.insert_one({
+                    "jornada_id": semis_id,
+                    "home_team_id": home_id,
+                    "away_team_id": away_id,
+                    "home_score": m["home_score"],
+                    "away_score": m["away_score"],
+                    "status": "finished" if m["home_score"] is not None else "scheduled",
+                    "leg": m["leg"],
+                    "start_at": datetime.fromisoformat(m["date"]),
+                    "created_at": datetime.utcnow(),
+                })
+        created.append("semis")
+
+    # ── 3. FINAL ─────────────────────────────────────────────
+    existing_final = await db.jornadas.find_one({"type": "liguilla", "phase": "final"})
+    if not existing_final:
+        final_doc = {
+            "week_number": 20,
+            "type": "liguilla",
+            "phase": "final",
+            "title": "Liguilla Clausura 2026 — Final",
+            "active_teams": ["Cruz Azul"],  # Se actualiza cuando sepamos el otro finalista
+            "start_date": datetime(2026, 5, 22),
+            "end_date": datetime(2026, 5, 25, 23, 59),
+            "status": "upcoming",
+            "is_active": False,
+            "processed": False,
+            "created_at": datetime.utcnow(),
+        }
+        await db.jornadas.insert_one(final_doc)
+        created.append("final (pendiente finalista)")
+
+    return {
+        "message": f"Jornadas de liguilla creadas: {', '.join(created) if created else 'ya existían'}",
+        "created": created,
+    }
+
+
+@api_router.post("/admin/activate-liguilla-final")
+async def activate_liguilla_final(
+    finalist: str,  # Nombre del equipo finalista (PUM o PAC)
+    current_user: dict = Depends(get_current_user)
+):
+    """Activa la jornada Final con los 2 finalistas confirmados (solo admin)"""
+    if current_user.get("email") != "contacto@distrito.digital":
+        raise HTTPException(status_code=403, detail="Acceso restringido")
+
+    # Cerrar semis
+    await db.jornadas.update_one(
+        {"type": "liguilla", "phase": "semis"},
+        {"$set": {"is_active": False, "status": "finished", "processed": True}}
+    )
+
+    # Activar Final con los 2 equipos
+    team_map = {"PUM": "Pumas UNAM", "PAC": "Pachuca"}
+    finalist_name = team_map.get(finalist, finalist)
+
+    result = await db.jornadas.update_one(
+        {"type": "liguilla", "phase": "final"},
+        {"$set": {
+            "active_teams": ["Cruz Azul", finalist_name],
+            "is_active": True,
+            "status": "upcoming",
+            "title": f"Liguilla Clausura 2026 — Final: Cruz Azul vs {finalist_name}",
+        }}
+    )
+
+    # Crear el partido de la final en matches
+    teams = await db.teams.find({"name": {"$in": ["Cruz Azul", finalist_name]}}).to_list(2)
+    final_jornada = await db.jornadas.find_one({"type": "liguilla", "phase": "final"})
+
+    if len(teams) == 2 and final_jornada:
+        caz = next((t for t in teams if t["name"] == "Cruz Azul"), None)
+        fin = next((t for t in teams if t["name"] == finalist_name), None)
+        if caz and fin:
+            # Partido de ida
+            await db.matches.insert_one({
+                "jornada_id": final_jornada["_id"],
+                "home_team_id": caz["_id"],
+                "away_team_id": fin["_id"],
+                "home_score": None, "away_score": None,
+                "status": "scheduled",
+                "leg": "ida",
+                "start_at": datetime(2026, 5, 22, 21, 0),
+                "created_at": datetime.utcnow(),
+            })
+            # Partido de vuelta
+            await db.matches.insert_one({
+                "jornada_id": final_jornada["_id"],
+                "home_team_id": fin["_id"],
+                "away_team_id": caz["_id"],
+                "home_score": None, "away_score": None,
+                "status": "scheduled",
+                "leg": "vuelta",
+                "start_at": datetime(2026, 5, 25, 21, 0),
+                "created_at": datetime.utcnow(),
+            })
+
+    return {
+        "message": f"Final activada: Cruz Azul vs {finalist_name}",
+        "finalist": finalist_name,
+    }
+
 # ============ ADMIN BRACKET UPDATE ============
 
 class BracketUpdateRequest(BaseModel):

@@ -45,6 +45,26 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<Tab>('resumen');
   const [syncing, setSyncing] = useState(false);
 
+  const createLiguillajornadas = async () => {
+    try {
+      const response = await api.post('/api/admin/create-liguilla-jornadas');
+      Alert.alert('✅ Éxito', response.data.message);
+      fetchStats();
+    } catch (error: any) {
+      Alert.alert('Error', error.message);
+    }
+  };
+
+  const activateFinal = async (finalist: string) => {
+    try {
+      const response = await api.post(`/api/admin/activate-liguilla-final?finalist=${finalist}`);
+      Alert.alert('✅ Final activada', response.data.message);
+      fetchStats();
+    } catch (error: any) {
+      Alert.alert('Error', error.message);
+    }
+  };
+
   const updateBracket = async () => {
     try {
       const response = await api.post('/api/admin/bracket/update', {
@@ -171,7 +191,19 @@ export default function AdminDashboard() {
             <>
               <Text style={s.sectionTitle}>🔧 Herramientas de Admin</Text>
               <TouchableOpacity style={[s.seedBtn, {backgroundColor: '#FFD700'}]} onPress={updateBracket}>
-                <Text style={[s.syncBtnText, {color: '#000'}]}>🏆 Actualizar resultados Liguilla</Text>
+                <Text style={[s.syncBtnText, {color: '#000'}]}>🏆 Actualizar resultados Bracket</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[s.seedBtn, {backgroundColor: '#2A9D8F'}]} onPress={createLiguillajornadas}>
+                <Text style={s.syncBtnText}>⚽ Crear Jornadas de Liguilla (Cuartos/Semis/Final)</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[s.seedBtn, {backgroundColor: '#E63946'}]} onPress={() => {
+                Alert.alert('¿Quién pasó a la Final?', 'Selecciona el finalista', [
+                  { text: 'Pachuca (PAC)', onPress: () => activateFinal('PAC') },
+                  { text: 'Pumas (PUM)', onPress: () => activateFinal('PUM') },
+                  { text: 'Cancelar', style: 'cancel' },
+                ]);
+              }}>
+                <Text style={s.syncBtnText}>🏁 Activar Final (después del partido hoy)</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[s.seedBtn, {backgroundColor: '#E63946'}]} onPress={closeJornada}>
                 <Text style={s.syncBtnText}>🔒 Cerrar todas las jornadas activas</Text>
