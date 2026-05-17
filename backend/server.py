@@ -4319,6 +4319,137 @@ import asyncio
 
 _scheduler_task: asyncio.Task | None = None
 
+
+async def _process_liguilla_phase(phase: str):
+    """
+    Procesa automáticamente una fase de liguilla cuando terminan todos sus partidos.
+    - Calcula puntos de fantasy de los jugadores
+    - Avanza a la siguiente fase automáticamente
+    - Identifica ganadores via marcadores en DB
+    """
+    jornada = await db.jornadas.find_one({"type": "liguilla", "phase": phase, "is_active": True})
+    if not jornada or jornada.get("processed"):
+        return
+
+    jornada_id = jornada["_id"]
+    logger.info(f"🏆 Procesando liguilla fase: {phase}")
+
+    # Verificar que todos los partidos terminaron
+    matches = await db.matches.find({"jornada_id": jornada_id}).to_list(20)
+    pending = [m for m in matches if m.get("status") != "finished"]
+    if pending:
+        logger.info(f"⏳ Liguilla {phase}: {len(pending)} partidos pendientes")
+        return
+
+    # Calcular puntos de fantasy por stats de jugadores
+    try:
+        scores_result = await _svc_get_match_results(str(jornada_id), db)
+        logger.info(f"✅ Liguilla {phase} scores: {scores_result.get('matches_updated', 0)} actualizados")
+    except Exception as e:
+        logger.error(f"❌ Error calculando scores liguilla {phase}: {e}")
+
+    # Marcar jornada como procesada y cerrada
+    await db.jornadas.update_one(
+        {"_id": jornada_id},
+        {"$set": {"processed": True, "is_active": False, "status": "finished"}}
+    )
+    logger.info(f"✅ Liguilla {phase} cerrada automáticamente")
+
+    # ── Avanzar a la siguiente fase ────────────────────────────────
+    if phase == "semis":
+        # Identificar ganadores de cada serie
+        # Serie izquierda: Cruz Azul vs Guadalajara
+        caz = await db.teams.find_one({"short_name": "CAZ"})
+        gdl = await db.teams.find_one({"short_name": "GDL"})
+        pum = await db.teams.find_one({"short_name": "PUM"})
+        pac = await db.teams.find_one({"short_name": "PAC"})
+
+        # Sumar goles por serie
+        async def get_series_winner(team_a_id, team_b_id):
+            partidos = await db.matches.find({
+                "jornada_id": jornada_id,
+                "$or": [
+                    {"home_team_id": team_a_id, "away_team_id": team_b_id},
+                    {"home_team_id": team_b_id, "away_team_id": team_a_id},
+                ]
+            }).to_list(2)
+
+            goles_a = 0
+            goles_b = 0
+            for p in partidos:
+                if p.get("home_team_id") == team_a_id:
+                    goles_a += p.get("home_score") or 0
+                    goles_b += p.get("away_score") or 0
+                else:
+                    goles_b += p.get("home_score") or 0
+                    goles_a += p.get("away_score") or 0
+
+            if goles_a > goles_b:
+                return team_a_id
+            elif goles_b > goles_a:
+                return team_b_id
+            else:
+                # Empate global — gana el de mejor posición (team_a es el mejor clasificado)
+                return team_a_id
+
+        if caz and gdl and pum and pac:
+            # SF Derecha: Cruz Azul vs Guadalajara
+            winner_right_id = await get_series_winner(caz["_id"], gdl["_id"])
+            winner_right = caz if winner_right_id == caz["_id"] else gdl
+
+            # SF Izquierda: Pumas vs Pachuca
+            winner_left_id = await get_series_winner(pum["_id"], pac["_id"])
+            winner_left = pum if winner_left_id == pum["_id"] else pac
+
+            logger.info(f"🏆 Finalistas: {winner_left['name']} vs {winner_right['name']}")
+
+            # Actualizar jornada Final con los finalistas
+            final_jornada = await db.jornadas.find_one({"type": "liguilla", "phase": "final"})
+            if final_jornada:
+                await db.jornadas.update_one(
+                    {"_id": final_jornada["_id"]},
+                    {"$set": {
+                        "active_teams": [winner_left["name"], winner_right["name"]],
+                        "title": f"Liguilla Clausura 2026 — Final: {winner_left['name']} vs {winner_right['name']}",
+                        "is_active": True,
+                        "status": "upcoming",
+                    }}
+                )
+
+                # Crear partidos de la final si no existen
+                existing = await db.matches.count_documents({"jornada_id": final_jornada["_id"]})
+                if existing == 0:
+                    await db.matches.insert_many([
+                        {
+                            "jornada_id": final_jornada["_id"],
+                            "home_team_id": winner_right["_id"],
+                            "away_team_id": winner_left["_id"],
+                            "home_score": None, "away_score": None,
+                            "status": "scheduled", "leg": "ida",
+                            "start_at": datetime(2026, 5, 22, 21, 0),
+                            "created_at": datetime.utcnow(),
+                        },
+                        {
+                            "jornada_id": final_jornada["_id"],
+                            "home_team_id": winner_left["_id"],
+                            "away_team_id": winner_right["_id"],
+                            "home_score": None, "away_score": None,
+                            "status": "scheduled", "leg": "vuelta",
+                            "start_at": datetime(2026, 5, 25, 21, 0),
+                            "created_at": datetime.utcnow(),
+                        },
+                    ])
+                logger.info(f"✅ Final activada automáticamente: {winner_left['name']} vs {winner_right['name']}")
+
+    elif phase == "final":
+        logger.info("🎉 ¡Liguilla Clausura 2026 finalizada! Calculando campeón...")
+        # Otorgar logros especiales
+        try:
+            # Aquí se pueden otorgar logros de campeón acertado
+            pass
+        except Exception as e:
+            logger.error(f"❌ Error otorgando logros de liguilla: {e}")
+
 async def _auto_update_scores():
     """
     Scheduler que corre en background continuamente.
@@ -4374,15 +4505,25 @@ async def _auto_update_scores():
                 logger.info("🏁 Todos los partidos del día terminaron — verificando proceso de jornada")
                 jornada = await db.jornadas.find_one({"is_active": True})
                 if jornada and not jornada.get("processed", False):
-                    try:
-                        proc_result = await _process_jornada_core(str(jornada["_id"]))
-                        logger.info(
-                            f"🎉 Jornada {jornada.get('week_number')} procesada automáticamente: "
-                            f"quiniela={proc_result.get('quiniela_updated')} usuarios, "
-                            f"fantasy={proc_result.get('fantasy_updated')} equipos"
-                        )
-                    except Exception as e:
-                        logger.error(f"❌ Scheduler process_jornada error: {e}")
+                    # ── Jornada de liguilla ────────────────────────────
+                    if jornada.get("type") == "liguilla":
+                        phase = jornada.get("phase", "")
+                        try:
+                            await _process_liguilla_phase(phase)
+                            logger.info(f"🏆 Liguilla fase {phase} procesada automáticamente")
+                        except Exception as e:
+                            logger.error(f"❌ Error procesando liguilla {phase}: {e}")
+                    else:
+                        # ── Jornada regular ───────────────────────────
+                        try:
+                            proc_result = await _process_jornada_core(str(jornada["_id"]))
+                            logger.info(
+                                f"🎉 Jornada {jornada.get('week_number')} procesada automáticamente: "
+                                f"quiniela={proc_result.get('quiniela_updated')} usuarios, "
+                                f"fantasy={proc_result.get('fantasy_updated')} equipos"
+                            )
+                        except Exception as e:
+                            logger.error(f"❌ Scheduler process_jornada error: {e}")
 
             # ── Intervalo según estado ─────────────────────────────────────
             if live_games:
