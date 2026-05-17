@@ -635,17 +635,70 @@ async def get_liguilla_bracket(current_user: dict = Depends(get_optional_user)):
     # Mapear por posición para construir cuartos
     by_pos = {t["position"]: t for t in teams_data}
 
+    # Obtener resultados guardados en DB
+    results = await db.liguilla_results.find_one({"temporada": "Clausura 2026"})
+    cuartos_winners   = results.get("cuartos_winners", []) if results else []
+    semis_left_winner = results.get("semis_left_winner") if results else None
+    semis_right_winner= results.get("semis_right_winner") if results else None
+    champion          = results.get("champion") if results else None
+
+    # Determinar status
+    if champion:
+        bracket_status = "finalizado"
+    elif semis_left_winner or semis_right_winner:
+        bracket_status = "semifinales"
+    elif cuartos_winners:
+        bracket_status = "semifinales"
+    else:
+        bracket_status = "cuartos"
+
+    # Buscar equipos semifinalistas en DB
+    async def find_team_by_short(short_name):
+        if not short_name:
+            return None
+        t = await db.teams.find_one({"short_name": short_name})
+        if not t:
+            t = await db.teams.find_one({"name": {"$regex": short_name, "$options": "i"}})
+        if t:
+            return {
+                "id": str(t["_id"]),
+                "name": t["name"],
+                "short_name": t.get("short_name", short_name),
+                "shield_url": t.get("shield_url", ""),
+            }
+        return {"id": "", "name": short_name, "short_name": short_name, "shield_url": ""}
+
+    # Semifinalistas (ganadores de cuartos)
+    semi_left_home  = await find_team_by_short(cuartos_winners[0]) if len(cuartos_winners) > 0 else None
+    semi_left_away  = await find_team_by_short(cuartos_winners[1]) if len(cuartos_winners) > 1 else None
+    semi_right_home = await find_team_by_short(cuartos_winners[2]) if len(cuartos_winners) > 2 else None
+    semi_right_away = await find_team_by_short(cuartos_winners[3]) if len(cuartos_winners) > 3 else None
+
+    # Finalistas
+    finalist_left  = await find_team_by_short(semis_left_winner) if semis_left_winner else None
+    finalist_right = await find_team_by_short(semis_right_winner) if semis_right_winner else None
+    champion_team  = await find_team_by_short(champion) if champion else None
+
     bracket = {
         "temporada":      "Clausura 2026",
-        "status":         "pendiente",
+        "status":         bracket_status,
         "is_provisional": is_provisional,
         "teams":          teams_data,
         "cuartos": [
-            {"match": 1, "side": "left",  "home": by_pos.get(1), "away": by_pos.get(8)},
-            {"match": 2, "side": "left",  "home": by_pos.get(4), "away": by_pos.get(5)},
-            {"match": 3, "side": "right", "home": by_pos.get(2), "away": by_pos.get(7)},
-            {"match": 4, "side": "right", "home": by_pos.get(3), "away": by_pos.get(6)},
+            {"match": 1, "side": "left",  "home": by_pos.get(1), "away": by_pos.get(8), "winner": cuartos_winners[0] if len(cuartos_winners) > 0 else None},
+            {"match": 2, "side": "left",  "home": by_pos.get(4), "away": by_pos.get(5), "winner": cuartos_winners[1] if len(cuartos_winners) > 1 else None},
+            {"match": 3, "side": "right", "home": by_pos.get(2), "away": by_pos.get(7), "winner": cuartos_winners[2] if len(cuartos_winners) > 2 else None},
+            {"match": 4, "side": "right", "home": by_pos.get(3), "away": by_pos.get(6), "winner": cuartos_winners[3] if len(cuartos_winners) > 3 else None},
         ],
+        "semifinales": {
+            "left":  {"home": semi_left_home,  "away": semi_left_away,  "winner": semis_left_winner},
+            "right": {"home": semi_right_home, "away": semi_right_away, "winner": semis_right_winner},
+        },
+        "final": {
+            "home": finalist_left,
+            "away": finalist_right,
+            "champion": champion_team,
+        },
         "scoring": {
             "cuartos": 5,
             "semis":   10,
@@ -3837,6 +3890,60 @@ async def get_admin_stats(current_user: dict = Depends(get_current_user)):
             "total_lineups": total_fantasy,
         },
     }
+
+
+
+# ============ ADMIN BRACKET UPDATE ============
+
+class BracketUpdateRequest(BaseModel):
+    cuartos_winners: Optional[List[str]] = None  # ["PUM", "GDL", "CAZ", "PAC"] en orden
+    semis_left_winner: Optional[str] = None      # Ganador SF Izquierda
+    semis_right_winner: Optional[str] = None     # Ganador SF Derecha
+    champion: Optional[str] = None               # Campeón
+
+@api_router.post("/admin/bracket/update")
+async def update_bracket_results(
+    data: BracketUpdateRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Actualiza los resultados del bracket de liguilla (solo admin)"""
+    if current_user.get("email") != "contacto@distrito.digital":
+        raise HTTPException(status_code=403, detail="Acceso restringido")
+
+    update_doc = {"updated_at": datetime.utcnow()}
+
+    if data.cuartos_winners:
+        update_doc["cuartos_winners"] = data.cuartos_winners
+    if data.semis_left_winner:
+        update_doc["semis_left_winner"] = data.semis_left_winner
+    if data.semis_right_winner:
+        update_doc["semis_right_winner"] = data.semis_right_winner
+    if data.champion:
+        update_doc["champion"] = data.champion
+
+    await db.liguilla_results.update_one(
+        {"temporada": "Clausura 2026"},
+        {"$set": update_doc},
+        upsert=True
+    )
+
+    return {"message": "Bracket actualizado", "data": update_doc}
+
+
+@api_router.get("/liguilla/results")
+async def get_liguilla_results():
+    """Obtiene los resultados actuales del bracket"""
+    results = await db.liguilla_results.find_one({"temporada": "Clausura 2026"})
+    if not results:
+        return {
+            "temporada": "Clausura 2026",
+            "cuartos_winners": [],
+            "semis_left_winner": None,
+            "semis_right_winner": None,
+            "champion": None
+        }
+    results["_id"] = str(results["_id"])
+    return results
 
 
 # ============ ROOT ============
