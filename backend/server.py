@@ -3779,11 +3779,26 @@ async def get_admin_stats(current_user: dict = Depends(get_current_user)):
 
     # Ligas
     try:
-        total_ligas = await db.leagues.count_documents({})
-        ligas_activas = await db.leagues.count_documents({"is_active": True})
-    except:
+        total_ligas = await db.private_leagues.count_documents({})
+        ligas_raw = await db.private_leagues.find(
+            {}, {"name": 1, "mode": 1, "code": 1, "owner_id": 1, "created_at": 1}
+        ).sort("created_at", -1).limit(20).to_list(20)
+        ligas_detalle = []
+        for liga in ligas_raw:
+            owner = await db.users.find_one({"_id": liga["owner_id"]}, {"display_name": 1, "email": 1})
+            miembros = await db.league_members.count_documents({"league_id": liga["_id"]})
+            ligas_detalle.append({
+                "id": str(liga["_id"]),
+                "nombre": liga.get("name", "Sin nombre"),
+                "modo": liga.get("mode", "quiniela"),
+                "codigo": liga.get("code", ""),
+                "creador": owner.get("display_name", owner.get("email", "?")) if owner else "?",
+                "miembros": miembros,
+                "creada": liga["created_at"].isoformat() if liga.get("created_at") else "",
+            })
+    except Exception as e:
         total_ligas = 0
-        ligas_activas = 0
+        ligas_detalle = []
 
     # Fantasy
     try:
@@ -3816,7 +3831,7 @@ async def get_admin_stats(current_user: dict = Depends(get_current_user)):
         },
         "ligas": {
             "total": total_ligas,
-            "activas": ligas_activas,
+            "detalle": ligas_detalle,
         },
         "fantasy": {
             "total_lineups": total_fantasy,

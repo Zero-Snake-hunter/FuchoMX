@@ -1,14 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-  RefreshControl,
-  Alert,
-  Image,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  ActivityIndicator, RefreshControl, Alert, Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,6 +9,16 @@ import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
 
 const ADMIN_EMAIL = 'contacto@distrito.digital';
+
+interface Liga {
+  id: string;
+  nombre: string;
+  modo: string;
+  codigo: string;
+  creador: string;
+  miembros: number;
+  creada: string;
+}
 
 interface AdminStats {
   usuarios: {
@@ -27,9 +30,11 @@ interface AdminStats {
   };
   jornadas: { total: number; activa: number | null };
   predicciones: { total: number };
-  ligas: { total: number; activas: number };
+  ligas: { total: number; detalle: Liga[] };
   fantasy: { total_lineups: number };
 }
+
+type Tab = 'resumen' | 'usuarios' | 'ligas';
 
 export default function AdminDashboard() {
   const { user, logout } = useAuth();
@@ -37,8 +42,8 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState<Tab>('resumen');
 
-  // Verificar acceso
   useEffect(() => {
     if (user && user.email !== ADMIN_EMAIL) {
       Alert.alert('Sin acceso', 'Esta sección es solo para administradores.');
@@ -58,313 +63,228 @@ export default function AdminDashboard() {
     }
   }, []);
 
-  useEffect(() => {
-    fetchStats();
-  }, []);
+  useEffect(() => { fetchStats(); }, []);
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchStats();
-  };
+  const onRefresh = () => { setRefreshing(true); fetchStats(); };
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '-';
     try {
-      const d = new Date(dateStr);
-      return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
-    } catch {
-      return dateStr;
-    }
+      return new Date(dateStr).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+    } catch { return dateStr; }
   };
 
   if (!user || user.email !== ADMIN_EMAIL) return null;
 
   return (
-    <ScrollView
-      style={styles.container}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#E63946" />}
-    >
-      {/* Header */}
-      <View style={styles.header}>
-        <Image
-          source={require('../../assets/images/FuchoMX.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-        <View style={styles.headerText}>
-          <Text style={styles.title}>Admin Dashboard</Text>
-          <Text style={styles.subtitle}>FuchoMX</Text>
+    <View style={s.root}>
+      {/* HEADER */}
+      <View style={s.header}>
+        <Image source={require('../../assets/images/FuchoMX.png')} style={s.logo} resizeMode="contain" />
+        <View style={{ flex: 1, marginLeft: 10 }}>
+          <Text style={s.title}>Admin Dashboard</Text>
+          <Text style={s.subtitle}>FuchoMX</Text>
         </View>
-        <TouchableOpacity onPress={onRefresh} style={styles.refreshBtn}>
+        <TouchableOpacity onPress={onRefresh} style={s.refreshBtn}>
           <Ionicons name="refresh" size={22} color="#E63946" />
         </TouchableOpacity>
       </View>
 
+      {/* TABS */}
+      <View style={s.tabs}>
+        {(['resumen', 'usuarios', 'ligas'] as Tab[]).map(tab => (
+          <TouchableOpacity
+            key={tab}
+            style={[s.tab, activeTab === tab && s.tabActive]}
+            onPress={() => setActiveTab(tab)}
+          >
+            <Text style={[s.tabText, activeTab === tab && s.tabTextActive]}>
+              {tab === 'resumen' ? '📊 Resumen' : tab === 'usuarios' ? '👥 Usuarios' : '🏆 Ligas'}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
       {loading ? (
-        <View style={styles.loadingContainer}>
+        <View style={s.center}>
           <ActivityIndicator size="large" color="#E63946" />
-          <Text style={styles.loadingText}>Cargando métricas...</Text>
+          <Text style={s.loadingText}>Cargando métricas...</Text>
         </View>
       ) : stats ? (
-        <>
-          {/* Fila principal de usuarios */}
-          <Text style={styles.sectionTitle}>👥 Usuarios</Text>
-          <View style={styles.row}>
-            <StatCard label="Total" value={stats.usuarios.total} icon="people" color="#E63946" />
-            <StatCard label="Hoy" value={stats.usuarios.nuevos_hoy} icon="today" color="#4CAF50" />
-          </View>
-          <View style={styles.row}>
-            <StatCard label="Esta semana" value={stats.usuarios.nuevos_semana} icon="calendar" color="#2196F3" />
-            <StatCard label="Este mes" value={stats.usuarios.nuevos_mes} icon="bar-chart" color="#FF9800" />
-          </View>
+        <ScrollView
+          style={{ flex: 1 }}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#E63946" />}
+          contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
+        >
+          {/* TAB RESUMEN */}
+          {activeTab === 'resumen' && (
+            <>
+              <Text style={s.sectionTitle}>👥 Usuarios</Text>
+              <View style={s.row}>
+                <StatCard label="Total" value={stats.usuarios.total} icon="people" color="#E63946" />
+                <StatCard label="Hoy" value={stats.usuarios.nuevos_hoy} icon="today" color="#4CAF50" />
+              </View>
+              <View style={s.row}>
+                <StatCard label="Esta semana" value={stats.usuarios.nuevos_semana} icon="calendar" color="#2196F3" />
+                <StatCard label="Este mes" value={stats.usuarios.nuevos_mes} icon="bar-chart" color="#FF9800" />
+              </View>
 
-          {/* Jornadas y ligas */}
-          <Text style={styles.sectionTitle}>⚽ App</Text>
-          <View style={styles.row}>
-            <StatCard label="Jornadas" value={stats.jornadas.total} icon="football" color="#9C27B0" />
-            <StatCard
-              label="Jornada activa"
-              value={stats.jornadas.activa ?? '-'}
-              icon="play-circle"
-              color="#00BCD4"
-            />
-          </View>
-          <View style={styles.row}>
-            <StatCard label="Predicciones" value={stats.predicciones.total} icon="checkmark-circle" color="#E63946" />
-            <StatCard label="Ligas activas" value={stats.ligas.activas} icon="trophy" color="#FFD700" />
-          </View>
-          <View style={styles.row}>
-            <StatCard label="Lineups Fantasy" value={stats.fantasy.total_lineups} icon="shirt" color="#4CAF50" />
-            <StatCard label="Ligas totales" value={stats.ligas.total} icon="grid" color="#607D8B" />
-          </View>
+              <Text style={s.sectionTitle}>⚽ App</Text>
+              <View style={s.row}>
+                <StatCard label="Jornadas" value={stats.jornadas.total} icon="football" color="#9C27B0" />
+                <StatCard label="Jornada activa" value={stats.jornadas.activa ?? '-'} icon="play-circle" color="#00BCD4" />
+              </View>
+              <View style={s.row}>
+                <StatCard label="Predicciones" value={stats.predicciones.total} icon="checkmark-circle" color="#E63946" />
+                <StatCard label="Ligas totales" value={stats.ligas.total} icon="trophy" color="#FFD700" />
+              </View>
+              <View style={s.row}>
+                <StatCard label="Fantasy lineups" value={stats.fantasy.total_lineups} icon="shirt" color="#4CAF50" />
+              </View>
+            </>
+          )}
 
-          {/* Últimos registros */}
-          <Text style={styles.sectionTitle}>🆕 Últimos registros</Text>
-          <View style={styles.card}>
-            {stats.usuarios.ultimos.length === 0 ? (
-              <Text style={styles.emptyText}>Sin registros aún</Text>
-            ) : (
-              stats.usuarios.ultimos.map((u, i) => (
-                <View key={i} style={[styles.userRow, i < stats.usuarios.ultimos.length - 1 && styles.userRowBorder]}>
-                  <View style={styles.userAvatar}>
-                    <Text style={styles.userAvatarText}>{u.display_name?.[0]?.toUpperCase() || '?'}</Text>
+          {/* TAB USUARIOS */}
+          {activeTab === 'usuarios' && (
+            <>
+              <Text style={s.sectionTitle}>🆕 Últimos registros</Text>
+              <View style={s.card}>
+                {stats.usuarios.ultimos.length === 0 ? (
+                  <Text style={s.emptyText}>Sin registros aún</Text>
+                ) : stats.usuarios.ultimos.map((u, i) => (
+                  <View key={i} style={[s.userRow, i < stats.usuarios.ultimos.length - 1 && s.userRowBorder]}>
+                    <View style={s.userAvatar}>
+                      <Text style={s.userAvatarText}>{u.display_name?.[0]?.toUpperCase() || '?'}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.userName}>{u.display_name || 'Sin nombre'}</Text>
+                      <Text style={s.userEmail}>{u.email}</Text>
+                      <Text style={s.userDate}>{formatDate(u.created_at)}</Text>
+                    </View>
+                    <View style={{ alignItems: 'center' }}>
+                      <Text style={s.userPointsValue}>{u.total_points ?? 0}</Text>
+                      <Text style={s.userPointsLabel}>pts</Text>
+                    </View>
                   </View>
-                  <View style={styles.userInfo}>
-                    <Text style={styles.userName}>{u.display_name || 'Sin nombre'}</Text>
-                    <Text style={styles.userEmail}>{u.email}</Text>
-                    <Text style={styles.userDate}>{formatDate(u.created_at)}</Text>
+                ))}
+              </View>
+            </>
+          )}
+
+          {/* TAB LIGAS */}
+          {activeTab === 'ligas' && (
+            <>
+              <Text style={s.sectionTitle}>🏆 Ligas creadas ({stats.ligas.total})</Text>
+              {stats.ligas.detalle.length === 0 ? (
+                <View style={s.card}>
+                  <Text style={s.emptyText}>No hay ligas creadas aún</Text>
+                </View>
+              ) : stats.ligas.detalle.map((liga, i) => (
+                <View key={i} style={s.ligaCard}>
+                  <View style={s.ligaHeader}>
+                    <View style={[s.ligaModeBadge, { backgroundColor: liga.modo === 'fantasy' ? '#1D88E522' : '#E6394622' }]}>
+                      <Text style={[s.ligaModeText, { color: liga.modo === 'fantasy' ? '#1D88E5' : '#E63946' }]}>
+                        {liga.modo === 'fantasy' ? '⚽ ONCE' : liga.modo === 'ambos' ? '🎮 AMBOS' : '📝 QUINIELA'}
+                      </Text>
+                    </View>
+                    <Text style={s.ligaCodigo}>#{liga.codigo}</Text>
                   </View>
-                  <View style={styles.userPoints}>
-                    <Text style={styles.userPointsValue}>{u.total_points ?? 0}</Text>
-                    <Text style={styles.userPointsLabel}>pts</Text>
+                  <Text style={s.ligaNombre}>{liga.nombre}</Text>
+                  <View style={s.ligaFooter}>
+                    <View style={s.ligaInfo}>
+                      <Ionicons name="person" size={13} color="#666" />
+                      <Text style={s.ligaInfoText}>{liga.creador}</Text>
+                    </View>
+                    <View style={s.ligaInfo}>
+                      <Ionicons name="people" size={13} color="#666" />
+                      <Text style={s.ligaInfoText}>{liga.miembros} miembro{liga.miembros !== 1 ? 's' : ''}</Text>
+                    </View>
+                    <View style={s.ligaInfo}>
+                      <Ionicons name="calendar" size={13} color="#666" />
+                      <Text style={s.ligaInfoText}>{formatDate(liga.creada)}</Text>
+                    </View>
                   </View>
                 </View>
-              ))
-            )}
-          </View>
+              ))}
+            </>
+          )}
 
-          {/* Botón logout */}
+          {/* LOGOUT */}
           <TouchableOpacity
-            style={styles.logoutBtn}
-            onPress={async () => {
-              await logout();
-              router.replace('/(auth)/login');
-            }}
+            style={s.logoutBtn}
+            onPress={async () => { await logout(); router.replace('/(auth)/login'); }}
           >
             <Ionicons name="log-out-outline" size={18} color="#999" />
-            <Text style={styles.logoutText}>Cerrar sesión</Text>
+            <Text style={s.logoutText}>Cerrar sesión</Text>
           </TouchableOpacity>
-        </>
+        </ScrollView>
       ) : (
-        <View style={styles.loadingContainer}>
+        <View style={s.center}>
           <Ionicons name="alert-circle-outline" size={48} color="#666" />
-          <Text style={styles.loadingText}>No se pudieron cargar los datos</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={fetchStats}>
-            <Text style={styles.retryText}>Reintentar</Text>
+          <Text style={s.loadingText}>No se pudieron cargar los datos</Text>
+          <TouchableOpacity style={s.retryBtn} onPress={fetchStats}>
+            <Text style={s.retryText}>Reintentar</Text>
           </TouchableOpacity>
         </View>
       )}
-    </ScrollView>
+    </View>
   );
 }
 
 function StatCard({ label, value, icon, color }: { label: string; value: any; icon: any; color: string }) {
   return (
-    <View style={[styles.statCard, { borderLeftColor: color }]}>
-      <View style={[styles.statIcon, { backgroundColor: color + '22' }]}>
+    <View style={[s.statCard, { borderLeftColor: color }]}>
+      <View style={[s.statIcon, { backgroundColor: color + '22' }]}>
         <Ionicons name={icon} size={22} color={color} />
       </View>
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
+      <Text style={s.statValue}>{value}</Text>
+      <Text style={s.statLabel}>{label}</Text>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#090909',
-    padding: 16,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-    paddingTop: 48,
-  },
-  logo: {
-    width: 44,
-    height: 44,
-  },
-  headerText: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  subtitle: {
-    fontSize: 13,
-    color: '#E63946',
-  },
-  refreshBtn: {
-    padding: 8,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#AAAAAA',
-    marginBottom: 12,
-    marginTop: 8,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 12,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: '#181818',
-    borderRadius: 12,
-    padding: 16,
-    borderLeftWidth: 3,
-    alignItems: 'center',
-  },
-  statIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  statValue: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#AAAAAA',
-    marginTop: 4,
-    textAlign: 'center',
-  },
-  card: {
-    backgroundColor: '#181818',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-  },
-  userRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  userRowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#2a2a2a',
-  },
-  userAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#E63946',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  userAvatarText: {
-    color: '#FFF',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  userInfo: {
-    flex: 1,
-  },
-  userName: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  userEmail: {
-    color: '#AAAAAA',
-    fontSize: 12,
-    marginTop: 2,
-  },
-  userDate: {
-    color: '#666',
-    fontSize: 11,
-    marginTop: 2,
-  },
-  userPoints: {
-    alignItems: 'center',
-  },
-  userPointsValue: {
-    color: '#E63946',
-    fontWeight: 'bold',
-    fontSize: 18,
-  },
-  userPointsLabel: {
-    color: '#666',
-    fontSize: 11,
-  },
-  emptyText: {
-    color: '#666',
-    textAlign: 'center',
-    padding: 16,
-  },
-  loadingContainer: {
-    alignItems: 'center',
-    paddingTop: 80,
-    gap: 16,
-  },
-  loadingText: {
-    color: '#AAAAAA',
-    fontSize: 15,
-  },
-  retryBtn: {
-    backgroundColor: '#E63946',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  retryText: {
-    color: '#FFF',
-    fontWeight: 'bold',
-  },
-  logoutBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 16,
-    marginTop: 8,
-    marginBottom: 32,
-  },
-  logoutText: {
-    color: '#999',
-    fontSize: 14,
-  },
+const s = StyleSheet.create({
+  root:              { flex: 1, backgroundColor: '#090909' },
+  header:            { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 48, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#1a1a1a' },
+  logo:              { width: 40, height: 40 },
+  title:             { color: '#FFF', fontWeight: 'bold', fontSize: 18 },
+  subtitle:          { color: '#E63946', fontSize: 12 },
+  refreshBtn:        { padding: 8 },
+  tabs:              { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#1a1a1a' },
+  tab:               { flex: 1, paddingVertical: 12, alignItems: 'center' },
+  tabActive:         { borderBottomWidth: 2, borderBottomColor: '#E63946' },
+  tabText:           { color: '#666', fontSize: 13 },
+  tabTextActive:     { color: '#FFF', fontWeight: '700' },
+  sectionTitle:      { fontSize: 14, fontWeight: 'bold', color: '#AAAAAA', marginBottom: 10, marginTop: 8 },
+  row:               { flexDirection: 'row', gap: 12, marginBottom: 12 },
+  statCard:          { flex: 1, backgroundColor: '#181818', borderRadius: 12, padding: 14, borderLeftWidth: 3, alignItems: 'center' },
+  statIcon:          { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center', marginBottom: 6 },
+  statValue:         { fontSize: 26, fontWeight: 'bold', color: '#FFF' },
+  statLabel:         { fontSize: 11, color: '#AAAAAA', marginTop: 2, textAlign: 'center' },
+  card:              { backgroundColor: '#181818', borderRadius: 12, padding: 16, marginBottom: 16 },
+  userRow:           { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
+  userRowBorder:     { borderBottomWidth: 1, borderBottomColor: '#2a2a2a' },
+  userAvatar:        { width: 38, height: 38, borderRadius: 19, backgroundColor: '#E63946', justifyContent: 'center', alignItems: 'center', marginRight: 10 },
+  userAvatarText:    { color: '#FFF', fontWeight: 'bold', fontSize: 15 },
+  userName:          { color: '#FFF', fontWeight: '600', fontSize: 13 },
+  userEmail:         { color: '#AAAAAA', fontSize: 11, marginTop: 1 },
+  userDate:          { color: '#666', fontSize: 10, marginTop: 1 },
+  userPointsValue:   { color: '#E63946', fontWeight: 'bold', fontSize: 16 },
+  userPointsLabel:   { color: '#666', fontSize: 10 },
+  ligaCard:          { backgroundColor: '#181818', borderRadius: 12, padding: 16, marginBottom: 10 },
+  ligaHeader:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  ligaModeBadge:     { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
+  ligaModeText:      { fontSize: 11, fontWeight: '800', letterSpacing: 1 },
+  ligaCodigo:        { color: '#555', fontSize: 12, fontFamily: 'monospace' },
+  ligaNombre:        { color: '#FFF', fontWeight: '700', fontSize: 16, marginBottom: 10 },
+  ligaFooter:        { flexDirection: 'row', gap: 12, flexWrap: 'wrap' },
+  ligaInfo:          { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  ligaInfoText:      { color: '#666', fontSize: 12 },
+  emptyText:         { color: '#666', textAlign: 'center', padding: 16 },
+  center:            { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16 },
+  loadingText:       { color: '#AAAAAA', fontSize: 15 },
+  retryBtn:          { backgroundColor: '#E63946', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 },
+  retryText:         { color: '#FFF', fontWeight: 'bold' },
+  logoutBtn:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 16, marginTop: 8 },
+  logoutText:        { color: '#999', fontSize: 14 },
 });
