@@ -3872,3 +3872,111 @@ app.add_middleware(
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
+    logger.info("🛑 MongoDB connection closed")
+
+# ============ AUTO-SCHEDULER ============
+import asyncio
+
+_scheduler_task: asyncio.Task | None = None
+
+async def _auto_update_scores():
+    """
+    Scheduler que corre en background continuamente.
+    - Si hay partidos hoy: actualiza scores cada 60 segundos
+    - Si hay partido live: actualiza cada 45 segundos
+    - Si no hay partidos hoy: revisa cada 10 minutos
+    - Al terminar todos los partidos: procesa jornada automáticamente
+    """
+    logger.info("🤖 Auto-scheduler iniciado")
+    
+    while True:
+        try:
+            now = datetime.utcnow()
+            today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            today_end = now.replace(hour=23, minute=59, second=59, microsecond=0)
+
+            from services.scores_service import _fetch_365scores, _normalize_name, _STATUS_MAP
+
+            # ── Verificar si hay partidos hoy ─────────────────────────────
+            games = await _fetch_365scores(today_start, today_end)
+            
+            if not games:
+                # Sin partidos hoy — revisar cada 10 minutos
+                logger.debug("📅 Sin partidos hoy. Próxima revisión en 10 min.")
+                await asyncio.sleep(600)
+                continue
+
+            # ── Clasificar partidos ───────────────────────────────────────
+            live_games    = [g for g in games if _STATUS_MAP.get(g.get("statusGroup", 1)) == "live"]
+            finished_games = [g for g in games if _STATUS_MAP.get(g.get("statusGroup", 1)) == "finished"]
+            scheduled_games = [g for g in games if _STATUS_MAP.get(g.get("statusGroup", 1)) == "scheduled"]
+
+            logger.info(
+                f"⚽ Partidos hoy: {len(games)} total | "
+                f"{len(live_games)} live | {len(finished_games)} terminados | {len(scheduled_games)} pendientes"
+            )
+
+            # ── Actualizar scores en DB si hay partidos live o terminados ─
+            if live_games or finished_games:
+                jornada = await db.jornadas.find_one({"is_active": True})
+                if jornada:
+                    jornada_id = str(jornada["_id"])
+                    try:
+                        scores_result = await _svc_get_match_results(jornada_id, db)
+                        updated = scores_result.get("matches_updated", 0)
+                        if updated > 0:
+                            logger.info(f"✅ Scheduler: {updated} partidos actualizados en jornada {jornada.get('week_number')}")
+                    except Exception as e:
+                        logger.error(f"❌ Scheduler scores error: {e}")
+
+            # ── Verificar si todos los partidos terminaron ─────────────────
+            if finished_games and not live_games and not scheduled_games:
+                logger.info("🏁 Todos los partidos del día terminaron — verificando proceso de jornada")
+                jornada = await db.jornadas.find_one({"is_active": True})
+                if jornada and not jornada.get("processed", False):
+                    try:
+                        proc_result = await _process_jornada_core(str(jornada["_id"]))
+                        logger.info(
+                            f"🎉 Jornada {jornada.get('week_number')} procesada automáticamente: "
+                            f"quiniela={proc_result.get('quiniela_updated')} usuarios, "
+                            f"fantasy={proc_result.get('fantasy_updated')} equipos"
+                        )
+                    except Exception as e:
+                        logger.error(f"❌ Scheduler process_jornada error: {e}")
+
+            # ── Intervalo según estado ─────────────────────────────────────
+            if live_games:
+                sleep_secs = 45   # Partido en curso: actualizar cada 45s
+            elif scheduled_games:
+                sleep_secs = 120  # Partidos pendientes hoy: revisar cada 2 min
+            else:
+                sleep_secs = 300  # Solo terminados: revisar cada 5 min
+
+            logger.debug(f"⏱ Próxima actualización en {sleep_secs}s")
+            await asyncio.sleep(sleep_secs)
+
+        except asyncio.CancelledError:
+            logger.info("🛑 Auto-scheduler cancelado")
+            break
+        except Exception as e:
+            logger.error(f"❌ Error inesperado en scheduler: {e}")
+            await asyncio.sleep(60)  # En caso de error, reintentar en 1 min
+
+
+@app.on_event("startup")
+async def start_scheduler():
+    global _scheduler_task
+    _scheduler_task = asyncio.create_task(_auto_update_scores())
+    logger.info("🚀 Auto-scheduler registrado en startup")
+
+
+@app.on_event("shutdown")
+async def stop_scheduler():
+    global _scheduler_task
+    if _scheduler_task:
+        _scheduler_task.cancel()
+        try:
+            await _scheduler_task
+        except asyncio.CancelledError:
+            pass
+    logger.info("🛑 Auto-scheduler detenido")
