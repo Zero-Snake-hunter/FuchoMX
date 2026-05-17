@@ -1,12 +1,16 @@
 // Archivo: /app/frontend/app/index.tsx
-// Lógica: onboarding (1ra vez) → login/home según token
+// En web: muestra landing page
+// En móvil: onboarding (1ra vez) → login/home según token
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
+import LandingPage from './components/LandingPage';
 
 export default function Index() {
   const router = useRouter();
+  const [showLanding, setShowLanding] = useState(false);
 
   useEffect(() => {
     checkAppState();
@@ -14,30 +18,37 @@ export default function Index() {
 
   const checkAppState = async () => {
     try {
-      // 1. ¿Ya vio el onboarding?
-      const onboardingDone = await AsyncStorage.getItem('onboarding_completed');
-
-      if (!onboardingDone) {
-        // Primera vez que abre la app → mostrar onboarding
-        router.replace('/onboarding');
+      // En web: si no tiene token, mostrar landing
+      if (Platform.OS === 'web') {
+        const token = await AsyncStorage.getItem('auth_token');
+        if (token) {
+          router.replace('/(tabs)/home');
+        } else {
+          setShowLanding(true);
+        }
         return;
       }
 
-      // 2. ¿Tiene sesión activa?
+      // En móvil: flujo normal
+      const onboardingDone = await AsyncStorage.getItem('onboarding_completed');
+      if (!onboardingDone) {
+        router.replace('/onboarding');
+        return;
+      }
       const token = await AsyncStorage.getItem('auth_token');
-
       if (token) {
-        // Usuario ya logueado → ir al home
         router.replace('/(tabs)/home');
       } else {
-        // Ya vio onboarding pero no está logueado → login
         router.replace('/(auth)/login');
       }
     } catch (error) {
-      // En caso de error, ir a login
       router.replace('/(auth)/login');
     }
   };
 
-  return null; // Esta pantalla no renderiza nada, solo redirige
+  if (showLanding) {
+    return <LandingPage />;
+  }
+
+  return null;
 }

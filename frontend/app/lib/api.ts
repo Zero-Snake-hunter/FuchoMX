@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import { Alert, Platform } from 'react-native';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://quiniela-fantasy.preview.emergentagent.com';
 
 console.log('🔧 [API] Instancia creada con baseURL:', BACKEND_URL);
 

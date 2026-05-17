@@ -1,0 +1,4 @@
+/app /login 302
+/jugar /register 302
+/entrar /login 302
+/inicio /login 302

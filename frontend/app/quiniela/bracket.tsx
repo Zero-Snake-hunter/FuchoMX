@@ -63,7 +63,7 @@ const TeamSlot = ({
           {isWinner && <Text style={ts.check}>✓</Text>}
         </>
       ) : (
-        <Text style={ts.emptyText}>?</Text>
+        <Text style={ts.emptyText}> </Text>
       )}
     </TouchableOpacity>
   );

@@ -3744,6 +3744,101 @@ async def get_my_stats(current_user: dict = Depends(get_current_user)):
         "ligas_activas": ligas_activas,
     }
 
+# ============ ADMIN STATS DASHBOARD ============
+
+ADMIN_EMAIL = "contacto@distrito.digital"
+
+@api_router.get("/admin/stats")
+async def get_admin_stats(current_user: dict = Depends(get_current_user)):
+    """Dashboard de métricas para el admin de FuchoMX"""
+    if current_user.get("email") != ADMIN_EMAIL:
+        raise HTTPException(status_code=403, detail="Acceso restringido")
+
+    from datetime import datetime, timedelta
+    now = datetime.utcnow()
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    week_start = today_start - timedelta(days=7)
+    month_start = today_start - timedelta(days=30)
+
+    # Usuarios
+    total_usuarios = await db.users.count_documents({})
+    nuevos_hoy = await db.users.count_documents({"created_at": {"$gte": today_start.isoformat()}})
+    nuevos_semana = await db.users.count_documents({"created_at": {"$gte": week_start.isoformat()}})
+    nuevos_mes = await db.users.count_documents({"created_at": {"$gte": month_start.isoformat()}})
+
+    # Jornadas
+    total_jornadas = await db.jornadas.count_documents({})
+    jornada_activa = await db.jornadas.find_one({"is_active": True})
+
+    # Quinielas / predicciones
+    total_predicciones = await db.quiniela_selections.count_documents({}) if hasattr(db, 'quiniela_selections') else 0
+    try:
+        total_predicciones = await db.quiniela_selections.count_documents({})
+    except:
+        total_predicciones = 0
+
+    # Ligas
+    try:
+        total_ligas = await db.private_leagues.count_documents({})
+        ligas_raw = await db.private_leagues.find(
+            {}, {"name": 1, "mode": 1, "code": 1, "owner_id": 1, "created_at": 1}
+        ).sort("created_at", -1).limit(20).to_list(20)
+        ligas_detalle = []
+        for liga in ligas_raw:
+            owner = await db.users.find_one({"_id": liga["owner_id"]}, {"display_name": 1, "email": 1})
+            miembros = await db.league_members.count_documents({"league_id": liga["_id"]})
+            ligas_detalle.append({
+                "id": str(liga["_id"]),
+                "nombre": liga.get("name", "Sin nombre"),
+                "modo": liga.get("mode", "quiniela"),
+                "codigo": liga.get("code", ""),
+                "creador": owner.get("display_name", owner.get("email", "?")) if owner else "?",
+                "miembros": miembros,
+                "creada": liga["created_at"].isoformat() if liga.get("created_at") else "",
+            })
+    except Exception as e:
+        total_ligas = 0
+        ligas_detalle = []
+
+    # Fantasy
+    try:
+        total_fantasy = await db.fantasy_lineups.count_documents({})
+    except:
+        total_fantasy = 0
+
+    # Últimos 5 usuarios registrados
+    ultimos_usuarios = await db.users.find(
+        {}, {"email": 1, "display_name": 1, "created_at": 1, "total_points": 1}
+    ).sort("created_at", -1).limit(5).to_list(5)
+
+    for u in ultimos_usuarios:
+        u["_id"] = str(u["_id"])
+
+    return {
+        "usuarios": {
+            "total": total_usuarios,
+            "nuevos_hoy": nuevos_hoy,
+            "nuevos_semana": nuevos_semana,
+            "nuevos_mes": nuevos_mes,
+            "ultimos": ultimos_usuarios,
+        },
+        "jornadas": {
+            "total": total_jornadas,
+            "activa": jornada_activa.get("week_number") if jornada_activa else None,
+        },
+        "predicciones": {
+            "total": total_predicciones,
+        },
+        "ligas": {
+            "total": total_ligas,
+            "detalle": ligas_detalle,
+        },
+        "fantasy": {
+            "total_lineups": total_fantasy,
+        },
+    }
+
+
 # ============ ROOT ============
 
 @api_router.get("/")
@@ -3784,3 +3879,111 @@ app.add_middleware(
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
+    logger.info("🛑 MongoDB connection closed")
+
+# ============ AUTO-SCHEDULER ============
+import asyncio
+
+_scheduler_task: asyncio.Task | None = None
+
+async def _auto_update_scores():
+    """
+    Scheduler que corre en background continuamente.
+    - Si hay partidos hoy: actualiza scores cada 60 segundos
+    - Si hay partido live: actualiza cada 45 segundos
+    - Si no hay partidos hoy: revisa cada 10 minutos
+    - Al terminar todos los partidos: procesa jornada automáticamente
+    """
+    logger.info("🤖 Auto-scheduler iniciado")
+    
+    while True:
+        try:
+            now = datetime.utcnow()
+            today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            today_end = now.replace(hour=23, minute=59, second=59, microsecond=0)
+
+            from services.scores_service import _fetch_365scores, _normalize_name, _STATUS_MAP
+
+            # ── Verificar si hay partidos hoy ─────────────────────────────
+            games = await _fetch_365scores(today_start, today_end)
+            
+            if not games:
+                # Sin partidos hoy — revisar cada 10 minutos
+                logger.debug("📅 Sin partidos hoy. Próxima revisión en 10 min.")
+                await asyncio.sleep(600)
+                continue
+
+            # ── Clasificar partidos ───────────────────────────────────────
+            live_games    = [g for g in games if _STATUS_MAP.get(g.get("statusGroup", 1)) == "live"]
+            finished_games = [g for g in games if _STATUS_MAP.get(g.get("statusGroup", 1)) == "finished"]
+            scheduled_games = [g for g in games if _STATUS_MAP.get(g.get("statusGroup", 1)) == "scheduled"]
+
+            logger.info(
+                f"⚽ Partidos hoy: {len(games)} total | "
+                f"{len(live_games)} live | {len(finished_games)} terminados | {len(scheduled_games)} pendientes"
+            )
+
+            # ── Actualizar scores en DB si hay partidos live o terminados ─
+            if live_games or finished_games:
+                jornada = await db.jornadas.find_one({"is_active": True})
+                if jornada:
+                    jornada_id = str(jornada["_id"])
+                    try:
+                        scores_result = await _svc_get_match_results(jornada_id, db)
+                        updated = scores_result.get("matches_updated", 0)
+                        if updated > 0:
+                            logger.info(f"✅ Scheduler: {updated} partidos actualizados en jornada {jornada.get('week_number')}")
+                    except Exception as e:
+                        logger.error(f"❌ Scheduler scores error: {e}")
+
+            # ── Verificar si todos los partidos terminaron ─────────────────
+            if finished_games and not live_games and not scheduled_games:
+                logger.info("🏁 Todos los partidos del día terminaron — verificando proceso de jornada")
+                jornada = await db.jornadas.find_one({"is_active": True})
+                if jornada and not jornada.get("processed", False):
+                    try:
+                        proc_result = await _process_jornada_core(str(jornada["_id"]))
+                        logger.info(
+                            f"🎉 Jornada {jornada.get('week_number')} procesada automáticamente: "
+                            f"quiniela={proc_result.get('quiniela_updated')} usuarios, "
+                            f"fantasy={proc_result.get('fantasy_updated')} equipos"
+                        )
+                    except Exception as e:
+                        logger.error(f"❌ Scheduler process_jornada error: {e}")
+
+            # ── Intervalo según estado ─────────────────────────────────────
+            if live_games:
+                sleep_secs = 45   # Partido en curso: actualizar cada 45s
+            elif scheduled_games:
+                sleep_secs = 120  # Partidos pendientes hoy: revisar cada 2 min
+            else:
+                sleep_secs = 300  # Solo terminados: revisar cada 5 min
+
+            logger.debug(f"⏱ Próxima actualización en {sleep_secs}s")
+            await asyncio.sleep(sleep_secs)
+
+        except asyncio.CancelledError:
+            logger.info("🛑 Auto-scheduler cancelado")
+            break
+        except Exception as e:
+            logger.error(f"❌ Error inesperado en scheduler: {e}")
+            await asyncio.sleep(60)  # En caso de error, reintentar en 1 min
+
+
+@app.on_event("startup")
+async def start_scheduler():
+    global _scheduler_task
+    _scheduler_task = asyncio.create_task(_auto_update_scores())
+    logger.info("🚀 Auto-scheduler registrado en startup")
+
+
+@app.on_event("shutdown")
+async def stop_scheduler():
+    global _scheduler_task
+    if _scheduler_task:
+        _scheduler_task.cancel()
+        try:
+            await _scheduler_task
+        except asyncio.CancelledError:
+            pass
+    logger.info("🛑 Auto-scheduler detenido")
