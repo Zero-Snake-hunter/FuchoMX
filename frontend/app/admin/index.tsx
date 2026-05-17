@@ -45,6 +45,16 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<Tab>('resumen');
   const [syncing, setSyncing] = useState(false);
 
+  const seedData = async (endpoint: string, label: string) => {
+    try {
+      const response = await api.post(endpoint);
+      Alert.alert('✅ Éxito', `${label}: ${JSON.stringify(response.data).substring(0, 100)}`);
+      fetchStats();
+    } catch (error: any) {
+      Alert.alert('Error', `${label}: ${error.message}`);
+    }
+  };
+
   const syncPlayers = async () => {
     setSyncing(true);
     try {
@@ -137,6 +147,13 @@ export default function AdminDashboard() {
           {/* TAB RESUMEN */}
           {activeTab === 'resumen' && (
             <>
+              <Text style={s.sectionTitle}>🔧 Herramientas de Admin</Text>
+              <TouchableOpacity style={[s.seedBtn, {backgroundColor: '#9C27B0'}]} onPress={() => seedData('/api/admin/seed-teams', 'Equipos')}>
+                <Text style={s.syncBtnText}>🏟️ 1. Sembrar Equipos</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[s.seedBtn, {backgroundColor: '#FF9800'}]} onPress={() => seedData('/api/admin/seed-real-data', 'Datos reales')}>
+                <Text style={s.syncBtnText}>📅 2. Sembrar Jornadas y Partidos</Text>
+              </TouchableOpacity>
               <TouchableOpacity
                 style={[s.syncBtn, syncing && { opacity: 0.6 }]}
                 onPress={syncPlayers}
@@ -144,7 +161,7 @@ export default function AdminDashboard() {
               >
                 {syncing
                   ? <ActivityIndicator size="small" color="#FFF" />
-                  : <Text style={s.syncBtnText}>⚽ Sincronizar Jugadores desde API-Football</Text>
+                  : <Text style={s.syncBtnText}>⚽ 3. Sincronizar Jugadores API-Football</Text>
                 }
               </TouchableOpacity>
               <Text style={s.sectionTitle}>👥 Usuarios</Text>
@@ -325,6 +342,7 @@ const s = StyleSheet.create({
   totalBox:          { backgroundColor: '#E63946', borderRadius: 16, padding: 24, alignItems: 'center', marginBottom: 16 },
   totalNum:          { fontSize: 64, fontWeight: '900', color: '#FFF' },
   totalLabel:        { fontSize: 14, color: 'rgba(255,255,255,0.8)', marginTop: 4 },
+  seedBtn:           { borderRadius: 12, padding: 14, alignItems: 'center', marginBottom: 10 },
   syncBtn:           { backgroundColor: '#1D88E5', borderRadius: 12, padding: 14, alignItems: 'center', marginBottom: 16, flexDirection: 'row', justifyContent: 'center' },
   syncBtnText:       { color: '#FFF', fontWeight: '700', fontSize: 14 },
   logoutBtn:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 16, marginTop: 8 },
