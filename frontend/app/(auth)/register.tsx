@@ -34,6 +34,16 @@ export default function RegisterScreen() {
       return;
     }
 
+    if (displayName.trim().length > 20) {
+      Alert.alert('Nombre muy largo', 'Usa un apodo o nombre corto (máx. 20 caracteres).');
+      return;
+    }
+
+    if (displayName.trim().length < 3) {
+      Alert.alert('Nombre muy corto', 'Tu nombre debe tener al menos 3 caracteres.');
+      return;
+    }
+
     if (password !== confirmPassword) {
       Alert.alert('Error', 'Las contraseñas no coinciden');
       return;
@@ -94,11 +104,12 @@ export default function RegisterScreen() {
             <Ionicons name="person-outline" size={20} color="#666" style={styles.inputIcon} />
             <TextInput
               style={styles.input}
-              placeholder="Nombre completo"
+              placeholder="Apodo o nombre corto (máx. 20)"
               placeholderTextColor="#666"
               value={displayName}
               onChangeText={setDisplayName}
               autoCapitalize="words"
+              maxLength={20}
             />
           </View>
 
