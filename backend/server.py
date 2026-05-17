@@ -3938,7 +3938,7 @@ async def sync_players_from_api_football(
     current_user: dict = Depends(get_current_user)
 ):
     """Sincroniza jugadores de todos los equipos desde API-Football (solo admin)"""
-    if current_user.get("email") != "contacto@distrito.digital":
+    if current_user.get("email") != ADMIN_EMAIL:
         raise HTTPException(status_code=403, detail="Acceso restringido")
 
     total_updated = 0
@@ -4012,7 +4012,7 @@ async def get_today_fixtures():
 @api_router.post("/admin/close-all-jornadas")
 async def close_all_jornadas(current_user: dict = Depends(get_current_user)):
     """Cierra todas las jornadas activas - solo admin"""
-    if current_user.get("email") != "contacto@distrito.digital":
+    if current_user.get("email") != ADMIN_EMAIL:
         raise HTTPException(status_code=403, detail="Acceso restringido")
     
     result = await db.jornadas.update_many(
@@ -4053,7 +4053,7 @@ LIGUILLA_SEMIS_MATCHES = [
 @api_router.post("/admin/create-liguilla-jornadas")
 async def create_liguilla_jornadas(current_user: dict = Depends(get_current_user)):
     """Crea las 3 jornadas de liguilla: Cuartos, Semis y Final (solo admin)"""
-    if current_user.get("email") != "contacto@distrito.digital":
+    if current_user.get("email") != ADMIN_EMAIL:
         raise HTTPException(status_code=403, detail="Acceso restringido")
 
     created = []
@@ -4167,7 +4167,7 @@ async def activate_liguilla_final(
     current_user: dict = Depends(get_current_user)
 ):
     """Activa la jornada Final con los 2 finalistas confirmados (solo admin)"""
-    if current_user.get("email") != "contacto@distrito.digital":
+    if current_user.get("email") != ADMIN_EMAIL:
         raise HTTPException(status_code=403, detail="Acceso restringido")
 
     # Cerrar semis
@@ -4240,7 +4240,7 @@ async def update_bracket_results(
     current_user: dict = Depends(get_current_user)
 ):
     """Actualiza los resultados del bracket de liguilla (solo admin)"""
-    if current_user.get("email") != "contacto@distrito.digital":
+    if current_user.get("email") != ADMIN_EMAIL:
         raise HTTPException(status_code=403, detail="Acceso restringido")
 
     update_doc = {"updated_at": datetime.utcnow()}
@@ -4309,10 +4309,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()
-    logger.info("🛑 MongoDB connection closed")
+# shutdown consolidado abajo con stop_scheduler
 
 # ============ AUTO-SCHEDULER ============
 import asyncio
@@ -4552,7 +4549,8 @@ async def start_scheduler():
 
 
 @app.on_event("shutdown")
-async def stop_scheduler():
+async def shutdown_app():
+    """Cierra scheduler y MongoDB al apagar el servidor"""
     global _scheduler_task
     if _scheduler_task:
         _scheduler_task.cancel()
@@ -4561,3 +4559,5 @@ async def stop_scheduler():
         except asyncio.CancelledError:
             pass
     logger.info("🛑 Auto-scheduler detenido")
+    client.close()
+    logger.info("🛑 MongoDB connection closed")

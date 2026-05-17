@@ -502,7 +502,7 @@ export default function BracketScreen() {
           </View>
 
           {/* Footer */}
-          <Text style={sc.footer}>fuchomx.mx  •  #FuchoMX #LigaMX #Clausura2026</Text>
+          <Text style={sc.footer}>fucho.com.mx  •  #FuchoMX #LigaMX #Clausura2026</Text>
         </View>
       )}
     </SafeAreaView>
