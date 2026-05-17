@@ -49,7 +49,12 @@ export default function AdminDashboard() {
     setSyncing(true);
     try {
       const response = await api.post('/api/admin/sync-players-api-football');
-      Alert.alert('✅ Éxito', `${response.data.players_updated} jugadores sincronizados desde API-Football`);
+      const count = response.data.players_updated || 0;
+      const errors = response.data.errors || [];
+      Alert.alert(
+        '✅ Sincronización completada',
+        `${count} jugadores actualizados.${errors.length > 0 ? '\n⚠️ ' + errors.length + ' equipos con error.' : '\n✅ Sin errores.'}`
+      );
     } catch (error: any) {
       Alert.alert('Error', error.message || 'No se pudo sincronizar');
     } finally {
