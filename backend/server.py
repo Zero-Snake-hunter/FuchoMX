@@ -2724,7 +2724,8 @@ async def get_my_fantasy_team(current_user: dict = Depends(get_current_user)):
 @api_router.get("/players")
 async def get_players(
     position: Optional[str] = None,
-    team_id: Optional[str] = None
+    team_id: Optional[str] = None,
+    team_name: Optional[str] = None
 ):
     """Get players filtered by position and/or team"""
     query = {}
@@ -2733,29 +2734,55 @@ async def get_players(
         query["position"] = position
     
     if team_id:
-        query["team_id"] = ObjectId(team_id)
+        try:
+            query["team_id"] = ObjectId(team_id)
+        except:
+            query["team_id"] = team_id
+
+    if team_name:
+        query["team_name"] = {"$regex": team_name, "$options": "i"}
     
     players = await db.players.find(query).to_list(1000)
     
     # Format response
     formatted_players = []
     for player in players:
-        team = await db.teams.find_one({"_id": player["team_id"]})
-        formatted_players.append({
-            "id": str(player["_id"]),
-            "name": player["name"],
-            "number": player.get("number", 0),
-            "position": player["position"],
-            "team": {
-                "id": str(team["_id"]),
-                "name": team["name"],
-                "short_name": team["short_name"],
-                "shield_url": team["shield_url"]
-            } if team else None,
-            "stats": player.get("stats", {})
-        })
+        try:
+            team_id_val = player.get("team_id")
+            team = None
+            if team_id_val:
+                if isinstance(team_id_val, ObjectId):
+                    team = await db.teams.find_one({"_id": team_id_val})
+                else:
+                    try:
+                        team = await db.teams.find_one({"_id": ObjectId(str(team_id_val))})
+                    except:
+                        pass
+            
+            formatted_players.append({
+                "id": str(player["_id"]),
+                "name": player.get("name", ""),
+                "number": player.get("number", 0),
+                "position": player.get("position", ""),
+                "team_name": player.get("team_name", ""),
+                "nationality": player.get("nationality", ""),
+                "photo": player.get("photo", ""),
+                "goals": player.get("goals", 0),
+                "assists": player.get("assists", 0),
+                "appearances": player.get("appearances", 0),
+                "rating": player.get("rating", "0"),
+                "team": {
+                    "id": str(team["_id"]),
+                    "name": team["name"],
+                    "short_name": team.get("short_name", ""),
+                    "shield_url": team.get("shield_url", "")
+                } if team else None,
+            })
+        except Exception as e:
+            logger.error(f"Error formatting player: {e}")
+            continue
     
-    return {"players": formatted_players}
+    return {"players": formatted_players, "total": len(formatted_players)}
 
 class FantasyLineupSubmit(BaseModel):
     jornada_id: str
