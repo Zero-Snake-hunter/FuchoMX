@@ -45,6 +45,16 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<Tab>('resumen');
   const [syncing, setSyncing] = useState(false);
 
+  const closeJornada = async () => {
+    try {
+      const response = await api.post('/api/admin/close-all-jornadas');
+      Alert.alert('✅ Éxito', response.data.message || 'Jornadas cerradas');
+      fetchStats();
+    } catch (error: any) {
+      Alert.alert('Error', error.message);
+    }
+  };
+
   const seedData = async (endpoint: string, label: string) => {
     try {
       const response = await api.post(endpoint);
@@ -148,6 +158,9 @@ export default function AdminDashboard() {
           {activeTab === 'resumen' && (
             <>
               <Text style={s.sectionTitle}>🔧 Herramientas de Admin</Text>
+              <TouchableOpacity style={[s.seedBtn, {backgroundColor: '#E63946'}]} onPress={closeJornada}>
+                <Text style={s.syncBtnText}>🔒 Cerrar todas las jornadas activas</Text>
+              </TouchableOpacity>
               <TouchableOpacity style={[s.seedBtn, {backgroundColor: '#9C27B0'}]} onPress={() => seedData('/api/admin/seed-teams', 'Equipos')}>
                 <Text style={s.syncBtnText}>🏟️ 1. Sembrar Equipos</Text>
               </TouchableOpacity>

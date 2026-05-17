@@ -4008,6 +4008,23 @@ async def get_today_fixtures():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+
+@api_router.post("/admin/close-all-jornadas")
+async def close_all_jornadas(current_user: dict = Depends(get_current_user)):
+    """Cierra todas las jornadas activas - solo admin"""
+    if current_user.get("email") != "contacto@distrito.digital":
+        raise HTTPException(status_code=403, detail="Acceso restringido")
+    
+    result = await db.jornadas.update_many(
+        {"is_active": True},
+        {"$set": {"is_active": False, "processed": True}}
+    )
+    
+    return {
+        "message": f"{result.modified_count} jornada(s) cerrada(s) correctamente",
+        "modified": result.modified_count
+    }
+
 # ============ ADMIN BRACKET UPDATE ============
 
 class BracketUpdateRequest(BaseModel):
