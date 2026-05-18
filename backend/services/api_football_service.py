@@ -12,24 +12,26 @@ BASE_URL = "https://v3.football.api-sports.io"
 LIGA_MX_ID = 262
 SEASON = 2025  # Clausura 2026 = season 2025
 
-# Map nombres de equipos DB → IDs de API-Football
+# Map nombres de equipos DB → IDs de API-Football (verificados en dashboard.api-football.com)
 TEAM_IDS = {
-    "Pumas UNAM":     3432,
-    "Guadalajara":    3439,
-    "Cruz Azul":      3435,
-    "Pachuca":        3441,
-    "Toluca":         3446,
-    "Atlas":          3430,
-    "Tigres UANL":    3445,
-    "Club América":   3431,
-    "Necaxa":         3440,
-    "Querétaro":      3442,
-    "León":           3438,
-    "Mazatlán FC":    3448,
-    "FC Juárez":      3447,
-    "Monterrey":      3436,
-    "Atlético de San Luis": 3449,
-    "Tijuana":        3444,
+    "Pumas UNAM":        2286,
+    "Club América":      2287,
+    "Necaxa":            2288,
+    "León":              2289,
+    "Querétaro":         2290,
+    "Puebla":            2291,
+    "Pachuca":           2292,
+    "Cruz Azul":         2295,
+    "Guadalajara":       2278,
+    "Tigres UANL":       2279,
+    "Tijuana":           2280,
+    "Toluca":            2281,
+    "Monterrey":         2282,
+    "Atlas":             2283,
+    "Santos Laguna":     2285,
+    "FC Juárez":         2298,
+    "Atlético San Luis": 2314,
+    "Mazatlán FC":       9567,  # pendiente verificar
 }
 
 async def _get(endpoint: str, params: dict, api_key: str) -> dict:
