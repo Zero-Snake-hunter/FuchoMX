@@ -4505,11 +4505,16 @@ async def _auto_update_scores():
                     # ── Jornada de liguilla ────────────────────────────
                     if jornada.get("type") == "liguilla":
                         phase = jornada.get("phase", "")
-                        try:
-                            await _process_liguilla_phase(phase)
-                            logger.info(f"🏆 Liguilla fase {phase} procesada automáticamente")
-                        except Exception as e:
-                            logger.error(f"❌ Error procesando liguilla {phase}: {e}")
+                        status = jornada.get("status", "")
+                        # No procesar jornadas upcoming — todavía no han empezado
+                        if status == "upcoming":
+                            logger.info(f"⏳ Liguilla {phase} en estado upcoming — esperando partidos")
+                        else:
+                            try:
+                                await _process_liguilla_phase(phase)
+                                logger.info(f"🏆 Liguilla fase {phase} procesada automáticamente")
+                            except Exception as e:
+                                logger.error(f"❌ Error procesando liguilla {phase}: {e}")
                     else:
                         # ── Jornada regular ───────────────────────────
                         try:
