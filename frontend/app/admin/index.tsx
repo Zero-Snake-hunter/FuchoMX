@@ -196,6 +196,9 @@ export default function AdminDashboard() {
               <TouchableOpacity style={[s.seedBtn, {backgroundColor: '#2A9D8F'}]} onPress={createLiguillajornadas}>
                 <Text style={s.syncBtnText}>⚽ Crear Jornadas de Liguilla (Cuartos/Semis/Final)</Text>
               </TouchableOpacity>
+              <TouchableOpacity style={[s.seedBtn, {backgroundColor: '#E63946'}]} onPress={() => seedData('/api/admin/seed-final-players', 'Jugadores Final')}>
+                <Text style={s.syncBtnText}>👥 Cargar Jugadores CAZ vs PUM (Final)</Text>
+              </TouchableOpacity>
               <TouchableOpacity style={[s.seedBtn, {backgroundColor: '#E63946'}]} onPress={() => {
                 Alert.alert('¿Quién pasó a la Final?', 'Selecciona el finalista', [
                   { text: 'Pachuca (PAC)', onPress: () => activateFinal('PAC') },

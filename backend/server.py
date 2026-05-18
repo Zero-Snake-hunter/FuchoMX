@@ -4226,6 +4226,76 @@ async def activate_liguilla_final(
         "finalist": finalist_name,
     }
 
+
+@api_router.post("/admin/seed-final-players")
+async def seed_final_players(current_user: dict = Depends(get_current_user)):
+    """Carga jugadores reales de Cruz Azul y Pumas para la Final (solo admin)"""
+    if current_user.get("email") != ADMIN_EMAIL:
+        raise HTTPException(status_code=403, detail="Acceso restringido")
+
+    CRUZ_AZUL = [
+        {"name": "Andrés Gudiño", "number": 1, "position": "POR", "nationality": "México", "age": 29, "appearances": 13, "goals": 0, "assists": 0, "yellow_cards": 3, "red_cards": 0},
+        {"name": "Kevin Mier", "number": 23, "position": "POR", "nationality": "Colombia", "age": 26, "appearances": 8, "goals": 0, "assists": 0, "yellow_cards": 0, "red_cards": 0},
+        {"name": "Jesús Orozco", "number": 2, "position": "DEF", "nationality": "México", "age": 24, "appearances": 1, "goals": 0, "assists": 0, "yellow_cards": 0, "red_cards": 0},
+        {"name": "Omar Campos", "number": 3, "position": "DEF", "nationality": "México", "age": 23, "appearances": 19, "goals": 1, "assists": 2, "yellow_cards": 3, "red_cards": 0},
+        {"name": "Willer Ditta", "number": 4, "position": "DEF", "nationality": "Colombia", "age": 29, "appearances": 20, "goals": 0, "assists": 2, "yellow_cards": 6, "red_cards": 0},
+        {"name": "Jorge Rodarte", "number": 22, "position": "DEF", "nationality": "México", "age": 22, "appearances": 13, "goals": 0, "assists": 1, "yellow_cards": 2, "red_cards": 0},
+        {"name": "Gonzalo Piovi", "number": 33, "position": "DEF", "nationality": "Argentina", "age": 31, "appearances": 20, "goals": 0, "assists": 0, "yellow_cards": 6, "red_cards": 0},
+        {"name": "Erik Lira", "number": 6, "position": "MED", "nationality": "México", "age": 26, "appearances": 17, "goals": 0, "assists": 0, "yellow_cards": 4, "red_cards": 0},
+        {"name": "Agustín Palavecino", "number": 8, "position": "MED", "nationality": "Argentina", "age": 29, "appearances": 20, "goals": 6, "assists": 3, "yellow_cards": 7, "red_cards": 0},
+        {"name": "Andres Montaño", "number": 10, "position": "MED", "nationality": "México", "age": 23, "appearances": 12, "goals": 2, "assists": 0, "yellow_cards": 1, "red_cards": 0},
+        {"name": "Ángel Márquez", "number": 16, "position": "MED", "nationality": "México", "age": 25, "appearances": 20, "goals": 3, "assists": 0, "yellow_cards": 1, "red_cards": 0},
+        {"name": "Amaury García", "number": 17, "position": "MED", "nationality": "México", "age": 24, "appearances": 16, "goals": 0, "assists": 0, "yellow_cards": 2, "red_cards": 0},
+        {"name": "Carlos Rodríguez", "number": 19, "position": "MED", "nationality": "México", "age": 29, "appearances": 21, "goals": 4, "assists": 1, "yellow_cards": 1, "red_cards": 0},
+        {"name": "Amaury Morales", "number": 31, "position": "MED", "nationality": "México", "age": 20, "appearances": 15, "goals": 0, "assists": 1, "yellow_cards": 0, "red_cards": 0},
+        {"name": "Nicolás Ibáñez", "number": 7, "position": "DEL", "nationality": "Argentina", "age": 31, "appearances": 12, "goals": 2, "assists": 1, "yellow_cards": 2, "red_cards": 0},
+        {"name": "Osinachi Ebere", "number": 11, "position": "DEL", "nationality": "Nigeria", "age": 28, "appearances": 14, "goals": 4, "assists": 1, "yellow_cards": 1, "red_cards": 0},
+        {"name": "Luka Romero", "number": 18, "position": "DEL", "nationality": "Argentina", "age": 21, "appearances": 18, "goals": 1, "assists": 0, "yellow_cards": 2, "red_cards": 0},
+        {"name": "José Paradela", "number": 20, "position": "DEL", "nationality": "Argentina", "age": 27, "appearances": 21, "goals": 7, "assists": 5, "yellow_cards": 3, "red_cards": 0},
+        {"name": "Gabriel Fernández", "number": 21, "position": "DEL", "nationality": "Uruguay", "age": 32, "appearances": 17, "goals": 5, "assists": 4, "yellow_cards": 0, "red_cards": 1},
+        {"name": "Rodolfo Rotondi", "number": 29, "position": "DEL", "nationality": "Argentina", "age": 29, "appearances": 19, "goals": 3, "assists": 4, "yellow_cards": 2, "red_cards": 0},
+    ]
+
+    PUMAS = [
+        {"name": "Keylor Navas", "number": 1, "position": "POR", "nationality": "Costa Rica", "age": 39, "appearances": 20, "goals": 0, "assists": 0, "yellow_cards": 5, "red_cards": 0},
+        {"name": "Pablo Lara", "number": 35, "position": "POR", "nationality": "México", "age": 20, "appearances": 1, "goals": 0, "assists": 0, "yellow_cards": 0, "red_cards": 0},
+        {"name": "Pablo Bennevendo", "number": 2, "position": "DEF", "nationality": "México", "age": 26, "appearances": 13, "goals": 0, "assists": 0, "yellow_cards": 1, "red_cards": 0},
+        {"name": "Rubén Duarte", "number": 5, "position": "DEF", "nationality": "España", "age": 30, "appearances": 16, "goals": 1, "assists": 0, "yellow_cards": 3, "red_cards": 0},
+        {"name": "Nathan Silva", "number": 6, "position": "DEF", "nationality": "Brasil", "age": 29, "appearances": 20, "goals": 1, "assists": 1, "yellow_cards": 4, "red_cards": 1},
+        {"name": "Álvaro Angulo", "number": 77, "position": "DEF", "nationality": "Colombia", "age": 29, "appearances": 20, "goals": 3, "assists": 0, "yellow_cards": 3, "red_cards": 1},
+        {"name": "Angel Azuaje", "number": 215, "position": "DEF", "nationality": "Venezuela", "age": 21, "appearances": 11, "goals": 0, "assists": 0, "yellow_cards": 2, "red_cards": 0},
+        {"name": "Rodrigo López", "number": 7, "position": "MED", "nationality": "México", "age": 24, "appearances": 21, "goals": 0, "assists": 1, "yellow_cards": 4, "red_cards": 0},
+        {"name": "Cesar Garza", "number": 14, "position": "MED", "nationality": "México", "age": 20, "appearances": 15, "goals": 0, "assists": 0, "yellow_cards": 3, "red_cards": 0},
+        {"name": "Alan Medina", "number": 22, "position": "MED", "nationality": "Uruguay", "age": 28, "appearances": 16, "goals": 1, "assists": 4, "yellow_cards": 3, "red_cards": 0},
+        {"name": "Adalberto Carrasquilla", "number": 28, "position": "MED", "nationality": "Panamá", "age": 27, "appearances": 19, "goals": 2, "assists": 2, "yellow_cards": 6, "red_cards": 0},
+        {"name": "Jordan Carrillo", "number": 33, "position": "MED", "nationality": "México", "age": 24, "appearances": 20, "goals": 6, "assists": 3, "yellow_cards": 3, "red_cards": 0},
+        {"name": "Pedro Vite", "number": 45, "position": "MED", "nationality": "Ecuador", "age": 24, "appearances": 21, "goals": 1, "assists": 1, "yellow_cards": 2, "red_cards": 0},
+        {"name": "Guillermo Martínez", "number": 9, "position": "DEL", "nationality": "México", "age": 31, "appearances": 15, "goals": 5, "assists": 0, "yellow_cards": 3, "red_cards": 0},
+        {"name": "José Macías", "number": 11, "position": "DEL", "nationality": "México", "age": 26, "appearances": 11, "goals": 4, "assists": 2, "yellow_cards": 0, "red_cards": 0},
+        {"name": "Uriel Antuna", "number": 21, "position": "DEL", "nationality": "México", "age": 28, "appearances": 21, "goals": 3, "assists": 3, "yellow_cards": 1, "red_cards": 0},
+        {"name": "Juninho", "number": 23, "position": "DEL", "nationality": "Brasil", "age": 29, "appearances": 21, "goals": 8, "assists": 4, "yellow_cards": 1, "red_cards": 0},
+        {"name": "Robert Morales", "number": 31, "position": "DEL", "nationality": "Paraguay", "age": 27, "appearances": 21, "goals": 8, "assists": 2, "yellow_cards": 1, "red_cards": 0},
+    ]
+
+    caz = await db.teams.find_one({"short_name": "CAZ"})
+    pum = await db.teams.find_one({"short_name": "PUM"})
+
+    if not caz or not pum:
+        raise HTTPException(status_code=404, detail="No se encontraron los equipos")
+
+    # Borrar jugadores viejos de estos equipos
+    await db.players.delete_many({"team_id": {"$in": [caz["_id"], pum["_id"]]}})
+
+    total = 0
+    for p in CRUZ_AZUL:
+        await db.players.insert_one({**p, "team_id": caz["_id"], "team_name": "Cruz Azul", "photo": "", "rating": "0", "season": "2025-26", "updated_at": datetime.utcnow()})
+        total += 1
+    for p in PUMAS:
+        await db.players.insert_one({**p, "team_id": pum["_id"], "team_name": "Pumas UNAM", "photo": "", "rating": "0", "season": "2025-26", "updated_at": datetime.utcnow()})
+        total += 1
+
+    return {"message": f"✅ {total} jugadores de la Final cargados correctamente", "total": total}
+
 # ============ ADMIN BRACKET UPDATE ============
 
 class BracketUpdateRequest(BaseModel):
