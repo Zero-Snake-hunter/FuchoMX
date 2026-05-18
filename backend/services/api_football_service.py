@@ -31,7 +31,7 @@ TEAM_IDS = {
     "Santos Laguna":     2285,
     "FC Juárez":         2298,
     "Atlético San Luis": 2314,
-    "Mazatlán FC":       9567,  # pendiente verificar
+    "Mazatlán FC":       14002,  # verificado
 }
 
 async def _get(endpoint: str, params: dict, api_key: str) -> dict:
