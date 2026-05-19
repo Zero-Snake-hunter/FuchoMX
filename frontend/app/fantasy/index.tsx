@@ -107,7 +107,7 @@ export default function FantasyDashboardScreen() {
 
               {jornada && (
                 <View style={styles.jornadaInfo}>
-                  <Text style={styles.jornadaLabel}>Jornada {jornada.week_number}</Text>
+                  <Text style={styles.jornadaLabel}>{jornada?.type === 'liguilla' && jornada?.title ? jornada.title.replace('Liguilla Clausura 2026 — ', '') : `Jornada ${jornada?.week_number}`}</Text>
                   <View
                     style={[
                       styles.statusBadge,

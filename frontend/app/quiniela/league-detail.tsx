@@ -313,7 +313,7 @@ export default function LeagueDetailScreen() {
         {jornada && (
           <View style={styles.jornadaInfo}>
             <Text style={styles.jornadaText}>
-              Jornada {jornada.week_number}
+              {jornada?.type === 'liguilla' && jornada?.title ? jornada.title.replace('Liguilla Clausura 2026 — ', '') : `Jornada ${jornada?.week_number}`}
             </Text>
             <View style={[
               styles.jornadaStatus,

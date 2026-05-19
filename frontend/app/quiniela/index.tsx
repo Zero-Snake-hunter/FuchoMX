@@ -41,11 +41,20 @@ interface Match {
 interface Jornada {
   id: string;
   week_number: number;
+  type?: string;
+  title?: string;
   start_date: string;
   end_date: string;
   status: string;
   matches: Match[];
 }
+
+const getJornadaLabel = (jornada: any): string => {
+  if (jornada?.type === 'liguilla' && jornada?.title) {
+    return jornada.title.replace('Liguilla Clausura 2026 \u2014 ', '');
+  }
+  return `Jornada ${jornada?.week_number}`;
+};
 
 export default function QuinielaScreen() {
   const router = useRouter();
@@ -250,7 +259,7 @@ export default function QuinielaScreen() {
         {/* Header Info */}
         <View style={styles.header}>
           <View style={styles.jornadaInfo}>
-            <Text style={styles.jornadaTitle}>Jornada {jornada.week_number}</Text>
+            <Text style={styles.jornadaTitle}>{getJornadaLabel(jornada)}</Text>
             <View style={styles.statusBadge}>
               <Text style={styles.statusText}>
                 {jornada.status === 'upcoming' ? 'Próxima' : 'En curso'}

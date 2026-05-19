@@ -268,7 +268,7 @@ export default function LineupScreen() {
       setAlreadySubmitted(true);
       Alert.alert(
         '✅ ¡Alineación Guardada!', 
-        `Tu equipo está listo para la Jornada ${currentJornada.week_number}.`,
+        currentJornada?.type === 'liguilla' && currentJornada?.title ? `Tu equipo está listo para ${currentJornada.title.replace('Liguilla Clausura 2026 — ', '')}.` : `Tu equipo está listo para la Jornada ${currentJornada?.week_number}.`,
         [{ text: 'Ver Rankings', onPress: () => router.replace('/fantasy/rankings') }]
       );
       
@@ -347,7 +347,7 @@ export default function LineupScreen() {
           <Ionicons name="checkmark-circle" size={80} color="#00A551" />
           <Text style={styles.submittedTitle}>¡Alineación Enviada!</Text>
           <Text style={styles.submittedSubtitle}>
-            Ya enviaste tu alineación para{'\n'}Jornada {currentJornada?.week_number}
+            Ya enviaste tu alineación para{'\n'}{currentJornada?.type === 'liguilla' && currentJornada?.title ? currentJornada.title.replace('Liguilla Clausura 2026 — ', '') : `Jornada ${currentJornada?.week_number}`}
           </Text>
           <TouchableOpacity
             style={[styles.submitButton, { marginTop: 32, width: 250 }]}
@@ -372,7 +372,7 @@ export default function LineupScreen() {
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
-          {currentJornada ? `J${currentJornada.week_number} - Alineación` : 'Armar Alineación'}
+          {currentJornada ? currentJornada?.type === 'liguilla' && currentJornada?.title ? currentJornada.title.replace('Liguilla Clausura 2026 — ', '') : `J${currentJornada?.week_number} - Alineación` : 'Armar Alineación'}
         </Text>
         <View style={styles.headerRight}>
           <Text style={styles.countText}>{selectedCount}/11</Text>

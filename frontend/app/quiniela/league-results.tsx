@@ -66,7 +66,7 @@ export default function LeagueResultsScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Jornada {results.jornada.week_number}</Text>
+        <Text style={styles.headerTitle}>{results.jornada?.type === 'liguilla' && results.jornada?.title ? results.jornada.title.replace('Liguilla Clausura 2026 — ', '') : `Jornada ${results.jornada.week_number}`}</Text>
         <Text style={styles.headerSubtitle}>Resultados Detallados</Text>
       </View>
 
