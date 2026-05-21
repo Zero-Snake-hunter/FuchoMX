@@ -4351,7 +4351,7 @@ async def get_liguilla_results():
 
 # ============ ROOT ============
 
-@api_router.get("/ping")
+@api_router.api_route("/ping", methods=["GET", "HEAD"])
 async def ping():
     return {"status": "ok"}
 
