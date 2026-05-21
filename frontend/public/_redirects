@@ -2,3 +2,5 @@
 /jugar /register 302
 /entrar /login 302
 /inicio /login 302
+/registro /register 302
+/iniciar /login 302
