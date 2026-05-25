@@ -202,23 +202,27 @@ export default function AdminDashboard() {
               <TouchableOpacity style={[s.seedBtn, {backgroundColor: '#1D88E5'}]} onPress={() => seedData('/api/admin/seed-world-cup', 'Mundial 2026')}>
                 <Text style={s.syncBtnText}>🌍 Cargar Datos Mundial 2026</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[s.seedBtn, {backgroundColor: '#2A9D8F'}]} onPress={() => {
-                fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/admin/activate-competition`, {
-                  method: 'POST',
-                  headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
-                  body: JSON.stringify({competition: 'world_cup_2026'})
-                }).then(r => r.json()).then(d => Alert.alert('Éxito', d.message));
-              }}>
-                <Text style={s.syncBtnText}>⚽ Activar Mundial 2026</Text>
+              <TouchableOpacity style={[s.seedBtn, {backgroundColor: '#2A9D8F'}]} onPress={() =>
+                seedData('/api/admin/activate-competition', 'Activar Mundial').then ? null :
+                api.post('/api/admin/activate-competition', {competition: 'world_cup_2026'})
+                  .then(r => Alert.alert('✅ Éxito', r.data.message || 'Mundial 2026 activado'))
+                  .catch(e => Alert.alert('Error', e.message))
+              }>
+                <Text style={s.syncBtnText}>🌍 Activar competición: Mundial 2026</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[s.seedBtn, {backgroundColor: '#E63946'}]} onPress={() => {
-                fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/admin/activate-competition`, {
-                  method: 'POST',
-                  headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
-                  body: JSON.stringify({competition: 'liga_mx'})
-                }).then(r => r.json()).then(d => Alert.alert('Éxito', d.message));
-              }}>
-                <Text style={s.syncBtnText}>🏟️ Activar Liga MX</Text>
+              <TouchableOpacity style={[s.seedBtn, {backgroundColor: '#FF6B35'}]} onPress={() =>
+                api.post('/api/admin/reset-jornada?week=1')
+                  .then(r => { Alert.alert('✅ Jornada 1 activada', r.data.message || 'Jornada 1 del Mundial está activa — los usuarios ya pueden apostar'); fetchStats(); })
+                  .catch(e => Alert.alert('Error', e.response?.data?.detail || e.message))
+              }>
+                <Text style={s.syncBtnText}>⚽ Activar Jornada 1 del Mundial</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[s.seedBtn, {backgroundColor: '#E63946'}]} onPress={() =>
+                api.post('/api/admin/activate-competition', {competition: 'liga_mx'})
+                  .then(r => Alert.alert('✅ Éxito', r.data.message || 'Liga MX activada'))
+                  .catch(e => Alert.alert('Error', e.message))
+              }>
+                <Text style={s.syncBtnText}>🏟️ Activar competición: Liga MX</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[s.seedBtn, {backgroundColor: '#E63946'}]} onPress={() => {
                 Alert.alert('¿Quién pasó a la Final?', 'Selecciona el finalista', [
