@@ -459,15 +459,16 @@ async def reset_jornada(week: int = None):
     now = datetime.utcnow()
 
     if week is not None:
-        # Modo directo: activar jornada específica
-        target = await db.jornadas.find_one({"week_number": week})
+        # Modo directo: activar jornada específica (filtrado por competición activa)
+        competition = await get_active_competition()
+        target = await db.jornadas.find_one({"week_number": week, "competition": competition})
         if not target:
             raise HTTPException(
                 status_code=404,
-                detail=f"Jornada {week} no encontrada"
+                detail=f"Jornada {week} no encontrada para competición '{competition}'"
             )
-        # Desactivar todas
-        await db.jornadas.update_many({}, {"$set": {"is_active": False}})
+        # Desactivar todas las jornadas de esta competición
+        await db.jornadas.update_many({"competition": competition}, {"$set": {"is_active": False}})
         # Activar la pedida
         await db.jornadas.update_one(
             {"_id": target["_id"]},
@@ -486,11 +487,12 @@ async def reset_jornada(week: int = None):
         }
 
     # Modo avance: cerrar activa → activar siguiente
-    current = await db.jornadas.find_one({"is_active": True})
+    adv_competition = await get_active_competition()
+    current = await db.jornadas.find_one({"is_active": True, "competition": adv_competition})
     if not current:
         # Fallback: buscar la de menor week_number con status != finished
         current = await db.jornadas.find_one(
-            {"status": {"$ne": "finished"}},
+            {"status": {"$ne": "finished"}, "competition": adv_competition},
             sort=[("week_number", 1)]
         )
     if not current:
@@ -507,8 +509,8 @@ async def reset_jornada(week: int = None):
         {"$set": {"is_active": False, "status": "finished"}}
     )
 
-    # Buscar y activar la siguiente
-    next_j = await db.jornadas.find_one({"week_number": closed_week + 1})
+    # Buscar y activar la siguiente (misma competición)
+    next_j = await db.jornadas.find_one({"week_number": closed_week + 1, "competition": adv_competition})
     if not next_j:
         raise HTTPException(
             status_code=404,
@@ -764,9 +766,10 @@ async def close_jornada(jornada_id: str):
         {"$set": {"status": "finished", "is_active": False}}
     )
     
-    # Activate the next jornada
+    # Activate the next jornada (same competition)
+    jornada_competition = jornada.get("competition", "liga_mx")
     next_jornada = await db.jornadas.find_one(
-        {"week_number": current_week + 1}
+        {"week_number": current_week + 1, "competition": jornada_competition}
     )
     
     next_info = None
@@ -990,9 +993,10 @@ async def get_teams():
 async def get_current_jornada():
     """Get current active jornada with matches - implements automatic state transition"""
     now = datetime.utcnow()
+    competition = await get_active_competition()
     
-    # Step 1: Find jornada with is_active = true
-    jornada = await db.jornadas.find_one({"is_active": True})
+    # Step 1: Find jornada with is_active = true (filtered by active competition)
+    jornada = await db.jornadas.find_one({"is_active": True, "competition": competition})
     
     # Step 2: If active jornada exists and its end_date has passed, transition to next
     if jornada and jornada.get("end_date") and jornada["end_date"] < now:
@@ -1022,9 +1026,9 @@ async def get_current_jornada():
             {"$set": {"status": "finished", "is_active": False}}
         )
         
-        # Activate next jornada
+        # Activate next jornada (filtered by same competition)
         next_jornada = await db.jornadas.find_one(
-            {"week_number": jornada["week_number"] + 1}
+            {"week_number": jornada["week_number"] + 1, "competition": competition}
         )
         
         if next_jornada:
@@ -1043,7 +1047,7 @@ async def get_current_jornada():
     # Step 3: Fallback - if no is_active found, try legacy status-based lookup
     if not jornada:
         jornada = await db.jornadas.find_one(
-            {"status": {"$in": ["upcoming", "in_progress"]}},
+            {"status": {"$in": ["upcoming", "in_progress"]}, "competition": competition},
             sort=[("week_number", 1)]
         )
         # If found via fallback, set is_active for consistency
