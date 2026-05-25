@@ -928,7 +928,8 @@ async def sync_fixtures():
         logger.warning(f"sync-fixtures: TheSportsDB falló ({exc}). Usando fallback Clausura 2025.")
 
         now = datetime.utcnow()
-        jornadas = await db.jornadas.find().sort("week_number", 1).to_list(17)
+        competition = await get_active_competition()
+        jornadas = await db.jornadas.find({"competition": competition}).sort("week_number", 1).to_list(25)
 
         for j in jornadas:
             week = j["week_number"]
@@ -956,7 +957,8 @@ async def sync_fixtures():
 @api_router.get("/admin/jornadas")
 async def list_all_jornadas():
     """Admin: List all jornadas with their status"""
-    jornadas = await db.jornadas.find().sort("week_number", 1).to_list(100)
+    competition = await get_active_competition()
+    jornadas = await db.jornadas.find({"competition": competition}).sort("week_number", 1).to_list(25)
     result = []
     for j in jornadas:
         result.append({
@@ -969,10 +971,17 @@ async def list_all_jornadas():
         })
     return {"jornadas": result, "total": len(result)}
 
+
+async def get_active_competition():
+    """Obtiene la competición activa desde la config"""
+    config = await db.config.find_one({"key": "active_competition"})
+    return config["value"] if config else "liga_mx"
+
 @api_router.get("/teams")
 async def get_teams():
-    """Get all teams"""
-    teams = await db.teams.find().to_list(100)
+    """Get all teams filtered by active competition"""
+    competition = await get_active_competition()
+    teams = await db.teams.find({"competition": competition}).sort([("priority", 1), ("name", 1)]).to_list(100)
     for team in teams:
         team["id"] = str(team.pop("_id"))
     return {"teams": teams}
@@ -2728,7 +2737,8 @@ async def get_players(
     team_name: Optional[str] = None
 ):
     """Get players filtered by position and/or team"""
-    query = {}
+    competition = await get_active_competition()
+    query = {"competition": competition}
     
     if position:
         query["position"] = position
