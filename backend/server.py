@@ -4296,6 +4296,235 @@ async def seed_final_players(current_user: dict = Depends(get_current_user)):
 
     return {"message": f"✅ {total} jugadores de la Final cargados correctamente", "total": total}
 
+
+@api_router.post("/admin/seed-world-cup")
+async def seed_world_cup(current_user: dict = Depends(get_current_user)):
+    """Carga equipos, jornadas y partidos del Mundial 2026"""
+    if current_user.get("email") != ADMIN_EMAIL:
+        raise HTTPException(status_code=403, detail="Acceso restringido")
+
+    TEAMS_WC = [
+        {"name": "México", "short_name": "MEX", "group": "A", "priority": 1, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/utpvpq1473543873.png"},
+        {"name": "Sudáfrica", "short_name": "RSA", "group": "A", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/vvupwq1473543892.png"},
+        {"name": "Corea del Sur", "short_name": "KOR", "group": "A", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvquu1473543881.png"},
+        {"name": "Rep. Checa", "short_name": "CZE", "group": "A", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvqvr1473543865.png"},
+        {"name": "Canadá", "short_name": "CAN", "group": "B", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvqus1473543862.png"},
+        {"name": "Bosnia", "short_name": "BIH", "group": "B", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvqvs1473543860.png"},
+        {"name": "Qatar", "short_name": "QAT", "group": "B", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvqvt1473543889.png"},
+        {"name": "Suiza", "short_name": "SUI", "group": "B", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvqvv1473543894.png"},
+        {"name": "Brasil", "short_name": "BRA", "group": "C", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvqut1473543861.png"},
+        {"name": "Marruecos", "short_name": "MAR", "group": "C", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvqvq1473543884.png"},
+        {"name": "Haití", "short_name": "HAI", "group": "C", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvqvp1473543876.png"},
+        {"name": "Escocia", "short_name": "SCO", "group": "C", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvqvr1473543891.png"},
+        {"name": "USA", "short_name": "USA", "group": "D", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvquw1473543897.png"},
+        {"name": "Paraguay", "short_name": "PAR", "group": "D", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvqvt1473543888.png"},
+        {"name": "Australia", "short_name": "AUS", "group": "D", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvqus1473543858.png"},
+        {"name": "Turquía", "short_name": "TUR", "group": "D", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvqvv1473543895.png"},
+        {"name": "Alemania", "short_name": "GER", "group": "E", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvqup1473543874.png"},
+        {"name": "Curaçao", "short_name": "CUW", "group": "E", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvqvs1473543864.png"},
+        {"name": "Costa de Marfil", "short_name": "CIV", "group": "E", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvqvs1473543863.png"},
+        {"name": "Ecuador", "short_name": "ECU", "group": "E", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvqvp1473543868.png"},
+        {"name": "Países Bajos", "short_name": "NED", "group": "F", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvqvr1473543886.png"},
+        {"name": "Japón", "short_name": "JPN", "group": "F", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvqvp1473543879.png"},
+        {"name": "Suecia", "short_name": "SWE", "group": "F", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvqvv1473543893.png"},
+        {"name": "Túnez", "short_name": "TUN", "group": "F", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvqvv1473543896.png"},
+        {"name": "Bélgica", "short_name": "BEL", "group": "G", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvqvs1473543859.png"},
+        {"name": "Egipto", "short_name": "EGY", "group": "G", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvqvp1473543869.png"},
+        {"name": "Irán", "short_name": "IRN", "group": "G", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvqvp1473543878.png"},
+        {"name": "Nueva Zelanda", "short_name": "NZL", "group": "G", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvqvr1473543887.png"},
+        {"name": "España", "short_name": "ESP", "group": "H", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvqvp1473543870.png"},
+        {"name": "Cabo Verde", "short_name": "CPV", "group": "H", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvqvs1473543862.png"},
+        {"name": "Arabia Saudita", "short_name": "KSA", "group": "H", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvqvs1473543891.png"},
+        {"name": "Uruguay", "short_name": "URU", "group": "H", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvqvw1473543898.png"},
+        {"name": "Francia", "short_name": "FRA", "group": "I", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvqvp1473543871.png"},
+        {"name": "Senegal", "short_name": "SEN", "group": "I", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvqvt1473543892.png"},
+        {"name": "Irak", "short_name": "IRQ", "group": "I", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvqvp1473543877.png"},
+        {"name": "Noruega", "short_name": "NOR", "group": "I", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvqvr1473543887.png"},
+        {"name": "Argentina", "short_name": "ARG", "group": "J", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvqus1473543857.png"},
+        {"name": "Argelia", "short_name": "ALG", "group": "J", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvqus1473543856.png"},
+        {"name": "Austria", "short_name": "AUT", "group": "J", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvqus1473543858.png"},
+        {"name": "Jordania", "short_name": "JOR", "group": "J", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvqvp1473543880.png"},
+        {"name": "Portugal", "short_name": "POR", "group": "K", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvqvt1473543889.png"},
+        {"name": "DR Congo", "short_name": "COD", "group": "K", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvqvs1473543863.png"},
+        {"name": "Uzbekistán", "short_name": "UZB", "group": "K", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvqvw1473543898.png"},
+        {"name": "Colombia", "short_name": "COL", "group": "K", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvqvs1473543863.png"},
+        {"name": "Inglaterra", "short_name": "ENG", "group": "L", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvqvp1473543869.png"},
+        {"name": "Croacia", "short_name": "CRO", "group": "L", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvqvs1473543864.png"},
+        {"name": "Ghana", "short_name": "GHA", "group": "L", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvqvp1473543873.png"},
+        {"name": "Panamá", "short_name": "PAN", "group": "L", "priority": 99, "shield_url": "https://www.thesportsdb.com/images/media/team/badge/sqvqvt1473543888.png"},
+    ]
+
+    MATCHES_WC = [
+        # JORNADA 1
+        {"j": 1, "home": "México", "away": "Sudáfrica", "date": "2026-06-11T19:00:00", "venue": "Estadio Azteca"},
+        {"j": 1, "home": "Corea del Sur", "away": "Rep. Checa", "date": "2026-06-12T02:00:00", "venue": "Estadio Akron"},
+        {"j": 1, "home": "Canadá", "away": "Bosnia", "date": "2026-06-12T19:00:00", "venue": "BMO Field"},
+        {"j": 1, "home": "Qatar", "away": "Suiza", "date": "2026-06-13T19:00:00", "venue": "Levi's Stadium"},
+        {"j": 1, "home": "Brasil", "away": "Marruecos", "date": "2026-06-13T22:00:00", "venue": "MetLife Stadium"},
+        {"j": 1, "home": "Haití", "away": "Escocia", "date": "2026-06-14T01:00:00", "venue": "Gillette Stadium"},
+        {"j": 1, "home": "USA", "away": "Paraguay", "date": "2026-06-13T01:00:00", "venue": "SoFi Stadium"},
+        {"j": 1, "home": "Australia", "away": "Turquía", "date": "2026-06-14T04:00:00", "venue": "BC Place"},
+        {"j": 1, "home": "Alemania", "away": "Curaçao", "date": "2026-06-14T17:00:00", "venue": "NRG Stadium"},
+        {"j": 1, "home": "Costa de Marfil", "away": "Ecuador", "date": "2026-06-14T23:00:00", "venue": "Lincoln Financial Field"},
+        {"j": 1, "home": "Países Bajos", "away": "Japón", "date": "2026-06-14T20:00:00", "venue": "AT&T Stadium"},
+        {"j": 1, "home": "Suecia", "away": "Túnez", "date": "2026-06-15T02:00:00", "venue": "Estadio BBVA"},
+        {"j": 1, "home": "Bélgica", "away": "Egipto", "date": "2026-06-15T19:00:00", "venue": "Lumen Field"},
+        {"j": 1, "home": "Irán", "away": "Nueva Zelanda", "date": "2026-06-16T01:00:00", "venue": "SoFi Stadium"},
+        {"j": 1, "home": "España", "away": "Cabo Verde", "date": "2026-06-15T16:00:00", "venue": "Mercedes-Benz Stadium"},
+        {"j": 1, "home": "Arabia Saudita", "away": "Uruguay", "date": "2026-06-15T22:00:00", "venue": "Hard Rock Stadium"},
+        {"j": 1, "home": "Francia", "away": "Senegal", "date": "2026-06-16T19:00:00", "venue": "MetLife Stadium"},
+        {"j": 1, "home": "Irak", "away": "Noruega", "date": "2026-06-16T22:00:00", "venue": "Gillette Stadium"},
+        {"j": 1, "home": "Argentina", "away": "Argelia", "date": "2026-06-17T01:00:00", "venue": "Arrowhead Stadium"},
+        {"j": 1, "home": "Austria", "away": "Jordania", "date": "2026-06-17T04:00:00", "venue": "Levi's Stadium"},
+        {"j": 1, "home": "Portugal", "away": "DR Congo", "date": "2026-06-17T17:00:00", "venue": "NRG Stadium"},
+        {"j": 1, "home": "Uzbekistán", "away": "Colombia", "date": "2026-06-18T02:00:00", "venue": "Estadio Azteca"},
+        {"j": 1, "home": "Inglaterra", "away": "Croacia", "date": "2026-06-17T20:00:00", "venue": "AT&T Stadium"},
+        {"j": 1, "home": "Ghana", "away": "Panamá", "date": "2026-06-17T23:00:00", "venue": "BMO Field"},
+        # JORNADA 2
+        {"j": 2, "home": "Rep. Checa", "away": "Sudáfrica", "date": "2026-06-18T16:00:00", "venue": "Mercedes-Benz Stadium"},
+        {"j": 2, "home": "México", "away": "Corea del Sur", "date": "2026-06-19T01:00:00", "venue": "Estadio Akron"},
+        {"j": 2, "home": "Suiza", "away": "Bosnia", "date": "2026-06-18T19:00:00", "venue": "SoFi Stadium"},
+        {"j": 2, "home": "Canadá", "away": "Qatar", "date": "2026-06-18T22:00:00", "venue": "BC Place"},
+        {"j": 2, "home": "Escocia", "away": "Marruecos", "date": "2026-06-19T22:00:00", "venue": "Gillette Stadium"},
+        {"j": 2, "home": "Brasil", "away": "Haití", "date": "2026-06-20T00:30:00", "venue": "Lincoln Financial Field"},
+        {"j": 2, "home": "USA", "away": "Australia", "date": "2026-06-19T19:00:00", "venue": "Lumen Field"},
+        {"j": 2, "home": "Turquía", "away": "Paraguay", "date": "2026-06-20T03:00:00", "venue": "Levi's Stadium"},
+        {"j": 2, "home": "Alemania", "away": "Costa de Marfil", "date": "2026-06-20T20:00:00", "venue": "BMO Field"},
+        {"j": 2, "home": "Ecuador", "away": "Curaçao", "date": "2026-06-21T00:00:00", "venue": "Arrowhead Stadium"},
+        {"j": 2, "home": "Países Bajos", "away": "Suecia", "date": "2026-06-20T17:00:00", "venue": "NRG Stadium"},
+        {"j": 2, "home": "Túnez", "away": "Japón", "date": "2026-06-21T04:00:00", "venue": "Estadio BBVA"},
+        {"j": 2, "home": "Bélgica", "away": "Irán", "date": "2026-06-21T19:00:00", "venue": "SoFi Stadium"},
+        {"j": 2, "home": "Nueva Zelanda", "away": "Egipto", "date": "2026-06-22T01:00:00", "venue": "BC Place"},
+        {"j": 2, "home": "España", "away": "Arabia Saudita", "date": "2026-06-21T16:00:00", "venue": "Mercedes-Benz Stadium"},
+        {"j": 2, "home": "Uruguay", "away": "Cabo Verde", "date": "2026-06-21T22:00:00", "venue": "Hard Rock Stadium"},
+        {"j": 2, "home": "Francia", "away": "Irak", "date": "2026-06-22T21:00:00", "venue": "Lincoln Financial Field"},
+        {"j": 2, "home": "Noruega", "away": "Senegal", "date": "2026-06-23T00:00:00", "venue": "MetLife Stadium"},
+        {"j": 2, "home": "Argentina", "away": "Austria", "date": "2026-06-22T17:00:00", "venue": "AT&T Stadium"},
+        {"j": 2, "home": "Jordania", "away": "Argelia", "date": "2026-06-23T03:00:00", "venue": "Levi's Stadium"},
+        {"j": 2, "home": "Portugal", "away": "Uzbekistán", "date": "2026-06-23T17:00:00", "venue": "NRG Stadium"},
+        {"j": 2, "home": "Colombia", "away": "DR Congo", "date": "2026-06-24T02:00:00", "venue": "Estadio Akron"},
+        {"j": 2, "home": "Inglaterra", "away": "Ghana", "date": "2026-06-23T20:00:00", "venue": "Gillette Stadium"},
+        {"j": 2, "home": "Panamá", "away": "Croacia", "date": "2026-06-23T23:00:00", "venue": "BMO Field"},
+        # JORNADA 3
+        {"j": 3, "home": "Rep. Checa", "away": "México", "date": "2026-06-25T01:00:00", "venue": "Estadio Azteca"},
+        {"j": 3, "home": "Sudáfrica", "away": "Corea del Sur", "date": "2026-06-25T01:00:00", "venue": "Estadio BBVA"},
+        {"j": 3, "home": "Suiza", "away": "Canadá", "date": "2026-06-24T19:00:00", "venue": "BC Place"},
+        {"j": 3, "home": "Bosnia", "away": "Qatar", "date": "2026-06-24T19:00:00", "venue": "Lumen Field"},
+        {"j": 3, "home": "Escocia", "away": "Brasil", "date": "2026-06-24T22:00:00", "venue": "Hard Rock Stadium"},
+        {"j": 3, "home": "Marruecos", "away": "Haití", "date": "2026-06-24T22:00:00", "venue": "Mercedes-Benz Stadium"},
+        {"j": 3, "home": "Turquía", "away": "USA", "date": "2026-06-26T01:00:00", "venue": "SoFi Stadium"},
+        {"j": 3, "home": "Paraguay", "away": "Australia", "date": "2026-06-26T01:00:00", "venue": "Levi's Stadium"},
+        {"j": 3, "home": "Curaçao", "away": "Costa de Marfil", "date": "2026-06-25T20:00:00", "venue": "Lincoln Financial Field"},
+        {"j": 3, "home": "Ecuador", "away": "Alemania", "date": "2026-06-25T20:00:00", "venue": "MetLife Stadium"},
+        {"j": 3, "home": "Japón", "away": "Suecia", "date": "2026-06-25T23:00:00", "venue": "AT&T Stadium"},
+        {"j": 3, "home": "Túnez", "away": "Países Bajos", "date": "2026-06-25T23:00:00", "venue": "Arrowhead Stadium"},
+        {"j": 3, "home": "Egipto", "away": "Irán", "date": "2026-06-27T03:00:00", "venue": "Lumen Field"},
+        {"j": 3, "home": "Nueva Zelanda", "away": "Bélgica", "date": "2026-06-27T03:00:00", "venue": "BC Place"},
+        {"j": 3, "home": "Cabo Verde", "away": "Arabia Saudita", "date": "2026-06-27T00:00:00", "venue": "NRG Stadium"},
+        {"j": 3, "home": "Uruguay", "away": "España", "date": "2026-06-27T01:00:00", "venue": "Estadio Akron"},
+        {"j": 3, "home": "Noruega", "away": "Francia", "date": "2026-06-26T19:00:00", "venue": "Gillette Stadium"},
+        {"j": 3, "home": "Senegal", "away": "Irak", "date": "2026-06-26T19:00:00", "venue": "BMO Field"},
+        {"j": 3, "home": "Argelia", "away": "Austria", "date": "2026-06-28T02:00:00", "venue": "Arrowhead Stadium"},
+        {"j": 3, "home": "Jordania", "away": "Argentina", "date": "2026-06-28T02:00:00", "venue": "AT&T Stadium"},
+        {"j": 3, "home": "Colombia", "away": "Portugal", "date": "2026-06-28T23:30:00", "venue": "Hard Rock Stadium"},
+        {"j": 3, "home": "DR Congo", "away": "Uzbekistán", "date": "2026-06-28T23:30:00", "venue": "Mercedes-Benz Stadium"},
+        {"j": 3, "home": "Panamá", "away": "Inglaterra", "date": "2026-06-27T21:00:00", "venue": "MetLife Stadium"},
+        {"j": 3, "home": "Croacia", "away": "Ghana", "date": "2026-06-27T21:00:00", "venue": "Lincoln Financial Field"},
+    ]
+
+    JORNADAS_WC = [
+        {"wn": 1, "title": "Fase de Grupos — Jornada 1", "start": "2026-06-11", "end": "2026-06-17"},
+        {"wn": 2, "title": "Fase de Grupos — Jornada 2", "start": "2026-06-18", "end": "2026-06-23"},
+        {"wn": 3, "title": "Fase de Grupos — Jornada 3", "start": "2026-06-24", "end": "2026-06-27"},
+        {"wn": 4, "title": "Round of 32", "start": "2026-06-28", "end": "2026-07-03"},
+        {"wn": 5, "title": "Round of 16", "start": "2026-07-04", "end": "2026-07-07"},
+        {"wn": 6, "title": "Cuartos de Final", "start": "2026-07-09", "end": "2026-07-11"},
+        {"wn": 7, "title": "Semifinales", "start": "2026-07-14", "end": "2026-07-15"},
+        {"wn": 8, "title": "Final Mundial", "start": "2026-07-19", "end": "2026-07-19"},
+    ]
+
+    # Marcar datos existentes como liga_mx
+    await db.teams.update_many({"competition": {"$exists": False}}, {"$set": {"competition": "liga_mx"}})
+    await db.players.update_many({"competition": {"$exists": False}}, {"$set": {"competition": "liga_mx"}})
+    await db.jornadas.update_many({"competition": {"$exists": False}}, {"$set": {"competition": "liga_mx"}})
+    await db.matches.update_many({"competition": {"$exists": False}}, {"$set": {"competition": "liga_mx"}})
+
+    # Config
+    await db.config.update_one(
+        {"key": "active_competition"},
+        {"$set": {"key": "active_competition", "value": "liga_mx"}},
+        upsert=True
+    )
+
+    # Borrar datos previos del Mundial
+    await db.teams.delete_many({"competition": "world_cup_2026"})
+    await db.jornadas.delete_many({"competition": "world_cup_2026"})
+    await db.matches.delete_many({"competition": "world_cup_2026"})
+
+    # Insertar equipos
+    team_ids = {}
+    for t in TEAMS_WC:
+        result = await db.teams.insert_one({
+            "name": t["name"], "short_name": t["short_name"],
+            "shield_url": t["shield_url"], "competition": "world_cup_2026",
+            "group": t["group"], "priority": t["priority"],
+            "created_at": datetime.utcnow()
+        })
+        team_ids[t["name"]] = result.inserted_id
+
+    # Insertar jornadas
+    jornada_ids = {}
+    for j in JORNADAS_WC:
+        result = await db.jornadas.insert_one({
+            "week_number": j["wn"], "title": j["title"],
+            "type": "world_cup", "competition": "world_cup_2026",
+            "status": "upcoming", "is_active": False, "processed": False,
+            "start_date": datetime.fromisoformat(j["start"]),
+            "end_date": datetime.fromisoformat(j["end"]),
+            "created_at": datetime.utcnow()
+        })
+        jornada_ids[j["wn"]] = result.inserted_id
+
+    # Insertar partidos
+    matches_count = 0
+    for m in MATCHES_WC:
+        ht = await db.teams.find_one({"name": m["home"], "competition": "world_cup_2026"})
+        at = await db.teams.find_one({"name": m["away"], "competition": "world_cup_2026"})
+        if ht and at:
+            await db.matches.insert_one({
+                "jornada_id": jornada_ids[m["j"]],
+                "home_team_id": ht["_id"], "away_team_id": at["_id"],
+                "home_team_name": m["home"], "away_team_name": m["away"],
+                "home_score": None, "away_score": None,
+                "status": "upcoming", "match_date": datetime.fromisoformat(m["date"]),
+                "venue": m["venue"], "competition": "world_cup_2026",
+                "created_at": datetime.utcnow()
+            })
+            matches_count += 1
+
+    return {
+        "message": "✅ Mundial 2026 cargado correctamente",
+        "teams": len(TEAMS_WC),
+        "jornadas": len(JORNADAS_WC),
+        "matches": matches_count
+    }
+
+
+@api_router.post("/admin/activate-competition")
+async def activate_competition(body: dict, current_user: dict = Depends(get_current_user)):
+    """Cambia la competición activa entre liga_mx y world_cup_2026"""
+    if current_user.get("email") != ADMIN_EMAIL:
+        raise HTTPException(status_code=403, detail="Acceso restringido")
+    competition = body.get("competition")
+    if competition not in ["liga_mx", "world_cup_2026"]:
+        raise HTTPException(status_code=400, detail="Competición inválida")
+    await db.config.update_one(
+        {"key": "active_competition"},
+        {"$set": {"value": competition}},
+        upsert=True
+    )
+    return {"message": f"✅ Competición activa: {competition}"}
+
 # ============ ADMIN BRACKET UPDATE ============
 
 class BracketUpdateRequest(BaseModel):
