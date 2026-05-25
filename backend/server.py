@@ -11,6 +11,7 @@ from typing import List, Optional
 import uuid
 from datetime import datetime, timedelta
 from real_liga_mx_data import LIGA_MX_TEAMS, CLAUSURA_2026_DATES, CLAUSURA_2026_J13_MATCHES, LIGUILLA_CLAUSURA_2026_TEAMS
+from world_cup_players_data import WC_SQUADS
 import bcrypt
 import jwt
 from bson import ObjectId
@@ -4521,6 +4522,54 @@ async def seed_world_cup(current_user: dict = Depends(get_current_user)):
         "teams": len(TEAMS_WC),
         "jornadas": len(JORNADAS_WC),
         "matches": matches_count
+    }
+
+
+@api_router.post("/admin/seed-world-cup-players")
+async def seed_world_cup_players(current_user: dict = Depends(get_current_user)):
+    """Carga las plantillas reales de las 48 selecciones del Mundial 2026"""
+    if current_user.get("email") != ADMIN_EMAIL:
+        raise HTTPException(status_code=403, detail="Acceso restringido")
+
+    # Borrar jugadores previos del Mundial
+    await db.players.delete_many({"competition": "world_cup_2026"})
+
+    inserted = 0
+    skipped_teams = []
+
+    for team_name, squad in WC_SQUADS.items():
+        team = await db.teams.find_one({"name": team_name, "competition": "world_cup_2026"})
+        if not team:
+            skipped_teams.append(team_name)
+            continue
+
+        for p in squad:
+            await db.players.insert_one({
+                "name": p["name"],
+                "team_id": team["_id"],
+                "team_name": team_name,
+                "position": p["position"],
+                "number": p["number"],
+                "competition": "world_cup_2026",
+                "stats": {
+                    "minutes_played": 0,
+                    "goals": 0,
+                    "assists": 0,
+                    "saves": 0,
+                    "clean_sheets": 0,
+                    "defensive_actions": 0,
+                    "yellow_cards": 0,
+                    "red_cards": 0,
+                },
+                "created_at": datetime.utcnow()
+            })
+            inserted += 1
+
+    return {
+        "message": f"✅ Plantillas del Mundial cargadas: {inserted} jugadores de {len(WC_SQUADS) - len(skipped_teams)} selecciones",
+        "players_inserted": inserted,
+        "teams_loaded": len(WC_SQUADS) - len(skipped_teams),
+        "skipped_teams": skipped_teams
     }
 
 

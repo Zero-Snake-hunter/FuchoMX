@@ -43,39 +43,6 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('resumen');
-  const [syncing, setSyncing] = useState(false);
-
-  const createLiguillajornadas = async () => {
-    try {
-      const response = await api.post('/api/admin/create-liguilla-jornadas');
-      Alert.alert('✅ Éxito', response.data.message);
-      fetchStats();
-    } catch (error: any) {
-      Alert.alert('Error', error.message);
-    }
-  };
-
-  const activateFinal = async (finalist: string) => {
-    try {
-      const response = await api.post(`/api/admin/activate-liguilla-final?finalist=${finalist}`);
-      Alert.alert('✅ Final activada', response.data.message);
-      fetchStats();
-    } catch (error: any) {
-      Alert.alert('Error', error.message);
-    }
-  };
-
-  const updateBracket = async () => {
-    try {
-      const response = await api.post('/api/admin/bracket/update', {
-        cuartos_winners: ["PUM", "PAC", "GDL", "CAZ"],
-        semis_right_winner: "CAZ",
-      });
-      Alert.alert('✅ Bracket actualizado', 'Cuartos y SF Derecha actualizados');
-    } catch (error: any) {
-      Alert.alert('Error', error.message);
-    }
-  };
 
   const closeJornada = async () => {
     try {
@@ -94,23 +61,6 @@ export default function AdminDashboard() {
       fetchStats();
     } catch (error: any) {
       Alert.alert('Error', `${label}: ${error.message}`);
-    }
-  };
-
-  const syncPlayers = async () => {
-    setSyncing(true);
-    try {
-      const response = await api.post('/api/admin/sync-players-api-football');
-      const count = response.data.players_updated || 0;
-      const errors = response.data.errors || [];
-      Alert.alert(
-        '✅ Sincronización completada',
-        `${count} jugadores actualizados.${errors.length > 0 ? '\n⚠️ ' + errors.length + ' equipos con error.' : '\n✅ Sin errores.'}`
-      );
-    } catch (error: any) {
-      Alert.alert('Error', error.message || 'No se pudo sincronizar');
-    } finally {
-      setSyncing(false);
     }
   };
 
@@ -190,67 +140,40 @@ export default function AdminDashboard() {
           {activeTab === 'resumen' && (
             <>
               <Text style={s.sectionTitle}>🔧 Herramientas de Admin</Text>
-              <TouchableOpacity style={[s.seedBtn, {backgroundColor: '#FFD700'}]} onPress={updateBracket}>
-                <Text style={[s.syncBtnText, {color: '#000'}]}>🏆 Actualizar resultados Bracket</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[s.seedBtn, {backgroundColor: '#2A9D8F'}]} onPress={createLiguillajornadas}>
-                <Text style={s.syncBtnText}>⚽ Crear Jornadas de Liguilla (Cuartos/Semis/Final)</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[s.seedBtn, {backgroundColor: '#E63946'}]} onPress={() => seedData('/api/admin/seed-final-players', 'Jugadores Final')}>
-                <Text style={s.syncBtnText}>👥 Cargar Jugadores CAZ vs PUM (Final)</Text>
-              </TouchableOpacity>
+
+              {/* ── MUNDIAL 2026 ─────────────────────────────────────────── */}
+              <Text style={s.subSectionTitle}>🌍 Mundial 2026</Text>
+
               <TouchableOpacity style={[s.seedBtn, {backgroundColor: '#1D88E5'}]} onPress={() => seedData('/api/admin/seed-world-cup', 'Mundial 2026')}>
-                <Text style={s.syncBtnText}>🌍 Cargar Datos Mundial 2026</Text>
+                <Text style={s.syncBtnText}>1. Cargar Equipos, Jornadas y Partidos</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[s.seedBtn, {backgroundColor: '#2A9D8F'}]} onPress={() =>
-                seedData('/api/admin/activate-competition', 'Activar Mundial').then ? null :
-                api.post('/api/admin/activate-competition', {competition: 'world_cup_2026'})
-                  .then(r => Alert.alert('✅ Éxito', r.data.message || 'Mundial 2026 activado'))
-                  .catch(e => Alert.alert('Error', e.message))
-              }>
-                <Text style={s.syncBtnText}>🌍 Activar competición: Mundial 2026</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[s.seedBtn, {backgroundColor: '#FF6B35'}]} onPress={() =>
-                api.post('/api/admin/reset-jornada?week=1')
-                  .then(r => { Alert.alert('✅ Jornada 1 activada', r.data.message || 'Jornada 1 del Mundial está activa — los usuarios ya pueden apostar'); fetchStats(); })
+
+              <TouchableOpacity style={[s.seedBtn, {backgroundColor: '#9C27B0'}]} onPress={() =>
+                api.post('/api/admin/seed-world-cup-players')
+                  .then(r => { Alert.alert('✅ Plantillas cargadas', r.data.message); fetchStats(); })
                   .catch(e => Alert.alert('Error', e.response?.data?.detail || e.message))
               }>
-                <Text style={s.syncBtnText}>⚽ Activar Jornada 1 del Mundial</Text>
+                <Text style={s.syncBtnText}>2. Cargar Plantillas — 48 Selecciones</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[s.seedBtn, {backgroundColor: '#E63946'}]} onPress={() =>
-                api.post('/api/admin/activate-competition', {competition: 'liga_mx'})
-                  .then(r => Alert.alert('✅ Éxito', r.data.message || 'Liga MX activada'))
+
+              <TouchableOpacity style={[s.seedBtn, {backgroundColor: '#2A9D8F'}]} onPress={() =>
+                api.post('/api/admin/activate-competition', {competition: 'world_cup_2026'})
+                  .then(r => { Alert.alert('✅ Éxito', r.data.message || 'Mundial 2026 activado'); fetchStats(); })
                   .catch(e => Alert.alert('Error', e.message))
               }>
-                <Text style={s.syncBtnText}>🏟️ Activar competición: Liga MX</Text>
+                <Text style={s.syncBtnText}>3. Activar competición: Mundial 2026</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[s.seedBtn, {backgroundColor: '#E63946'}]} onPress={() => {
-                Alert.alert('¿Quién pasó a la Final?', 'Selecciona el finalista', [
-                  { text: 'Pachuca (PAC)', onPress: () => activateFinal('PAC') },
-                  { text: 'Pumas (PUM)', onPress: () => activateFinal('PUM') },
-                  { text: 'Cancelar', style: 'cancel' },
-                ]);
-              }}>
-                <Text style={s.syncBtnText}>🏁 Activar Final (después del partido hoy)</Text>
+
+              <TouchableOpacity style={[s.seedBtn, {backgroundColor: '#FF6B35'}]} onPress={() =>
+                api.post('/api/admin/reset-jornada?week=1')
+                  .then(r => { Alert.alert('✅ Jornada 1 activa', r.data.message || '¡Los usuarios ya pueden apostar!'); fetchStats(); })
+                  .catch(e => Alert.alert('Error', e.response?.data?.detail || e.message))
+              }>
+                <Text style={s.syncBtnText}>4. Activar Jornada 1 del Mundial</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[s.seedBtn, {backgroundColor: '#E63946'}]} onPress={closeJornada}>
+
+              <TouchableOpacity style={[s.seedBtn, {backgroundColor: '#444'}]} onPress={closeJornada}>
                 <Text style={s.syncBtnText}>🔒 Cerrar todas las jornadas activas</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[s.seedBtn, {backgroundColor: '#9C27B0'}]} onPress={() => seedData('/api/admin/seed-teams', 'Equipos')}>
-                <Text style={s.syncBtnText}>🏟️ 1. Sembrar Equipos</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[s.seedBtn, {backgroundColor: '#FF9800'}]} onPress={() => seedData('/api/admin/seed-real-data', 'Datos reales')}>
-                <Text style={s.syncBtnText}>📅 2. Sembrar Jornadas y Partidos</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[s.syncBtn, syncing && { opacity: 0.6 }]}
-                onPress={syncPlayers}
-                disabled={syncing}
-              >
-                {syncing
-                  ? <ActivityIndicator size="small" color="#FFF" />
-                  : <Text style={s.syncBtnText}>⚽ 3. Sincronizar Jugadores API-Football</Text>
-                }
               </TouchableOpacity>
               <Text style={s.sectionTitle}>👥 Usuarios</Text>
               <View style={s.row}>
@@ -398,6 +321,7 @@ const s = StyleSheet.create({
   tabText:           { color: '#666', fontSize: 13 },
   tabTextActive:     { color: '#FFF', fontWeight: '700' },
   sectionTitle:      { fontSize: 14, fontWeight: 'bold', color: '#AAAAAA', marginBottom: 10, marginTop: 8 },
+  subSectionTitle:   { fontSize: 12, fontWeight: '700', color: '#666', marginBottom: 8, marginTop: 4, textTransform: 'uppercase', letterSpacing: 1 },
   row:               { flexDirection: 'row', gap: 12, marginBottom: 12 },
   statCard:          { flex: 1, backgroundColor: '#181818', borderRadius: 12, padding: 14, borderLeftWidth: 3, alignItems: 'center' },
   statIcon:          { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center', marginBottom: 6 },
