@@ -1195,8 +1195,11 @@ async def submit_quiniela(
     current_user: dict = Depends(get_current_user)
 ):
     """Submit quiniela selections for a jornada"""
-    jornada_id = ObjectId(quiniela.jornada_id)
-    
+    try:
+        jornada_id = ObjectId(quiniela.jornada_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="ID de jornada inválido")
+
     # Check if jornada exists
     jornada = await db.jornadas.find_one({"_id": jornada_id})
     if not jornada:
@@ -1278,8 +1281,11 @@ async def get_my_picks(
     current_user: dict = Depends(get_current_user)
 ):
     """Get user's selections for a specific jornada"""
-    jornada_obj_id = ObjectId(jornada_id)
-    
+    try:
+        jornada_obj_id = ObjectId(jornada_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="ID de jornada inválido")
+
     # Get selections
     selections = await db.quiniela_selections.find({
         "user_id": current_user["_id"],
@@ -2169,7 +2175,7 @@ async def _process_jornada_core(jornada_id: str) -> dict:
     try:
         user_ids = await db.users.distinct("_id", {})
         for uid in user_ids:
-            awarded = await check_and_award_achievements_after_jornada(str(uid), jornada_id)
+            awarded = await check_and_award_achievements_after_jornada(uid, jornada_id)
             achievements_awarded += len(awarded)
     except Exception as exc:
         logger.error(f"  ❌ Achievements error: {exc}")
@@ -2826,8 +2832,11 @@ async def submit_fantasy_lineup(
             detail="Primero debes crear tu equipo fantasy"
         )
     
-    jornada_id = ObjectId(lineup.jornada_id)
-    
+    try:
+        jornada_id = ObjectId(lineup.jornada_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="ID de jornada inválido")
+
     # Check if lineup already exists
     existing = await db.fantasy_lineups.find_one({
         "fantasy_team_id": team["_id"],
@@ -2891,8 +2900,11 @@ async def get_fantasy_lineup(
     if not team:
         return {"submitted": False, "lineup": []}
     
-    jornada_obj_id = ObjectId(jornada_id)
-    
+    try:
+        jornada_obj_id = ObjectId(jornada_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="ID de jornada inválido")
+
     lineup = await db.fantasy_lineups.find({
         "fantasy_team_id": team["_id"],
         "jornada_id": jornada_obj_id
@@ -3867,9 +3879,9 @@ async def get_admin_stats(current_user: dict = Depends(get_current_user)):
 
     # Usuarios
     total_usuarios = await db.users.count_documents({})
-    nuevos_hoy = await db.users.count_documents({"created_at": {"$gte": today_start.isoformat()}})
-    nuevos_semana = await db.users.count_documents({"created_at": {"$gte": week_start.isoformat()}})
-    nuevos_mes = await db.users.count_documents({"created_at": {"$gte": month_start.isoformat()}})
+    nuevos_hoy = await db.users.count_documents({"created_at": {"$gte": today_start}})
+    nuevos_semana = await db.users.count_documents({"created_at": {"$gte": week_start}})
+    nuevos_mes = await db.users.count_documents({"created_at": {"$gte": month_start}})
 
     # Jornadas
     total_jornadas = await db.jornadas.count_documents({})
