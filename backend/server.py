@@ -304,13 +304,15 @@ async def seed_current_jornada(current_user: dict = Depends(get_admin_user)):
             detail="Primero debes crear los equipos usando /api/admin/seed-teams"
         )
     
+    competition = await get_active_competition()
+
     # Find the highest week_number to auto-increment
     last_jornada = await db.jornadas.find_one(sort=[("week_number", -1)])
     next_week = (last_jornada["week_number"] + 1) if last_jornada else 1
-    
-    # Deactivate any currently active jornada
+
+    # Deactivate any currently active jornada (solo la competición activa)
     await db.jornadas.update_many(
-        {"is_active": True},
+        {"is_active": True, "competition": competition},
         {"$set": {"is_active": False, "status": "finished"}}
     )
     
@@ -853,6 +855,7 @@ async def sync_fixtures(current_user: dict = Depends(get_admin_user)):
 
     teams_list = await db.teams.find().to_list(100)
     team_by_name = {t["name"]: t["_id"] for t in teams_list}
+    competition = await get_active_competition()
 
     # --- Attempt TheSportsDB ---
     try:
@@ -914,7 +917,7 @@ async def sync_fixtures(current_user: dict = Depends(get_admin_user)):
             match_filter: dict = {"home_team_id": home_id, "away_team_id": away_id}
             if round_num:
                 try:
-                    j = await db.jornadas.find_one({"week_number": int(round_num)})
+                    j = await db.jornadas.find_one({"week_number": int(round_num), "competition": competition})
                     if j:
                         match_filter["jornada_id"] = j["_id"]
                 except Exception:
@@ -1118,9 +1121,9 @@ async def get_current_jornada():
                 {"_id": jornada["_id"]},
                 {"$set": {"is_active": False, "status": "finished"}}
             )
-            # Activate next jornada
+            # Activate next jornada (misma competición)
             next_j = await db.jornadas.find_one(
-                {"week_number": jornada["week_number"] + 1}
+                {"week_number": jornada["week_number"] + 1, "competition": competition}
             )
             if next_j:
                 await db.jornadas.update_one(
@@ -1915,10 +1918,10 @@ async def get_league_ranking(
     league_obj_id = ObjectId(league_id)
     
     # Verify membership
-    is_member = await db.league_members.find({
+    is_member = await db.league_members.find_one({
         "league_id": league_obj_id,
         "user_id": current_user["_id"]
-    }).to_list(1)
+    })
     
     if not is_member:
         raise HTTPException(
@@ -3678,10 +3681,14 @@ async def check_and_award_achievements_after_jornada(user_id, jornada_id: str) -
             new_achievements.append("fantasy_100pts")
 
     # 6. Fantasy streak 3 jornadas seguidas con alineación
-    fantasy_lineup_count = await db.fantasy_teams.count_documents({"user_id": user_id})
-    if fantasy_lineup_count >= 3:
-        if await award_achievement(user_id, "fantasy_streak_3"):
-            new_achievements.append("fantasy_streak_3")
+    _ft = await db.fantasy_teams.find_one({"user_id": user_id})
+    if _ft:
+        _jornadas_con_lineup = await db.fantasy_lineups.distinct(
+            "jornada_id", {"fantasy_team_id": _ft["_id"]}
+        )
+        if len(_jornadas_con_lineup) >= 3:
+            if await award_achievement(user_id, "fantasy_streak_3"):
+                new_achievements.append("fantasy_streak_3")
 
     # 7. fantasy_top: mejor manager de la jornada
     top_fantasy = await db.fantasy_points_log.find(
