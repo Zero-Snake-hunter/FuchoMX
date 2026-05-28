@@ -36,6 +36,8 @@ SECRET_KEY = os.environ.get('JWT_SECRET', 'your-secret-key-change-in-production'
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 30  # 30 días
 
+ADMIN_EMAIL = "contacto@distrito.digital"
+
 # Create the main app
 app = FastAPI(title="Quiniela Liga MX API")
 api_router = APIRouter(prefix="/api")
@@ -144,6 +146,12 @@ async def get_optional_user(
     except Exception:
         return None
 
+async def get_admin_user(current_user: dict = Depends(get_current_user)):
+    """Dependency: requiere usuario autenticado con email de admin."""
+    if current_user.get("email") != ADMIN_EMAIL:
+        raise HTTPException(status_code=403, detail="Acceso restringido")
+    return current_user
+
 def serialize_user(user: dict) -> UserResponse:
     """Serialize user document to response model"""
     return UserResponse(
@@ -249,7 +257,7 @@ async def recover_password(request: RecoverPasswordRequest):
 # ============ ADMIN/SEED ROUTES ============
 
 @api_router.post("/admin/seed-teams")
-async def seed_teams():
+async def seed_teams(current_user: dict = Depends(get_admin_user)):
     """Seed Liga MX teams (mock data)"""
     teams_data = [
         {"name": "Club América", "short_name": "AME", "shield_url": "https://via.placeholder.com/100/FFD700/000000?text=AME"},
@@ -286,7 +294,7 @@ async def seed_teams():
     return {"message": f"Se crearon {len(result.inserted_ids)} equipos", "count": len(result.inserted_ids)}
 
 @api_router.post("/admin/seed-jornada")
-async def seed_current_jornada():
+async def seed_current_jornada(current_user: dict = Depends(get_admin_user)):
     """Create current jornada with matches - auto-increments week_number"""
     # Get all teams
     teams = await db.teams.find().to_list(100)
@@ -352,7 +360,7 @@ async def seed_current_jornada():
     }
 
 @api_router.post("/admin/seed-season")
-async def seed_full_season():
+async def seed_full_season(current_user: dict = Depends(get_admin_user)):
     """Create multiple jornadas for a full season (17 jornadas)"""
     teams = await db.teams.find().to_list(100)
     if len(teams) < 2:
@@ -451,7 +459,7 @@ async def seed_full_season():
 
 
 @api_router.post("/admin/reset-jornada")
-async def reset_jornada(week: int = None):
+async def reset_jornada(week: int = None, current_user: dict = Depends(get_admin_user)):
     """
     Utilidad para demos y pruebas.
     - Sin parámetros: cierra la jornada activa y activa la siguiente.
@@ -748,7 +756,7 @@ async def submit_bracket_prediction(
 
 
 @api_router.post("/admin/quiniela/cerrar-jornada/{jornada_id}")
-async def close_jornada(jornada_id: str):
+async def close_jornada(jornada_id: str, current_user: dict = Depends(get_admin_user)):
     """Admin: Close a jornada and activate the next one"""
     try:
         jornada_oid = ObjectId(jornada_id)
@@ -798,7 +806,7 @@ async def close_jornada(jornada_id: str):
 
 
 @api_router.post("/admin/sync-fixtures")
-async def sync_fixtures():
+async def sync_fixtures(current_user: dict = Depends(get_admin_user)):
     """
     Sync Liga MX fixtures from TheSportsDB (ID: 4350).
     Falls back to Clausura 2025 real calendar dates if API is unavailable.
@@ -959,7 +967,7 @@ async def sync_fixtures():
 
 
 @api_router.get("/admin/jornadas")
-async def list_all_jornadas():
+async def list_all_jornadas(current_user: dict = Depends(get_admin_user)):
     """Admin: List all jornadas with their status"""
     competition = await get_active_competition()
     jornadas = await db.jornadas.find({"competition": competition}).sort("week_number", 1).to_list(25)
@@ -1941,7 +1949,7 @@ class UpdateScoreRequest(BaseModel):
     away_score: int
 
 @api_router.put("/admin/match/{match_id}/score")
-async def update_match_score(match_id: str, scores: UpdateScoreRequest):
+async def update_match_score(match_id: str, scores: UpdateScoreRequest, current_user: dict = Depends(get_admin_user)):
     """Update match score (admin only)"""
     match = await db.matches.find_one({"_id": ObjectId(match_id)})
     if not match:
@@ -1969,7 +1977,7 @@ async def update_match_score(match_id: str, scores: UpdateScoreRequest):
     }
 
 @api_router.post("/admin/jornada/{jornada_id}/calculate-points")
-async def calculate_jornada_points(jornada_id: str):
+async def calculate_jornada_points(jornada_id: str, current_user: dict = Depends(get_admin_user)):
     """Calculate points for all users in a jornada"""
     jornada_obj_id = ObjectId(jornada_id)
     
@@ -2032,7 +2040,7 @@ async def calculate_jornada_points(jornada_id: str):
             match_id = sel["match_id"]
             if match_id in match_results:
                 if sel["selection"] == match_results[match_id]:
-                    points += 1  # 1 point per correct prediction
+                    points += 3  # 3 points per correct prediction (reglas oficiales)
         
         if points > 0:
             # Save points log
@@ -2043,13 +2051,13 @@ async def calculate_jornada_points(jornada_id: str):
                 "points": points,
                 "created_at": datetime.utcnow()
             })
-            
+
             # Update user total points
             await db.users.update_one(
                 {"_id": user_id},
                 {"$inc": {"total_points": points}}
             )
-            
+
             users_updated += 1
             total_points_awarded += points
     
@@ -2123,7 +2131,7 @@ async def _process_jornada_core(jornada_id: str) -> dict:
 
             for uid, sels in user_sels.items():
                 pts = sum(
-                    1 for s in sels
+                    3 for s in sels
                     if s.get("match_id") in match_results_map
                     and s["selection"] == match_results_map[s["match_id"]]
                 )
@@ -2188,7 +2196,7 @@ async def _process_jornada_core(jornada_id: str) -> dict:
 
 
 @api_router.post("/admin/process-jornada/{jornada_id}")
-async def process_jornada_endpoint(jornada_id: str):
+async def process_jornada_endpoint(jornada_id: str, current_user: dict = Depends(get_admin_user)):
     """
     Procesa completamente una jornada:
     1. Resultados de partidos (365Scores → ESPN fallback)
@@ -2349,7 +2357,7 @@ def calculate_player_points(player_stats: dict, position: str) -> dict:
     }
 
 @api_router.post("/admin/fantasy/simulate-jornada/{jornada_id}")
-async def simulate_fantasy_jornada(jornada_id: str):
+async def simulate_fantasy_jornada(jornada_id: str, current_user: dict = Depends(get_admin_user)):
     """
     Simula una jornada completa de Fantasy con estadísticas mock.
     Genera stats para todos los jugadores y calcula puntos.
@@ -3157,7 +3165,7 @@ async def get_fantasy_rankings():
 # ============ ADMIN ROUTES FOR FANTASY ============
 
 @api_router.post("/admin/seed-players")
-async def seed_players():
+async def seed_players(current_user: dict = Depends(get_admin_user)):
     """Seed players for all teams"""
     teams = await db.teams.find().to_list(100)
     
@@ -3271,7 +3279,7 @@ async def seed_players():
     }
 
 @api_router.post("/admin/seed-real-data")
-async def seed_real_data():
+async def seed_real_data(current_user: dict = Depends(get_admin_user)):
     """Seed database with REAL Liga MX teams and players from real_liga_mx_data.py"""
     import random
     
@@ -3733,7 +3741,7 @@ async def get_my_achievements(current_user: dict = Depends(get_current_user)):
 
 
 @api_router.post("/admin/achievements/check/{jornada_id}")
-async def trigger_achievement_check(jornada_id: str):
+async def trigger_achievement_check(jornada_id: str, current_user: dict = Depends(get_admin_user)):
     """Admin: verifica y otorga logros a TODOS los usuarios tras una jornada."""
     all_users = await db.users.find().to_list(10000)
     summary = []
@@ -3844,8 +3852,6 @@ async def get_my_stats(current_user: dict = Depends(get_current_user)):
     }
 
 # ============ ADMIN STATS DASHBOARD ============
-
-ADMIN_EMAIL = "contacto@distrito.digital"
 
 @api_router.get("/admin/stats")
 async def get_admin_stats(current_user: dict = Depends(get_current_user)):
