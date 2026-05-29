@@ -2,7 +2,6 @@ from fastapi import FastAPI, APIRouter, HTTPException, Depends, status
 from starlette.middleware.cors import CORSMiddleware
 import os
 import logging
-from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional
 import uuid
 from datetime import datetime, timedelta
@@ -20,6 +19,12 @@ from config import (
 )
 from auth_utils import hash_password, verify_password, create_access_token, decode_token
 from dependencies import security, get_current_user, get_optional_user, get_admin_user
+from models import (
+    UserRegister, UserLogin, UserResponse, TokenResponse, RecoverPasswordRequest,
+    serialize_user, QuinielaSubmit, CreateLeagueRequest, JoinLeagueRequest,
+    MAX_MEMBERS_FREE, UpdateScoreRequest, FantasyTeamCreate, FantasyLineupSubmit,
+    BracketUpdateRequest,
+)
 
 # Create the main app
 app = FastAPI(title="Quiniela Liga MX API")
@@ -35,44 +40,6 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
-
-# ============ MODELS ============
-
-class UserRegister(BaseModel):
-    email: EmailStr
-    password: str
-    display_name: str
-
-class UserLogin(BaseModel):
-    email: EmailStr
-    password: str
-
-class UserResponse(BaseModel):
-    id: str
-    email: str
-    display_name: str
-    avatar_base64: Optional[str] = None
-    total_points: int = 0
-    created_at: datetime
-
-class TokenResponse(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
-    user: UserResponse
-
-class RecoverPasswordRequest(BaseModel):
-    email: EmailStr
-
-def serialize_user(user: dict) -> UserResponse:
-    """Serialize user document to response model"""
-    return UserResponse(
-        id=str(user["_id"]),
-        email=user["email"],
-        display_name=user["display_name"],
-        avatar_base64=user.get("avatar_base64"),
-        total_points=user.get("total_points", 0),
-        created_at=user["created_at"]
-    )
 
 # ============ AUTH ROUTES ============
 
@@ -1099,10 +1066,6 @@ async def get_current_jornada():
 
 # ============ QUINIELA ROUTES ============
 
-class QuinielaSubmit(BaseModel):
-    jornada_id: str
-    selections: List[dict]  # [{match_id: str, selection: str}]
-
 @api_router.post("/quiniela/submit")
 async def submit_quiniela(
     quiniela: QuinielaSubmit,
@@ -1286,15 +1249,6 @@ async def get_jornada_rankings(jornada_id: str):
     return {"rankings": rankings, "jornada_id": jornada_id}
 
 # ============ PRIVATE LEAGUES (QUINIELA) ============
-
-class CreateLeagueRequest(BaseModel):
-    name: str
-    mode: str = "quiniela"  # "quiniela" o "fantasy"
-
-class JoinLeagueRequest(BaseModel):
-    code: str
-
-MAX_MEMBERS_FREE = 25
 
 @api_router.post("/leagues")
 async def create_unified_league(
@@ -1863,10 +1817,6 @@ async def get_league_ranking(
     return {"rankings": rankings}
 
 # ============ ADMIN ROUTES FOR QUINIELA ============
-
-class UpdateScoreRequest(BaseModel):
-    home_score: int
-    away_score: int
 
 @api_router.put("/admin/match/{match_id}/score")
 async def update_match_score(match_id: str, scores: UpdateScoreRequest, current_user: dict = Depends(get_admin_user)):
@@ -2603,9 +2553,6 @@ async def get_fantasy_general_rankings():
 
 # ============ FANTASY ROUTES ============
 
-class FantasyTeamCreate(BaseModel):
-    name: str
-
 @api_router.post("/fantasy/team")
 async def create_or_update_fantasy_team(
     team_data: FantasyTeamCreate,
@@ -2726,11 +2673,6 @@ async def get_players(
             continue
     
     return {"players": formatted_players, "total": len(formatted_players)}
-
-class FantasyLineupSubmit(BaseModel):
-    jornada_id: str
-    players: List[dict]  # [{player_id, position_slot}]
-    dt_team_id: Optional[str] = None  # Director Técnico
 
 @api_router.post("/fantasy/lineup")
 async def submit_fantasy_lineup(
@@ -4525,12 +4467,6 @@ async def activate_competition(body: dict, current_user: dict = Depends(get_curr
     return {"message": f"✅ Competición activa: {competition}"}
 
 # ============ ADMIN BRACKET UPDATE ============
-
-class BracketUpdateRequest(BaseModel):
-    cuartos_winners: Optional[List[str]] = None  # ["PUM", "GDL", "CAZ", "PAC"] en orden
-    semis_left_winner: Optional[str] = None      # Ganador SF Izquierda
-    semis_right_winner: Optional[str] = None     # Ganador SF Derecha
-    champion: Optional[str] = None               # Campeón
 
 @api_router.post("/admin/bracket/update")
 async def update_bracket_results(
