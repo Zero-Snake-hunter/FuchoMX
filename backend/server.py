@@ -17,7 +17,6 @@ from config import (
     API_FOOTBALL_KEY, API_FOOTBALL_BASE, API_FOOTBALL_LIGA_MX_ID, API_FOOTBALL_SEASON,
     ADMIN_EMAIL,
 )
-from auth_utils import hash_password, verify_password, create_access_token, decode_token
 from dependencies import security, get_current_user, get_optional_user, get_admin_user
 from achievements import (
     ACHIEVEMENTS_CATALOG, award_achievement,
@@ -25,9 +24,9 @@ from achievements import (
 )
 from fantasy_scoring import calculate_player_points, calculate_fantasy_points
 from jornada_processor import _process_jornada_core
+from routers import auth as auth_router
 from models import (
-    UserRegister, UserLogin, UserResponse, TokenResponse, RecoverPasswordRequest,
-    serialize_user, QuinielaSubmit, CreateLeagueRequest, JoinLeagueRequest,
+    QuinielaSubmit, CreateLeagueRequest, JoinLeagueRequest,
     MAX_MEMBERS_FREE, UpdateScoreRequest, FantasyTeamCreate, FantasyLineupSubmit,
     BracketUpdateRequest,
 )
@@ -35,6 +34,7 @@ from models import (
 # Create the main app
 app = FastAPI(title="Quiniela Liga MX API")
 api_router = APIRouter(prefix="/api")
+api_router.include_router(auth_router.router)
 
 @app.get("/")
 async def health_check():
@@ -46,97 +46,6 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
-
-# ============ AUTH ROUTES ============
-
-@api_router.post("/auth/register", response_model=TokenResponse)
-async def register(user_data: UserRegister):
-    """Register a new user"""
-    # Check if user already exists
-    existing_user = await db.users.find_one({"email": user_data.email})
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="El correo ya está registrado"
-        )
-    
-    # Create new user
-    user_dict = {
-        "email": user_data.email,
-        "password_hash": hash_password(user_data.password),
-        "display_name": user_data.display_name,
-        "avatar_base64": None,
-        "total_points": 0,
-        "created_at": datetime.utcnow()
-    }
-    
-    result = await db.users.insert_one(user_dict)
-    user_dict["_id"] = result.inserted_id
-    
-    # Award first login achievement
-    await award_achievement(result.inserted_id, "first_login")
-    
-    # Create access token
-    access_token = create_access_token({"sub": str(result.inserted_id)})
-    
-    logger.info(f"New user registered: {user_data.email}")
-    
-    return TokenResponse(
-        access_token=access_token,
-        user=serialize_user(user_dict)
-    )
-
-@api_router.post("/auth/login", response_model=TokenResponse)
-async def login(credentials: UserLogin):
-    """Login user"""
-    # Find user
-    user = await db.users.find_one({"email": credentials.email})
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Credenciales inválidas"
-        )
-    
-    # Verify password
-    if not verify_password(credentials.password, user["password_hash"]):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Credenciales inválidas"
-        )
-    
-    # Create access token
-    access_token = create_access_token({"sub": str(user["_id"])})
-    
-    # Veteran: 30 días en la app
-    if user.get("created_at"):
-        days = (datetime.utcnow() - user["created_at"]).days
-        if days >= 30:
-            await award_achievement(user["_id"], "veteran")
-    
-    logger.info(f"User logged in: {credentials.email}")
-    
-    return TokenResponse(
-        access_token=access_token,
-        user=serialize_user(user)
-    )
-
-@api_router.get("/auth/me", response_model=UserResponse)
-async def get_me(current_user: dict = Depends(get_current_user)):
-    """Get current user info"""
-    return serialize_user(current_user)
-
-@api_router.post("/auth/recover-password")
-async def recover_password(request: RecoverPasswordRequest):
-    """Send password recovery email (mock for now)"""
-    user = await db.users.find_one({"email": request.email})
-    if not user:
-        # Don't reveal if email exists
-        return {"message": "Si el correo existe, recibirás instrucciones para recuperar tu contraseña"}
-    
-    # TODO: Implement email sending
-    logger.info(f"Password recovery requested for: {request.email}")
-    
-    return {"message": "Si el correo existe, recibirás instrucciones para recuperar tu contraseña"}
 
 # ============ ADMIN/SEED ROUTES ============
 
