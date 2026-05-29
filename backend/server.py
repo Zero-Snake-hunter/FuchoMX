@@ -1,5 +1,4 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from starlette.middleware.cors import CORSMiddleware
 import os
 import logging
@@ -9,8 +8,6 @@ import uuid
 from datetime import datetime, timedelta
 from real_liga_mx_data import LIGA_MX_TEAMS, CLAUSURA_2026_DATES, CLAUSURA_2026_J13_MATCHES, LIGUILLA_CLAUSURA_2026_TEAMS
 from world_cup_players_data import WC_SQUADS
-import bcrypt
-import jwt
 from bson import ObjectId
 import httpx
 from services.scores_service import get_match_results as _svc_get_match_results
@@ -21,11 +18,12 @@ from config import (
     API_FOOTBALL_KEY, API_FOOTBALL_BASE, API_FOOTBALL_LIGA_MX_ID, API_FOOTBALL_SEASON,
     SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, ADMIN_EMAIL,
 )
+from auth_utils import hash_password, verify_password, create_access_token, decode_token
+from dependencies import security, get_current_user, get_optional_user, get_admin_user
 
 # Create the main app
 app = FastAPI(title="Quiniela Liga MX API")
 api_router = APIRouter(prefix="/api")
-security = HTTPBearer()
 
 @app.get("/")
 async def health_check():
@@ -64,81 +62,6 @@ class TokenResponse(BaseModel):
 
 class RecoverPasswordRequest(BaseModel):
     email: EmailStr
-
-# ============ HELPER FUNCTIONS ============
-
-def hash_password(password: str) -> str:
-    """Hash a password using bcrypt"""
-    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-
-def verify_password(password: str, hashed: str) -> bool:
-    """Verify a password against its hash"""
-    return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
-
-def create_access_token(data: dict) -> str:
-    """Create JWT access token"""
-    to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-
-def decode_token(token: str) -> dict:
-    """Decode JWT token"""
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return payload
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token ha expirado"
-        )
-    except jwt.InvalidTokenError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token inválido"
-        )
-
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    """Get current authenticated user"""
-    token = credentials.credentials
-    payload = decode_token(token)
-    user_id = payload.get("sub")
-    if not user_id:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token inválido"
-        )
-    
-    user = await db.users.find_one({"_id": ObjectId(user_id)})
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Usuario no encontrado"
-        )
-    
-    return user
-
-
-async def get_optional_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False))
-) -> Optional[dict]:
-    """Optional auth — retorna None si no hay token en lugar de lanzar error."""
-    if not credentials:
-        return None
-    try:
-        payload = decode_token(credentials.credentials)
-        user_id = payload.get("sub")
-        if not user_id:
-            return None
-        return await db.users.find_one({"_id": ObjectId(user_id)})
-    except Exception:
-        return None
-
-async def get_admin_user(current_user: dict = Depends(get_current_user)):
-    """Dependency: requiere usuario autenticado con email de admin."""
-    if current_user.get("email") != ADMIN_EMAIL:
-        raise HTTPException(status_code=403, detail="Acceso restringido")
-    return current_user
 
 def serialize_user(user: dict) -> UserResponse:
     """Serialize user document to response model"""
