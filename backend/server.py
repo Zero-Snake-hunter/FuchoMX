@@ -20,7 +20,7 @@ from services.scores_service import get_match_results as _svc_get_match_results
 from services.player_stats_service import get_player_stats as _svc_get_player_stats
 
 ROOT_DIR = Path(__file__).parent
-API_FOOTBALL_KEY = os.environ.get('API_FOOTBALL_KEY', '50792ab8857ff066d1df1ccb3366ca38')
+API_FOOTBALL_KEY = os.environ.get('API_FOOTBALL_KEY')
 API_FOOTBALL_BASE = 'https://v3.football.api-sports.io'
 API_FOOTBALL_LIGA_MX_ID = 262  # Liga MX en API-Football
 API_FOOTBALL_SEASON = 2025     # Temporada Clausura 2026 = season 2025
