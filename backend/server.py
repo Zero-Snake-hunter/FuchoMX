@@ -1,11 +1,8 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
-from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
-from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional
 import uuid
@@ -19,24 +16,11 @@ import httpx
 from services.scores_service import get_match_results as _svc_get_match_results
 from services.player_stats_service import get_player_stats as _svc_get_player_stats
 
-ROOT_DIR = Path(__file__).parent
-API_FOOTBALL_KEY = os.environ.get('API_FOOTBALL_KEY')
-API_FOOTBALL_BASE = 'https://v3.football.api-sports.io'
-API_FOOTBALL_LIGA_MX_ID = 262  # Liga MX en API-Football
-API_FOOTBALL_SEASON = 2025     # Temporada Clausura 2026 = season 2025
-load_dotenv(ROOT_DIR / '.env')
-
-# MongoDB connection
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url, tls=True, tlsAllowInvalidCertificates=True)
-db = client[os.environ.get('DB_NAME', 'quiniela_db')]
-
-# JWT Configuration
-SECRET_KEY = os.environ.get('JWT_SECRET', 'your-secret-key-change-in-production')
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 30  # 30 días
-
-ADMIN_EMAIL = "contacto@distrito.digital"
+from database import client, db
+from config import (
+    API_FOOTBALL_KEY, API_FOOTBALL_BASE, API_FOOTBALL_LIGA_MX_ID, API_FOOTBALL_SEASON,
+    SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, ADMIN_EMAIL,
+)
 
 # Create the main app
 app = FastAPI(title="Quiniela Liga MX API")
