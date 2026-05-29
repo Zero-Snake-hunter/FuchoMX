@@ -1182,8 +1182,8 @@ async def get_current_jornada():
                 "shield_url": "https://via.placeholder.com/100"
             }
         
-        match.pop("home_team_id")
-        match.pop("away_team_id")
+        match.pop("home_team_id", None)
+        match.pop("away_team_id", None)
     
     jornada["id"] = str(jornada.pop("_id"))
     jornada["matches"] = matches
