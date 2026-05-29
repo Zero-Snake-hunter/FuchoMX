@@ -43,6 +43,10 @@ app = FastAPI(title="Quiniela Liga MX API")
 api_router = APIRouter(prefix="/api")
 security = HTTPBearer()
 
+@app.get("/")
+async def health_check():
+    return {"status": "ok", "app": "FuchoMX"}
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
