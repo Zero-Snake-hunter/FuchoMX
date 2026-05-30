@@ -25,7 +25,7 @@ WORLD_CUP_TEAMS = {
     },
     "Czech Republic": {
         "group": "A",
-        "shield_url": "https://upload.wikimedia.org/wikipedia/en/thumb/7/76/Czech_Republic_national_football_team_logo.svg/500px-Czech_Republic_national_football_team_logo.svg.png",
+        "shield_url": "https://flagcdn.com/w160/cz.png",
         "players": []
     },
 
@@ -42,7 +42,7 @@ WORLD_CUP_TEAMS = {
     },
     "Qatar": {
         "group": "B",
-        "shield_url": "https://upload.wikimedia.org/wikipedia/en/thumb/3/3a/Qatar_Football_Association_logo.svg/500px-Qatar_Football_Association_logo.svg.png",
+        "shield_url": "https://flagcdn.com/w160/qa.png",
         "players": []
     },
     "Switzerland": {
@@ -54,12 +54,12 @@ WORLD_CUP_TEAMS = {
     # ── GRUPO C ──
     "Brazil": {
         "group": "C",
-        "shield_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/32/Confedera%C3%A7%C3%A3o_Brasileira_de_Futebol_logo_%282020%29.svg/500px-Confedera%C3%A7%C3%A3o_Brasileira_de_Futebol_logo_%282020%29.svg.png",
+        "shield_url": "https://flagcdn.com/w160/br.png",
         "players": []
     },
     "Morocco": {
         "group": "C",
-        "shield_url": "https://upload.wikimedia.org/wikipedia/en/thumb/d/d0/Royal_Moroccan_Football_Federation_logo.svg/500px-Royal_Moroccan_Football_Federation_logo.svg.png",
+        "shield_url": "https://flagcdn.com/w160/ma.png",
         "players": []
     },
     "Haiti": {
@@ -91,7 +91,7 @@ WORLD_CUP_TEAMS = {
     },
     "Turkey": {
         "group": "D",
-        "shield_url": "https://upload.wikimedia.org/wikipedia/en/thumb/7/70/Turkish_Football_Federation_crest.svg/250px-Turkish_Football_Federation_crest.svg.png",
+        "shield_url": "https://flagcdn.com/w160/tr.png",
         "players": []
     },
 
@@ -164,7 +164,7 @@ WORLD_CUP_TEAMS = {
     # ── GRUPO H ──
     "Spain": {
         "group": "H",
-        "shield_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/Royal_Spanish_Football_Federation_logo.svg/500px-Royal_Spanish_Football_Federation_logo.svg.png",
+        "shield_url": "https://flagcdn.com/w160/es.png",
         "players": []
     },
     "Cape Verde": {
@@ -186,7 +186,7 @@ WORLD_CUP_TEAMS = {
     # ── GRUPO I ──
     "France": {
         "group": "I",
-        "shield_url": "https://upload.wikimedia.org/wikipedia/en/thumb/9/92/FFF_logo_2021.svg/500px-FFF_logo_2021.svg.png",
+        "shield_url": "https://flagcdn.com/w160/fr.png",
         "players": []
     },
     "Senegal": {
@@ -208,7 +208,7 @@ WORLD_CUP_TEAMS = {
     # ── GRUPO J ──
     "Argentina": {
         "group": "J",
-        "shield_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Argentine_Football_Association_logo.svg/500px-Argentine_Football_Association_logo.svg.png",
+        "shield_url": "https://flagcdn.com/w160/ar.png",
         "players": []
     },
     "Algeria": {
@@ -230,7 +230,7 @@ WORLD_CUP_TEAMS = {
     # ── GRUPO K ──
     "Portugal": {
         "group": "K",
-        "shield_url": "https://upload.wikimedia.org/wikipedia/en/thumb/4/4f/Federacao_Portuguesa_Futebol_logo.svg/500px-Federacao_Portuguesa_Futebol_logo.svg.png",
+        "shield_url": "https://flagcdn.com/w160/pt.png",
         "players": []
     },
     "DR Congo": {
@@ -252,7 +252,7 @@ WORLD_CUP_TEAMS = {
     # ── GRUPO L ──
     "England": {
         "group": "L",
-        "shield_url": "https://upload.wikimedia.org/wikipedia/en/thumb/b/be/Flag_of_England.svg/500px-Flag_of_England.svg.png",
+        "shield_url": "https://flagcdn.com/w160/gb-eng.png",
         "players": []
     },
     "Croatia": {
