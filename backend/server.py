@@ -3,6 +3,7 @@ import logging
 from fastapi import FastAPI, APIRouter
 from starlette.middleware.cors import CORSMiddleware
 
+from database import db
 from scheduler import shutdown_app, start_scheduler
 
 from routers import achievements as achievements_router
@@ -44,6 +45,12 @@ async def health_check():
 @api_router.api_route("/ping", methods=["GET", "HEAD"])
 async def ping():
     return {"status": "ok"}
+
+
+@api_router.get("/health/db")
+async def health_db():
+    count = await db.users.count_documents({})
+    return {"status": "ok", "users": count}
 
 
 @api_router.get("/")
