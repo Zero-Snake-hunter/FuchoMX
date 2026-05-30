@@ -49,8 +49,20 @@ async def ping():
 
 @api_router.api_route("/health/db", methods=["GET", "HEAD"])
 async def health_db():
-    count = await db.users.count_documents({})
-    return {"status": "ok", "users": count}
+    import os
+    mongo_url = os.environ.get("MONGO_URL", "NOT_SET")
+    db_name = os.environ.get("DB_NAME", "quiniela_db")
+    try:
+        count = await db.users.count_documents({})
+        return {"status": "ok", "users": count, "db": db_name}
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e),
+            "mongo_url_set": mongo_url != "NOT_SET",
+            "mongo_url_prefix": mongo_url[:30] if mongo_url != "NOT_SET" else None,
+            "db": db_name,
+        }
 
 
 @api_router.get("/")
