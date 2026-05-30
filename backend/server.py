@@ -47,7 +47,7 @@ async def ping():
     return {"status": "ok"}
 
 
-@api_router.get("/health/db")
+@api_router.api_route("/health/db", methods=["GET", "HEAD"])
 async def health_db():
     count = await db.users.count_documents({})
     return {"status": "ok", "users": count}
