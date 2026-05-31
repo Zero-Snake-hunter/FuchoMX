@@ -30,17 +30,17 @@ interface MyStats {
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, logout, isReady } = useAuth();
   const [stats, setStats] = useState<MyStats | null>(null);
   const [loadingStats, setLoadingStats] = useState(true);
 
   useEffect(() => {
-    loadStats();
-  }, []);
+    if (isReady) loadStats();
+  }, [isReady]);
 
   const loadStats = async () => {
     try {
-      const res = await api.get('/api/stats/my');
+      const res = await api.get('/api/stats/my', { timeout: 3000 });
       setStats(res.data);
     } catch (err) {
       console.log('Stats not available:', err);

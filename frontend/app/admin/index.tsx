@@ -37,7 +37,7 @@ interface AdminStats {
 type Tab = 'resumen' | 'usuarios' | 'ligas';
 
 export default function AdminDashboard() {
-  const { user, logout } = useAuth();
+  const { user, logout, isReady } = useAuth();
   const router = useRouter();
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -83,7 +83,7 @@ export default function AdminDashboard() {
     }
   }, []);
 
-  useEffect(() => { fetchStats(); }, []);
+  useEffect(() => { if (isReady) fetchStats(); }, [isReady]);
 
   const onRefresh = () => { setRefreshing(true); fetchStats(); };
 

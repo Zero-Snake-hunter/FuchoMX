@@ -10,7 +10,7 @@ console.log('🔧 [API] Instancia creada con baseURL:', BACKEND_URL);
 // Crear instancia de axios con configuración base
 const api = axios.create({
   baseURL: BACKEND_URL,
-  timeout: 15000,
+  timeout: 8000,
   headers: {
     'Content-Type': 'application/json',
   },

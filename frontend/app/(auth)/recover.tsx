@@ -42,8 +42,11 @@ export default function RecoverPasswordScreen() {
           },
         ]
       );
-    } catch (error) {
-      Alert.alert('Error', 'Ocurrió un error. Por favor intenta de nuevo.');
+    } catch (error: any) {
+      let msg = 'Ocurrió un error. Por favor intenta de nuevo.';
+      if (error.response?.data?.detail) msg = error.response.data.detail;
+      else if (error.message === 'Network Error') msg = 'Error de conexión. Verifica tu internet.';
+      Alert.alert('Error', msg);
     } finally {
       setLoading(false);
     }
