@@ -94,3 +94,9 @@ class BracketUpdateRequest(BaseModel):
     semis_left_winner: Optional[str] = None
     semis_right_winner: Optional[str] = None
     champion: Optional[str] = None
+
+
+# ── Push Notifications ────────────────────────────────────────────────────────
+
+class RegisterPushTokenRequest(BaseModel):
+    token: str

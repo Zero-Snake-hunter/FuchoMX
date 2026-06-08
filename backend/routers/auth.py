@@ -9,6 +9,7 @@ from database import db
 from dependencies import get_current_user
 from models import (
     RecoverPasswordRequest,
+    RegisterPushTokenRequest,
     TokenResponse,
     UserRegister,
     UserLogin,
@@ -98,3 +99,22 @@ async def recover_password(request: RecoverPasswordRequest):
     logger.info(f"Password recovery requested for: {request.email}")
 
     return {"message": "Si el correo existe, recibirás instrucciones para recuperar tu contraseña"}
+
+
+@router.post("/push-token")
+async def register_push_token(
+    request: RegisterPushTokenRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    token = request.token.strip()
+    if not token.startswith("ExponentPushToken["):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Token de push inválido. Debe empezar con 'ExponentPushToken['",
+        )
+    await db.users.update_one(
+        {"_id": current_user["_id"]},
+        {"$addToSet": {"push_tokens": token}},
+    )
+    logger.info(f"Push token registrado para {current_user['email']}")
+    return {"message": "Token registrado"}
