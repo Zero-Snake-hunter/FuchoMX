@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import random
 from datetime import datetime, timedelta
@@ -22,6 +23,7 @@ from services.api_football_service import (
     get_live_fixtures as _af_get_live,
     get_players_by_team as _af_get_players,
 )
+from services.push_service import notify_jornada_open
 
 logger = logging.getLogger(__name__)
 
@@ -293,7 +295,7 @@ async def seed_real_data(current_user: dict = Depends(get_admin_user)):
 # ── Jornada management ────────────────────────────────────────────────────────
 
 @router.post("/admin/reset-jornada")
-async def reset_jornada(week: int = None, current_user: dict = Depends(get_admin_user)):
+async def reset_jornada(week: int = None, reminder_hours: int = 2, current_user: dict = Depends(get_admin_user)):
     now = datetime.utcnow()
 
     if week is not None:
@@ -305,8 +307,10 @@ async def reset_jornada(week: int = None, current_user: dict = Depends(get_admin
         await db.jornadas.update_many({"competition": competition}, {"$set": {"is_active": False}})
         await db.jornadas.update_one({"_id": target["_id"]}, {"$set": {
             "is_active": True, "status": "in_progress",
-            "start_date": now, "end_date": now + timedelta(days=7)
+            "start_date": now, "end_date": now + timedelta(days=7),
+            "reminder_hours": reminder_hours, "notified_reminder": False,
         }})
+        asyncio.create_task(notify_jornada_open(week))
         logger.info(f"Admin reset-jornada: jornada {week} activada directamente")
         return {"message": f"✅ Jornada {week} activada", "week_number": week, "jornada_id": str(target["_id"])}
 
@@ -331,8 +335,10 @@ async def reset_jornada(week: int = None, current_user: dict = Depends(get_admin
 
     await db.jornadas.update_one({"_id": next_j["_id"]}, {"$set": {
         "is_active": True, "status": "in_progress",
-        "start_date": now, "end_date": now + timedelta(days=7)
+        "start_date": now, "end_date": now + timedelta(days=7),
+        "reminder_hours": reminder_hours, "notified_reminder": False,
     }})
+    asyncio.create_task(notify_jornada_open(closed_week + 1))
     logger.info(f"Admin reset-jornada: {closed_week} → {closed_week + 1}")
     return {
         "message": f"✅ Jornada {closed_week} cerrada → Jornada {closed_week + 1} activa",
@@ -341,7 +347,7 @@ async def reset_jornada(week: int = None, current_user: dict = Depends(get_admin
 
 
 @router.post("/admin/quiniela/cerrar-jornada/{jornada_id}")
-async def close_jornada(jornada_id: str, current_user: dict = Depends(get_admin_user)):
+async def close_jornada(jornada_id: str, reminder_hours: int = 2, current_user: dict = Depends(get_admin_user)):
     try:
         jornada_oid = ObjectId(jornada_id)
     except Exception:
@@ -361,8 +367,11 @@ async def close_jornada(jornada_id: str, current_user: dict = Depends(get_admin_
 
     next_info = None
     if next_jornada:
-        await db.jornadas.update_one({"_id": next_jornada["_id"]},
-                                     {"$set": {"status": "upcoming", "is_active": True}})
+        await db.jornadas.update_one({"_id": next_jornada["_id"]}, {"$set": {
+            "status": "upcoming", "is_active": True,
+            "reminder_hours": reminder_hours, "notified_reminder": False,
+        }})
+        asyncio.create_task(notify_jornada_open(next_jornada["week_number"]))
         next_info = {"id": str(next_jornada["_id"]), "week_number": next_jornada["week_number"]}
         logger.info(f"Closed jornada {current_week}, activated jornada {current_week + 1}")
     else:
@@ -748,3 +757,26 @@ async def close_all_jornadas(current_user: dict = Depends(get_current_user)):
     )
     return {"message": f"{result.modified_count} jornada(s) cerrada(s) correctamente",
             "modified": result.modified_count}
+
+
+@router.patch("/admin/jornada/{jornada_id}/reminder")
+async def update_reminder_hours(
+    jornada_id: str,
+    reminder_hours: int,
+    current_user: dict = Depends(get_admin_user),
+):
+    """Actualiza reminder_hours y resetea notified_reminder para reenviar el recordatorio."""
+    try:
+        jornada_oid = ObjectId(jornada_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="ID de jornada inválido")
+
+    result = await db.jornadas.update_one(
+        {"_id": jornada_oid},
+        {"$set": {"reminder_hours": reminder_hours, "notified_reminder": False}},
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Jornada no encontrada")
+
+    logger.info(f"Admin: reminder_hours de jornada {jornada_id} → {reminder_hours}h")
+    return {"message": f"✅ Recordatorio ajustado a {reminder_hours}h antes del partido"}
