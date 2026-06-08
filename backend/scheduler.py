@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 
 from database import client, db
 from jornada_processor import _process_jornada_core
+from services.push_service import notify_jornada_reminder
 from services.scores_service import (
     _fetch_365scores,
     _STATUS_MAP,
@@ -131,6 +132,33 @@ async def _auto_update_scores():
             now = datetime.utcnow()
             today_start = now.replace(hour=0,  minute=0,  second=0,  microsecond=0)
             today_end   = now.replace(hour=23, minute=59, second=59, microsecond=0)
+
+            # ── Recordatorio de picks (se evalúa en cada ciclo) ───────────────────
+            try:
+                jornada_reminder = await db.jornadas.find_one(
+                    {"is_active": True, "notified_reminder": {"$ne": True}}
+                )
+                if jornada_reminder:
+                    first_match = await db.matches.find_one(
+                        {"jornada_id": jornada_reminder["_id"], "status": "scheduled"},
+                        sort=[("start_at", 1)],
+                    )
+                    if first_match and first_match.get("start_at"):
+                        reminder_hours = jornada_reminder.get("reminder_hours", 2)
+                        reminder_time = first_match["start_at"] - timedelta(hours=reminder_hours)
+                        if now >= reminder_time:
+                            week = jornada_reminder.get("week_number", "?")
+                            await notify_jornada_reminder(
+                                jornada_reminder["_id"], week, reminder_hours
+                            )
+                            await db.jornadas.update_one(
+                                {"_id": jornada_reminder["_id"]},
+                                {"$set": {"notified_reminder": True}},
+                            )
+                            logger.info(f"✅ Recordatorio enviado para jornada {week}")
+            except Exception as exc:
+                logger.error(f"❌ Error en check de recordatorio: {exc}")
+            # ──────────────────────────────────────────────────────────────────────
 
             games = await _fetch_365scores(today_start, today_end)
 
