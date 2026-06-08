@@ -28,7 +28,7 @@ async def _send_batch(tokens: List[str], title: str, body: str) -> None:
 
 async def _gather_tokens(query: dict) -> List[str]:
     users = await db.users.find(query, {"push_tokens": 1}).to_list(None)
-    return [t for u in users for t in u.get("push_tokens", [])]
+    return [t for u in users for t in (u.get("push_tokens") or [])]
 
 
 async def notify_all_users(title: str, body: str) -> None:
