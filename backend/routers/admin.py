@@ -1,5 +1,7 @@
 import asyncio
 import logging
+
+_bg_tasks: set = set()
 import random
 from datetime import datetime, timedelta
 
@@ -310,7 +312,9 @@ async def reset_jornada(week: int = None, reminder_hours: int = 2, current_user:
             "start_date": now, "end_date": now + timedelta(days=7),
             "reminder_hours": reminder_hours, "notified_reminder": False,
         }})
-        asyncio.create_task(notify_jornada_open(week))
+        _task = asyncio.create_task(notify_jornada_open(week))
+        _bg_tasks.add(_task)
+        _task.add_done_callback(_bg_tasks.discard)
         logger.info(f"Admin reset-jornada: jornada {week} activada directamente")
         return {"message": f"✅ Jornada {week} activada", "week_number": week, "jornada_id": str(target["_id"])}
 
@@ -338,7 +342,9 @@ async def reset_jornada(week: int = None, reminder_hours: int = 2, current_user:
         "start_date": now, "end_date": now + timedelta(days=7),
         "reminder_hours": reminder_hours, "notified_reminder": False,
     }})
-    asyncio.create_task(notify_jornada_open(closed_week + 1))
+    _task = asyncio.create_task(notify_jornada_open(closed_week + 1))
+    _bg_tasks.add(_task)
+    _task.add_done_callback(_bg_tasks.discard)
     logger.info(f"Admin reset-jornada: {closed_week} → {closed_week + 1}")
     return {
         "message": f"✅ Jornada {closed_week} cerrada → Jornada {closed_week + 1} activa",
@@ -371,7 +377,9 @@ async def close_jornada(jornada_id: str, reminder_hours: int = 2, current_user: 
             "status": "upcoming", "is_active": True,
             "reminder_hours": reminder_hours, "notified_reminder": False,
         }})
-        asyncio.create_task(notify_jornada_open(next_jornada["week_number"]))
+        _task = asyncio.create_task(notify_jornada_open(next_jornada["week_number"]))
+        _bg_tasks.add(_task)
+        _task.add_done_callback(_bg_tasks.discard)
         next_info = {"id": str(next_jornada["_id"]), "week_number": next_jornada["week_number"]}
         logger.info(f"Closed jornada {current_week}, activated jornada {current_week + 1}")
     else:
