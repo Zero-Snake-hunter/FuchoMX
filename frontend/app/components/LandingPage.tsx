@@ -53,7 +53,7 @@ export default function LandingPage() {
         <Text style={s.heroSubtitle}>Predice. Arma tu once ideal. Gana.{'\n'}Tu fut, con tus cuates.</Text>
         <View style={s.heroBtns}>
           <TouchableOpacity style={s.heroBtnPrimary} onPress={() => router.push('/(auth)/register')}>
-            <Ionicons name="rocket" size={18} color="#000" />
+            <Ionicons name="rocket" size={18} color="#FFF" />
             <Text style={s.heroBtnPrimaryText}>Jugar gratis</Text>
           </TouchableOpacity>
           <TouchableOpacity style={s.heroBtnSecondary} onPress={() => router.push('/(auth)/login')}>
@@ -141,9 +141,9 @@ export default function LandingPage() {
       </View>
 
       {/* CTA FINAL */}
-      <View style={[s.section, { backgroundColor: '#E63946', alignItems: 'center' }]}>
+      <View style={[s.section, { backgroundColor: '#C02030', alignItems: 'center' }]}>
         <Text style={[s.sectionTitle, { color: '#FFF', textAlign: 'center' }]}>¿Listo para jugar?</Text>
-        <Text style={[s.heroSubtitle, { color: 'rgba(255,255,255,0.8)', textAlign: 'center' }]}>Únete gratis y empieza a competir esta jornada.</Text>
+        <Text style={[s.heroSubtitle, { color: '#FFF', textAlign: 'center' }]}>Únete gratis y empieza a competir esta jornada.</Text>
         <TouchableOpacity style={s.ctaBtn} onPress={() => router.push('/(auth)/register')}>
           <Text style={s.ctaBtnText}>Crear mi cuenta gratis 🚀</Text>
         </TouchableOpacity>
@@ -170,7 +170,7 @@ const s = StyleSheet.create({
   navBrand:            { color: '#FFF', fontWeight: '900', fontSize: 16, letterSpacing: 1, marginRight: 16 },
   navBtn:              { paddingHorizontal: 16, paddingVertical: 8, marginRight: 8 },
   navBtnText:          { color: '#AAAAAA', fontSize: 14 },
-  navBtnPrimary:       { backgroundColor: '#E63946', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 },
+  navBtnPrimary:       { backgroundColor: '#C02030', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 },
   navBtnPrimaryText:   { color: '#FFF', fontWeight: '700', fontSize: 14 },
   // HERO
   hero:                { alignItems: 'center', paddingHorizontal: 24, paddingTop: 60, paddingBottom: 60 },
@@ -180,14 +180,14 @@ const s = StyleSheet.create({
   heroTitle:           { fontSize: isWide ? 56 : 40, fontWeight: '900', color: '#FFF', textAlign: 'center', lineHeight: isWide ? 64 : 48, marginBottom: 16 },
   heroSubtitle:        { fontSize: 16, color: '#888', textAlign: 'center', lineHeight: 24, marginBottom: 32 },
   heroBtns:            { flexDirection: 'row', gap: 12, marginBottom: 48 },
-  heroBtnPrimary:      { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#E63946', paddingHorizontal: 28, paddingVertical: 16, borderRadius: 12 },
+  heroBtnPrimary:      { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#C02030', paddingHorizontal: 28, paddingVertical: 16, borderRadius: 12 },
   heroBtnPrimaryText:  { color: '#FFF', fontWeight: '900', fontSize: 16 },
   heroBtnSecondary:    { paddingHorizontal: 28, paddingVertical: 16, borderRadius: 12, borderWidth: 1, borderColor: '#333' },
   heroBtnSecondaryText:{ color: '#AAA', fontSize: 16 },
   heroStats:           { flexDirection: 'row', alignItems: 'center', gap: 0 },
   heroStat:            { alignItems: 'center', paddingHorizontal: 24 },
   heroStatNum:         { fontSize: 28, fontWeight: '900', color: '#E63946' },
-  heroStatLabel:       { fontSize: 12, color: '#666', marginTop: 4 },
+  heroStatLabel:       { fontSize: 12, color: '#888', marginTop: 4 },
   heroStatDivider:     { width: 1, height: 40, backgroundColor: '#222' },
   // SECTIONS
   section:             { paddingHorizontal: 24, paddingVertical: 60 },
@@ -199,14 +199,14 @@ const s = StyleSheet.create({
   featureCardWide:     { width: '30%' },
   featureIcon:         { width: 56, height: 56, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
   featureTitle:        { color: '#FFF', fontWeight: '800', fontSize: 16, marginBottom: 8 },
-  featureDesc:         { color: '#666', fontSize: 14, lineHeight: 20 },
+  featureDesc:         { color: '#AAA', fontSize: 14, lineHeight: 20 },
   // STEPS
   steps:               { gap: 16, maxWidth: 600, alignSelf: 'center', width: '100%' },
   stepCard:            { flexDirection: 'row', alignItems: 'center', backgroundColor: '#181818', borderRadius: 16, padding: 20, gap: 16 },
   stepNum:             { width: 48, height: 48, borderRadius: 24, backgroundColor: '#E63946', justifyContent: 'center', alignItems: 'center' },
   stepNumText:         { color: '#FFF', fontWeight: '900', fontSize: 20 },
   stepTitle:           { color: '#FFF', fontWeight: '700', fontSize: 16, marginBottom: 4 },
-  stepDesc:            { color: '#666', fontSize: 13 },
+  stepDesc:            { color: '#AAA', fontSize: 13 },
   // SPONSORS
   sponsorSubtitle:     { color: '#666', fontSize: 15, textAlign: 'center', marginBottom: 32, maxWidth: 500, alignSelf: 'center' },
   sponsorCards:        { flexDirection: 'row', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 32 },
@@ -217,12 +217,12 @@ const s = StyleSheet.create({
   sponsorBtnText:      { color: '#FFF', fontWeight: '700', fontSize: 16 },
   // CTA
   ctaBtn:              { backgroundColor: '#FFF', paddingHorizontal: 32, paddingVertical: 18, borderRadius: 12, marginTop: 24 },
-  ctaBtnText:          { color: '#E63946', fontWeight: '900', fontSize: 16 },
+  ctaBtnText:          { color: '#C02030', fontWeight: '900', fontSize: 16 },
   // FOOTER
   footer:              { alignItems: 'center', paddingVertical: 48, borderTopWidth: 1, borderTopColor: '#1a1a1a' },
   footerLogo:          { width: 60, height: 60, marginBottom: 8 },
   footerBrand:         { color: '#FFF', fontWeight: '900', fontSize: 18, letterSpacing: 1 },
-  footerSub:           { color: '#555', fontSize: 14, marginTop: 4, marginBottom: 16 },
+  footerSub:           { color: '#888', fontSize: 14, marginTop: 4, marginBottom: 16 },
   footerContact:       { color: '#E63946', fontSize: 13, marginBottom: 8 },
-  footerCopy:          { color: '#333', fontSize: 12 },
+  footerCopy:          { color: '#888', fontSize: 12 },
 });
