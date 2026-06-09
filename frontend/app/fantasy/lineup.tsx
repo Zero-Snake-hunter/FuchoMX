@@ -296,11 +296,7 @@ export default function LineupScreen() {
       });
 
       setAlreadySubmitted(true);
-      Alert.alert(
-        '✅ ¡Alineación Guardada!', 
-        currentJornada?.type === 'liguilla' && currentJornada?.title ? `Tu equipo está listo para ${currentJornada.title.replace('Liguilla Clausura 2026 — ', '')}.` : `Tu equipo está listo para la Jornada ${currentJornada?.week_number}.`,
-        [{ text: 'Ver Rankings', onPress: () => router.replace('/fantasy/rankings') }]
-      );
+      router.replace('/fantasy/rankings');
       
     } catch (error: any) {
       console.error('Error saving lineup:', error);

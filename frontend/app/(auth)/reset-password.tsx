@@ -48,11 +48,7 @@ export default function ResetPasswordScreen() {
         token,
         new_password: newPassword,
       });
-      Alert.alert(
-        'Contraseña actualizada',
-        'Tu contraseña fue restablecida. Ya puedes iniciar sesión.',
-        [{ text: 'Iniciar sesión', onPress: () => router.replace('/(auth)/login') }]
-      );
+      router.replace('/(auth)/login');
     } catch (error: any) {
       let msg = 'Ocurrió un error. Por favor intenta de nuevo.';
       if (error.response?.data?.detail) msg = error.response.data.detail;
