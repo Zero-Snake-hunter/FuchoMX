@@ -9,13 +9,16 @@ import { Ionicons } from '@expo/vector-icons';
 const { width } = Dimensions.get('window');
 const isWide = width > 768;
 
-const FEATURES = [
+const PRIMARY_FEATURES = [
   { icon: 'football', title: 'FuchoQuiniela', desc: 'Predice los resultados de cada jornada de Liga MX y compite con tus cuates en tu liga privada.', color: '#E63946' },
   { icon: 'shirt', title: 'FuchoOnce', desc: 'Arma tu once ideal con jugadores reales de Liga MX y gana puntos según sus estadísticas reales.', color: '#1D88E5' },
+];
+
+const SECONDARY_FEATURES = [
   { icon: 'trophy', title: 'Ligas Privadas', desc: 'Crea tu liga, invita a tus amigos con un código y compite toda la temporada.', color: '#FFD700' },
   { icon: 'ribbon', title: 'Logros y Rachas', desc: '20 logros desbloqueables, rachas de aciertos y rankings en tiempo real.', color: '#2A9D8F' },
-  { icon: 'bar-chart', title: 'Rankings en Vivo', desc: 'Tabla de posiciones actualizada automáticamente al terminar cada partido.', color: '#FF9800' },
-  { icon: 'gift', title: '100% Gratis', desc: 'Sin suscripciones, sin pagos ocultos. Quiniela y fantasy completamente gratis.', color: '#4CAF50' },
+  { icon: 'bar-chart', title: 'Rankings en Vivo', desc: 'Tabla de posiciones actualizada al terminar cada partido.', color: '#FF9800' },
+  { icon: 'gift', title: '100% Gratis', desc: 'Sin suscripciones, sin pagos ocultos. Completamente gratis.', color: '#4CAF50' },
 ];
 
 const SPONSORS = [
@@ -60,36 +63,32 @@ export default function LandingPage() {
             <Text style={s.heroBtnSecondaryText}>Ya tengo cuenta</Text>
           </TouchableOpacity>
         </View>
-        <View style={s.heroStats}>
-          <View style={s.heroStat}>
-            <Text style={s.heroStatNum}>2</Text>
-            <Text style={s.heroStatLabel}>Modos de juego</Text>
-          </View>
-          <View style={s.heroStatDivider} />
-          <View style={s.heroStat}>
-            <Text style={s.heroStatNum}>20</Text>
-            <Text style={s.heroStatLabel}>Logros</Text>
-          </View>
-          <View style={s.heroStatDivider} />
-          <View style={s.heroStat}>
-            <Text style={s.heroStatNum}>100%</Text>
-            <Text style={s.heroStatLabel}>Gratis</Text>
-          </View>
-        </View>
+        <Text style={s.heroTagline}>Liga MX · Cada jornada · Sin costo.</Text>
       </View>
 
       {/* FEATURES */}
       <View style={s.section}>
-        <Text style={s.sectionTag}>CARACTERÍSTICAS</Text>
-        <Text style={s.sectionTitle}>Todo lo que necesitas{'\n'}para tu quiniela</Text>
-        <View style={s.featuresGrid}>
-          {FEATURES.map((f, i) => (
-            <View key={i} style={[s.featureCard, isWide && s.featureCardWide]}>
-              <View style={[s.featureIcon, { backgroundColor: f.color + '22' }]}>
-                <Ionicons name={f.icon as any} size={28} color={f.color} />
+        <Text style={s.sectionTitle}>Quiniela y fantasy.{'\n'}Un solo lugar.</Text>
+        {PRIMARY_FEATURES.map((f, i) => (
+          <View key={i} style={s.featurePrimary}>
+            <View style={[s.featurePrimaryAccent, { backgroundColor: f.color }]} />
+            <View style={s.featurePrimaryContent}>
+              <View style={s.featurePrimaryHeader}>
+                <Ionicons name={f.icon as any} size={22} color={f.color} />
+                <Text style={s.featurePrimaryTitle}>{f.title}</Text>
               </View>
-              <Text style={s.featureTitle}>{f.title}</Text>
-              <Text style={s.featureDesc}>{f.desc}</Text>
+              <Text style={s.featurePrimaryDesc}>{f.desc}</Text>
+            </View>
+          </View>
+        ))}
+        <View style={[s.featuresSecondary, isWide && { flexDirection: 'row', flexWrap: 'wrap', gap: 16 }]}>
+          {SECONDARY_FEATURES.map((f, i) => (
+            <View key={i} style={[s.featureSecondary, isWide && { width: '47%' }]}>
+              <Ionicons name={f.icon as any} size={18} color={f.color} style={s.featureSecondaryIcon} />
+              <View style={{ flex: 1 }}>
+                <Text style={s.featureSecondaryTitle}>{f.title}</Text>
+                <Text style={s.featureSecondaryDesc}>{f.desc}</Text>
+              </View>
             </View>
           ))}
         </View>
@@ -97,7 +96,6 @@ export default function LandingPage() {
 
       {/* COMO FUNCIONA */}
       <View style={[s.section, { backgroundColor: '#111' }]}>
-        <Text style={s.sectionTag}>ASÍ DE FÁCIL</Text>
         <Text style={s.sectionTitle}>3 pasos y ya{'\n'}estás jugando</Text>
         <View style={s.steps}>
           {[
@@ -179,27 +177,28 @@ const s = StyleSheet.create({
   heroLogo:            { width: 140, height: 140, marginBottom: 24 },
   heroTitle:           { fontSize: isWide ? 56 : 40, fontWeight: '900', color: '#FFF', textAlign: 'center', lineHeight: isWide ? 64 : 48, marginBottom: 16 },
   heroSubtitle:        { fontSize: 16, color: '#888', textAlign: 'center', lineHeight: 24, marginBottom: 32 },
-  heroBtns:            { flexDirection: 'row', gap: 12, marginBottom: 48 },
+  heroBtns:            { flexDirection: 'row', gap: 12, marginBottom: 32 },
   heroBtnPrimary:      { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#C02030', paddingHorizontal: 28, paddingVertical: 16, borderRadius: 12 },
   heroBtnPrimaryText:  { color: '#FFF', fontWeight: '900', fontSize: 16 },
   heroBtnSecondary:    { paddingHorizontal: 28, paddingVertical: 16, borderRadius: 12, borderWidth: 1, borderColor: '#333' },
   heroBtnSecondaryText:{ color: '#AAA', fontSize: 16 },
-  heroStats:           { flexDirection: 'row', alignItems: 'center', gap: 0 },
-  heroStat:            { alignItems: 'center', paddingHorizontal: 24 },
-  heroStatNum:         { fontSize: 28, fontWeight: '900', color: '#E63946' },
-  heroStatLabel:       { fontSize: 12, color: '#888', marginTop: 4 },
-  heroStatDivider:     { width: 1, height: 40, backgroundColor: '#222' },
+  heroTagline:         { fontSize: 13, color: '#888', textAlign: 'center', letterSpacing: 0.5 },
   // SECTIONS
   section:             { paddingHorizontal: 24, paddingVertical: 60 },
   sectionTag:          { color: '#E63946', fontSize: 11, fontWeight: '800', letterSpacing: 3, marginBottom: 12, textAlign: 'center' },
   sectionTitle:        { fontSize: isWide ? 36 : 28, fontWeight: '900', color: '#FFF', textAlign: 'center', marginBottom: 40, lineHeight: isWide ? 44 : 36 },
   // FEATURES
-  featuresGrid:        { flexDirection: 'row', flexWrap: 'wrap', gap: 16, justifyContent: 'center' },
-  featureCard:         { backgroundColor: '#181818', borderRadius: 16, padding: 24, width: '100%', maxWidth: 340 },
-  featureCardWide:     { width: '30%' },
-  featureIcon:         { width: 56, height: 56, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
-  featureTitle:        { color: '#FFF', fontWeight: '800', fontSize: 16, marginBottom: 8 },
-  featureDesc:         { color: '#AAA', fontSize: 14, lineHeight: 20 },
+  featurePrimary:         { flexDirection: 'row', marginBottom: 28, gap: 0 },
+  featurePrimaryAccent:   { width: 3, borderRadius: 2, marginRight: 20 },
+  featurePrimaryContent:  { flex: 1 },
+  featurePrimaryHeader:   { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
+  featurePrimaryTitle:    { color: '#FFF', fontWeight: '900', fontSize: 20 },
+  featurePrimaryDesc:     { color: '#AAA', fontSize: 14, lineHeight: 22 },
+  featuresSecondary:      { marginTop: 8, gap: 16 },
+  featureSecondary:       { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
+  featureSecondaryIcon:   { marginTop: 2 },
+  featureSecondaryTitle:  { color: '#FFF', fontWeight: '700', fontSize: 14, marginBottom: 2 },
+  featureSecondaryDesc:   { color: '#888', fontSize: 13, lineHeight: 18 },
   // STEPS
   steps:               { gap: 16, maxWidth: 600, alignSelf: 'center', width: '100%' },
   stepCard:            { flexDirection: 'row', alignItems: 'center', backgroundColor: '#181818', borderRadius: 16, padding: 20, gap: 16 },
@@ -208,7 +207,7 @@ const s = StyleSheet.create({
   stepTitle:           { color: '#FFF', fontWeight: '700', fontSize: 16, marginBottom: 4 },
   stepDesc:            { color: '#AAA', fontSize: 13 },
   // SPONSORS
-  sponsorSubtitle:     { color: '#666', fontSize: 15, textAlign: 'center', marginBottom: 32, maxWidth: 500, alignSelf: 'center' },
+  sponsorSubtitle:     { color: '#888', fontSize: 15, textAlign: 'center', marginBottom: 32, maxWidth: 500, alignSelf: 'center' },
   sponsorCards:        { flexDirection: 'row', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 32 },
   sponsorCard:         { borderWidth: 2, borderRadius: 16, padding: 24, minWidth: 140, alignItems: 'center' },
   sponsorTier:         { fontWeight: '900', fontSize: 18, letterSpacing: 2, marginBottom: 8 },
