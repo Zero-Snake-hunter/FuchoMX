@@ -19,10 +19,13 @@ export default function RecoverPasswordScreen() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   const handleRecover = async () => {
+    setErrorMsg('');
     if (!email) {
-      Alert.alert('Error', 'Por favor ingresa tu correo electrónico');
+      setErrorMsg('Por favor ingresa tu correo electrónico');
       return;
     }
 
@@ -31,26 +34,39 @@ export default function RecoverPasswordScreen() {
       await api.post('/api/auth/recover-password', {
         email: email.toLowerCase().trim(),
       });
-
-      Alert.alert(
-        'Solicitud enviada',
-        'Si el correo existe, recibirás instrucciones para recuperar tu contraseña.',
-        [
-          {
-            text: 'OK',
-            onPress: () => router.back(),
-          },
-        ]
-      );
+      setSent(true);
     } catch (error: any) {
       let msg = 'Ocurrió un error. Por favor intenta de nuevo.';
       if (error.response?.data?.detail) msg = error.response.data.detail;
       else if (error.message === 'Network Error') msg = 'Error de conexión. Verifica tu internet.';
-      Alert.alert('Error', msg);
+      setErrorMsg(msg);
     } finally {
       setLoading(false);
     }
   };
+
+  if (sent) {
+    return (
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.container}
+      >
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+          <View style={styles.header}>
+            <Ionicons name="checkmark-circle" size={60} color="#00A551" />
+            <Text style={styles.title}>¡ENVIADO!</Text>
+            <Text style={styles.subtitle}>
+              Si el correo existe, recibirás instrucciones para recuperar tu contraseña.
+              Revisa tu bandeja de entrada.
+            </Text>
+          </View>
+          <TouchableOpacity style={styles.recoverButton} onPress={() => router.back()}>
+            <Text style={styles.recoverButtonText}>VOLVER AL INICIO</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -90,6 +106,8 @@ export default function RecoverPasswordScreen() {
               autoCorrect={false}
             />
           </View>
+
+          {errorMsg ? <Text style={styles.errorText}>{errorMsg}</Text> : null}
 
           <TouchableOpacity
             style={[styles.recoverButton, loading && styles.buttonDisabled]}
@@ -184,6 +202,12 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.6,
+  },
+  errorText: {
+    color: '#DC143C',
+    fontSize: 13,
+    textAlign: 'center',
+    marginBottom: 12,
   },
   recoverButtonText: {
     color: '#FFFFFF',

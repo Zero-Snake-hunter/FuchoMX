@@ -21,6 +21,7 @@ export default function CreateTeamScreen() {
   const [teamName, setTeamName] = useState('');
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
     loadCurrentTeam();
@@ -52,37 +53,22 @@ export default function CreateTeamScreen() {
   };
 
   const handleSave = async () => {
-    console.log('🔄 handleSave called');
-    console.log('Team name:', teamName);
-    console.log('Token:', token ? 'exists' : 'missing');
-
+    setErrorMsg('');
     if (!teamName.trim()) {
-      Alert.alert('Error', 'Por favor ingresa un nombre para tu equipo');
+      setErrorMsg('Por favor ingresa un nombre para tu equipo');
       return;
     }
 
     setLoading(true);
     try {
-      console.log('🔄 Enviando request al backend...');
-      const response = await api.post('/api/fantasy/team', { 
-        name: teamName.trim() 
-      });
-
-      console.log('✅ Response:', response.data);
-      
+      await api.post('/api/fantasy/team', { name: teamName.trim() });
       if (isEditing) {
-        // Si está editando, solo muestra mensaje y regresa
-        Alert.alert('¡Éxito!', 'Nombre actualizado');
         router.back();
       } else {
-        // Si es nuevo equipo, navega a lineup inmediatamente
-        console.log('✅ Equipo creado! Navegando a lineup...');
         router.push('/fantasy/lineup');
       }
     } catch (error: any) {
-      console.error('❌ Error saving team:', error.response?.status, error.message);
-      const errorMessage = error.response?.data?.detail || 'Error al guardar el equipo. Intenta de nuevo.';
-      Alert.alert('Error', errorMessage);
+      setErrorMsg(error.response?.data?.detail || 'Error al guardar el equipo. Intenta de nuevo.');
     } finally {
       setLoading(false);
     }
@@ -121,6 +107,8 @@ export default function CreateTeamScreen() {
             />
           </View>
           <Text style={styles.charCount}>{teamName.length}/30 caracteres</Text>
+
+          {errorMsg ? <Text style={styles.errorText}>{errorMsg}</Text> : null}
 
           <TouchableOpacity
             style={[styles.saveButton, loading && styles.buttonDisabled]}
@@ -224,6 +212,13 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.6,
+  },
+  errorText: {
+    color: '#DC143C',
+    fontSize: 13,
+    textAlign: 'center',
+    marginTop: 12,
+    marginBottom: 4,
   },
   saveButtonText: {
     color: '#FFFFFF',

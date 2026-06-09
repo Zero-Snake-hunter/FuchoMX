@@ -109,6 +109,7 @@ export default function BracketScreen() {
   const [saving, setSaving] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const [bracketData, setBracketData] = useState<any>(null);
   const [picks, setPicks] = useState<BracketPicks>(EMPTY);
   const [byPos, setByPos] = useState<Record<number, TeamInfo>>({});
@@ -179,6 +180,7 @@ export default function BracketScreen() {
 
   const saveBracket = async () => {
     if (!picks.champion) return;
+    setSaveError('');
     setSaving(true);
     try {
       await api.post('/api/liguilla/bracket/submit', {
@@ -187,9 +189,8 @@ export default function BracketScreen() {
         champion:      picks.champion?.id,
       });
       setSaved(true);
-      Alert.alert('✅ Bracket guardado', `Tu campeón: ${picks.champion.name}\n\n¡Ahora comparte tu bracket!`);
     } catch {
-      Alert.alert('Error', 'No se pudo guardar el bracket');
+      setSaveError('No se pudo guardar el bracket. Intenta de nuevo.');
     } finally {
       setSaving(false);
     }
@@ -406,6 +407,11 @@ export default function BracketScreen() {
       {/* Submit / Share bar */}
       {picks.champion && (
         <View style={s.submitBar}>
+          {saved && (
+            <Text style={s.savedText}>✓ Bracket guardado — ¡comparte tu predicción!</Text>
+          )}
+          {saveError ? <Text style={s.saveErrorText}>{saveError}</Text> : null}
+
           {/* Save button — always visible when champion is picked */}
           <TouchableOpacity
             style={s.submitBtn}
@@ -415,7 +421,7 @@ export default function BracketScreen() {
           >
             {saving
               ? <ActivityIndicator color="#FFF" />
-              : <Text style={s.submitText}>GUARDAR MI BRACKET</Text>}
+              : <Text style={s.submitText}>{saved ? 'ACTUALIZAR BRACKET' : 'GUARDAR MI BRACKET'}</Text>}
           </TouchableOpacity>
 
           {/* Share button — visible after saving */}
@@ -534,6 +540,8 @@ const s = StyleSheet.create({
   submitText:   { color: '#FFF', fontSize: 15, fontWeight: '800', letterSpacing: 1 },
   shareBtn:     { backgroundColor: '#111', borderRadius: 12, paddingVertical: 13, alignItems: 'center', borderWidth: 1, borderColor: '#E63946' },
   shareText:    { color: '#E63946', fontSize: 15, fontWeight: '700', letterSpacing: 0.5 },
+  savedText:    { color: '#00A551', fontSize: 13, fontWeight: '600', textAlign: 'center' },
+  saveErrorText: { color: '#E63946', fontSize: 13, textAlign: 'center' },
 });
 
 const mc = StyleSheet.create({

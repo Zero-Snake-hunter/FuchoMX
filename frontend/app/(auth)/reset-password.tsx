@@ -23,22 +23,24 @@ export default function ResetPasswordScreen() {
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   const handleReset = async () => {
+    setErrorMsg('');
     if (!newPassword || !confirmPassword) {
-      Alert.alert('Error', 'Por favor completa ambos campos');
+      setErrorMsg('Por favor completa ambos campos');
       return;
     }
     if (newPassword.length < 6) {
-      Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres');
+      setErrorMsg('La contraseña debe tener al menos 6 caracteres');
       return;
     }
     if (newPassword !== confirmPassword) {
-      Alert.alert('Error', 'Las contraseñas no coinciden');
+      setErrorMsg('Las contraseñas no coinciden');
       return;
     }
     if (!token) {
-      Alert.alert('Error', 'Token inválido. Solicita un nuevo enlace de recuperación.');
+      setErrorMsg('Token inválido. Solicita un nuevo enlace de recuperación.');
       return;
     }
 
@@ -53,7 +55,7 @@ export default function ResetPasswordScreen() {
       let msg = 'Ocurrió un error. Por favor intenta de nuevo.';
       if (error.response?.data?.detail) msg = error.response.data.detail;
       else if (error.message === 'Network Error') msg = 'Error de conexión. Verifica tu internet.';
-      Alert.alert('Error', msg);
+      setErrorMsg(msg);
     } finally {
       setLoading(false);
     }
@@ -114,6 +116,8 @@ export default function ResetPasswordScreen() {
               <Ionicons name={showConfirm ? 'eye-off-outline' : 'eye-outline'} size={20} color="#666" />
             </TouchableOpacity>
           </View>
+
+          {errorMsg ? <Text style={styles.errorText}>{errorMsg}</Text> : null}
 
           <TouchableOpacity
             style={[styles.resetButton, loading && styles.buttonDisabled]}
@@ -211,6 +215,12 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.6,
+  },
+  errorText: {
+    color: '#DC143C',
+    fontSize: 13,
+    textAlign: 'center',
+    marginBottom: 12,
   },
   resetButtonText: {
     color: '#FFFFFF',

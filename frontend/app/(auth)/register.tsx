@@ -25,47 +25,40 @@ export default function RegisterScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   const handleRegister = async () => {
-    console.log('[Register] handleRegister ejecutado', { displayName, email, password: password.length });
-
+    setErrorMsg('');
     if (!displayName.trim() || !email.trim() || !password || !confirmPassword) {
-      Alert.alert('Error', 'Por favor completa todos los campos');
+      setErrorMsg('Por favor completa todos los campos');
       return;
     }
-
     if (displayName.trim().length > 20) {
-      Alert.alert('Nombre muy largo', 'Usa un apodo o nombre corto (máx. 20 caracteres).');
+      setErrorMsg('Usa un apodo o nombre corto (máx. 20 caracteres).');
       return;
     }
-
     if (displayName.trim().length < 3) {
-      Alert.alert('Nombre muy corto', 'Tu nombre debe tener al menos 3 caracteres.');
+      setErrorMsg('Tu nombre debe tener al menos 3 caracteres.');
       return;
     }
-
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Las contraseñas no coinciden');
+      setErrorMsg('Las contraseñas no coinciden');
       return;
     }
-
     if (password.length < 6) {
-      Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres');
+      setErrorMsg('La contraseña debe tener al menos 6 caracteres');
       return;
     }
 
     setLoading(true);
     try {
-      console.log('[Register] Llamando a register()...');
       await register(email.toLowerCase().trim(), password, displayName.trim());
-      console.log('[Register] Registro exitoso, navegando a welcome');
       router.replace({
         pathname: '/(auth)/welcome',
         params: { name: displayName.trim() },
       });
     } catch (error: any) {
-      console.log('[Register] Error:', error.message);
-      Alert.alert('Error al registrarse', error.message || 'No se pudo crear la cuenta. Intenta de nuevo.');
+      setErrorMsg(error.message || 'No se pudo crear la cuenta. Intenta de nuevo.');
     } finally {
       setLoading(false);
     }
@@ -162,6 +155,8 @@ export default function RegisterScreen() {
               autoCapitalize="none"
             />
           </View>
+
+          {errorMsg ? <Text style={styles.errorText}>{errorMsg}</Text> : null}
 
           <TouchableOpacity
             style={[styles.registerButton, loading && styles.buttonDisabled]}
@@ -261,6 +256,12 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.6,
+  },
+  errorText: {
+    color: '#DC143C',
+    fontSize: 13,
+    textAlign: 'center',
+    marginBottom: 12,
   },
   registerButtonText: {
     color: '#FFFFFF',

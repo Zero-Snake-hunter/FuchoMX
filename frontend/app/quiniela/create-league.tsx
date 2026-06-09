@@ -24,23 +24,25 @@ export default function CreateLeagueScreen() {
   const [leagueName, setLeagueName] = useState('');
   const [loading, setLoading] = useState(false);
   const [createdLeague, setCreatedLeague] = useState<any>(null);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [copied, setCopied] = useState(false);
 
   const handleCreate = async () => {
+    setErrorMsg('');
     if (!leagueName.trim()) {
-      Alert.alert('Error', 'Por favor ingresa un nombre para la liga');
+      setErrorMsg('Por favor ingresa un nombre para la liga');
       return;
     }
 
     setLoading(true);
     try {
-      const response = await api.post('/api/quiniela/league', { 
-        name: leagueName.trim() 
+      const response = await api.post('/api/quiniela/league', {
+        name: leagueName.trim()
       });
-
       setCreatedLeague(response.data);
     } catch (error: any) {
       if (error.response?.status !== 401) {
-        Alert.alert('Error', error.response?.data?.detail || 'Error al crear liga');
+        setErrorMsg(error.response?.data?.detail || 'Error al crear liga');
       }
     } finally {
       setLoading(false);
@@ -50,7 +52,8 @@ export default function CreateLeagueScreen() {
   const copyCode = async () => {
     if (createdLeague?.code) {
       await Clipboard.setStringAsync(createdLeague.code);
-      Alert.alert('¡Copiado!', 'Código copiado al portapapeles');
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     }
   };
 
@@ -96,8 +99,8 @@ export default function CreateLeagueScreen() {
 
           <View style={styles.actions}>
             <TouchableOpacity style={styles.actionButton} onPress={copyCode}>
-              <Ionicons name="copy-outline" size={24} color="#FFFFFF" />
-              <Text style={styles.actionButtonText}>Copiar Código</Text>
+              <Ionicons name={copied ? 'checkmark' : 'copy-outline'} size={24} color="#FFFFFF" />
+              <Text style={styles.actionButtonText}>{copied ? '¡Copiado!' : 'Copiar Código'}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -146,6 +149,8 @@ export default function CreateLeagueScreen() {
             />
           </View>
           <Text style={styles.charCount}>{leagueName.length}/30 caracteres</Text>
+
+          {errorMsg ? <Text style={styles.errorText}>{errorMsg}</Text> : null}
 
           <TouchableOpacity
             style={[styles.createButton, loading && styles.buttonDisabled]}
@@ -294,6 +299,12 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.6,
+  },
+  errorText: {
+    color: '#DC143C',
+    fontSize: 13,
+    textAlign: 'center',
+    marginTop: 12,
   },
   createButtonText: {
     color: '#FFFFFF',

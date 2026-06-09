@@ -21,40 +21,31 @@ export default function JoinLeagueScreen() {
   const { token } = useAuth();
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   const handleJoin = async () => {
+    setErrorMsg('');
     if (!code.trim()) {
-      Alert.alert('Error', 'Por favor ingresa el código de la liga');
+      setErrorMsg('Por favor ingresa el código de la liga');
       return;
     }
-
     if (code.trim().length !== 6) {
-      Alert.alert('Error', 'El código debe tener 6 caracteres');
+      setErrorMsg('El código debe tener 6 caracteres');
       return;
     }
 
     setLoading(true);
     try {
-      console.log('📡 [JoinLeague] Uniéndose a liga con código:', code.trim().toUpperCase());
       const response = await api.post(
         '/api/quiniela/league/join',
         { code: code.trim().toUpperCase() }
       );
-
-      Alert.alert('¡Éxito!', `Te has unido a "${response.data.league_name}"`, [
-        {
-          text: 'OK',
-          onPress: () => {
-            router.replace({
-              pathname: '/quiniela/league-detail',
-              params: { leagueId: response.data.league_id },
-            });
-          },
-        },
-      ]);
+      router.replace({
+        pathname: '/quiniela/league-detail',
+        params: { leagueId: response.data.league_id },
+      });
     } catch (error: any) {
-      const message = error.response?.data?.detail || 'Error al unirse a la liga';
-      Alert.alert('Error', message);
+      setErrorMsg(error.response?.data?.detail || 'Error al unirse a la liga');
     } finally {
       setLoading(false);
     }
@@ -91,6 +82,8 @@ export default function JoinLeagueScreen() {
             />
           </View>
           <Text style={styles.charCount}>{code.length}/6 caracteres</Text>
+
+          {errorMsg ? <Text style={styles.errorText}>{errorMsg}</Text> : null}
 
           <TouchableOpacity
             style={[styles.joinButton, loading && styles.buttonDisabled]}
@@ -195,6 +188,12 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.6,
+  },
+  errorText: {
+    color: '#DC143C',
+    fontSize: 13,
+    textAlign: 'center',
+    marginTop: 12,
   },
   joinButtonText: {
     color: '#FFFFFF',

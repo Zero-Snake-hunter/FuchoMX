@@ -23,10 +23,12 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   const handleLogin = async () => {
+    setErrorMsg('');
     if (!email || !password) {
-      Alert.alert('Error', 'Por favor completa todos los campos');
+      setErrorMsg('Por favor completa todos los campos');
       return;
     }
 
@@ -35,7 +37,7 @@ export default function LoginScreen() {
       await login(email.toLowerCase().trim(), password);
       router.replace('/(tabs)/home');
     } catch (error: any) {
-      Alert.alert('Error', error.message);
+      setErrorMsg(error.message || 'No se pudo iniciar sesión. Intenta de nuevo.');
     } finally {
       setLoading(false);
     }
@@ -104,6 +106,8 @@ export default function LoginScreen() {
           >
             <Text style={styles.forgotText}>¿Olvidaste tu contraseña?</Text>
           </TouchableOpacity>
+
+          {errorMsg ? <Text style={styles.errorText}>{errorMsg}</Text> : null}
 
           <TouchableOpacity
             style={[styles.loginButton, loading && styles.buttonDisabled]}
@@ -202,6 +206,12 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.6,
+  },
+  errorText: {
+    color: '#DC143C',
+    fontSize: 13,
+    textAlign: 'center',
+    marginBottom: 12,
   },
   loginButtonText: {
     color: '#FFFFFF',
