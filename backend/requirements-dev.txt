@@ -1,0 +1,30 @@
+-r requirements.txt
+
+# Testing
+pytest==9.0.1
+pytest-asyncio==0.24.0
+iniconfig==2.3.0
+pluggy==1.6.0
+
+# Linting / formatting
+black==25.11.0
+flake8==7.3.0
+isort==7.0.0
+mccabe==0.7.0
+pycodestyle==2.14.0
+pyflakes==3.4.0
+pathspec==0.12.1
+
+# Type checking
+mypy==1.18.2
+mypy_extensions==1.1.0
+
+# Dev tools
+platformdirs==4.5.0
+watchfiles==1.1.1
+rich==14.2.0
+markdown-it-py==4.0.0
+mdurl==0.1.2
+Pygments==2.19.2
+typer==0.20.0
+shellingham==1.5.4
