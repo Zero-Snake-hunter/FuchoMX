@@ -1,13 +1,10 @@
 import React from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Image, Linking, Dimensions,
+  Image, Linking, useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-
-const { width } = Dimensions.get('window');
-const isWide = width > 768;
 
 const PRIMARY_FEATURES = [
   { icon: 'football', title: 'FuchoQuiniela', desc: 'Predice los resultados de cada jornada de Liga MX y compite con tus cuates en tu liga privada.', color: '#E63946' },
@@ -29,6 +26,10 @@ const SPONSORS = [
 
 export default function LandingPage() {
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const isWide = width > 768;
+  const wideHeroTitle    = isWide ? { fontSize: 56, lineHeight: 64 } : undefined;
+  const wideSectionTitle = isWide ? { fontSize: 36, lineHeight: 44 } : undefined;
 
   return (
     <ScrollView style={s.container} showsVerticalScrollIndicator={false}>
@@ -52,7 +53,7 @@ export default function LandingPage() {
           <Text style={s.heroPillText}>LIGA MX · QUINIELA · ONCE</Text>
         </View>
         <Image source={require('../../assets/images/FuchoMX.png')} style={s.heroLogo} resizeMode="contain" />
-        <Text style={s.heroTitle}>La quiniela de{'\n'}tus cuates</Text>
+        <Text style={[s.heroTitle, wideHeroTitle]}>La quiniela de{'\n'}tus cuates</Text>
         <Text style={s.heroSubtitle}>Predice. Arma tu once ideal. Gana.{'\n'}Tu fut, con tus cuates.</Text>
         <View style={s.heroBtns}>
           <TouchableOpacity style={s.heroBtnPrimary} onPress={() => router.push('/(auth)/register')}>
@@ -68,7 +69,7 @@ export default function LandingPage() {
 
       {/* FEATURES */}
       <View style={s.section}>
-        <Text style={s.sectionTitle}>Quiniela y fantasy.{'\n'}Un solo lugar.</Text>
+        <Text style={[s.sectionTitle, wideSectionTitle]}>Quiniela y fantasy.{'\n'}Un solo lugar.</Text>
         {PRIMARY_FEATURES.map((f, i) => (
           <View key={i} style={s.featurePrimary}>
             <View style={[s.featurePrimaryAccent, { backgroundColor: f.color }]} />
@@ -96,7 +97,7 @@ export default function LandingPage() {
 
       {/* COMO FUNCIONA */}
       <View style={[s.section, { backgroundColor: '#111' }]}>
-        <Text style={s.sectionTitle}>3 pasos y ya{'\n'}estás jugando</Text>
+        <Text style={[s.sectionTitle, wideSectionTitle]}>3 pasos y ya{'\n'}estás jugando</Text>
         <View style={s.steps}>
           {[
             { n: '1', t: 'Crea tu cuenta gratis', d: 'Regístrate en segundos, sin tarjeta.' },
@@ -119,7 +120,7 @@ export default function LandingPage() {
       {/* SPONSORS */}
       <View style={s.section}>
         <Text style={s.sectionTag}>PATROCINADORES</Text>
-        <Text style={s.sectionTitle}>Llega a los aficionados{'\n'}de Liga MX en Aguascalientes</Text>
+        <Text style={[s.sectionTitle, wideSectionTitle]}>Llega a los aficionados{'\n'}de Liga MX en Aguascalientes</Text>
         <Text style={s.sponsorSubtitle}>FuchoMX conecta marcas locales con fanáticos del fut. 100% gratis para usuarios, monetizado por sponsors.</Text>
         <View style={s.sponsorCards}>
           {SPONSORS.map((sp, i) => (
@@ -140,7 +141,7 @@ export default function LandingPage() {
 
       {/* CTA FINAL */}
       <View style={[s.section, { backgroundColor: '#C02030', alignItems: 'center' }]}>
-        <Text style={[s.sectionTitle, { color: '#FFF', textAlign: 'center' }]}>¿Listo para jugar?</Text>
+        <Text style={[s.sectionTitle, wideSectionTitle, { color: '#FFF', textAlign: 'center' }]}>¿Listo para jugar?</Text>
         <Text style={[s.heroSubtitle, { color: '#FFF', textAlign: 'center' }]}>Únete gratis y empieza a competir esta jornada.</Text>
         <TouchableOpacity style={s.ctaBtn} onPress={() => router.push('/(auth)/register')}>
           <Text style={s.ctaBtnText}>Crear mi cuenta gratis 🚀</Text>
@@ -166,16 +167,16 @@ const s = StyleSheet.create({
   nav:                 { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#1a1a1a' },
   navLogo:             { width: 36, height: 36, marginRight: 8 },
   navBrand:            { color: '#FFF', fontWeight: '900', fontSize: 16, letterSpacing: 1, marginRight: 16 },
-  navBtn:              { paddingHorizontal: 16, paddingVertical: 8, marginRight: 8 },
+  navBtn:              { paddingHorizontal: 16, paddingVertical: 12, marginRight: 8, minHeight: 44, justifyContent: 'center' },
   navBtnText:          { color: '#AAAAAA', fontSize: 14 },
-  navBtnPrimary:       { backgroundColor: '#C02030', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 },
+  navBtnPrimary:       { backgroundColor: '#C02030', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 8, minHeight: 44, justifyContent: 'center' },
   navBtnPrimaryText:   { color: '#FFF', fontWeight: '700', fontSize: 14 },
   // HERO
   hero:                { alignItems: 'center', paddingHorizontal: 24, paddingTop: 60, paddingBottom: 60 },
   heroPill:            { borderWidth: 1, borderColor: '#E6394655', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 5, marginBottom: 24 },
   heroPillText:        { color: '#E63946', fontSize: 11, fontWeight: '800', letterSpacing: 2 },
   heroLogo:            { width: 140, height: 140, marginBottom: 24 },
-  heroTitle:           { fontSize: isWide ? 56 : 40, fontWeight: '900', color: '#FFF', textAlign: 'center', lineHeight: isWide ? 64 : 48, marginBottom: 16 },
+  heroTitle:           { fontSize: 40, fontWeight: '900', color: '#FFF', textAlign: 'center', lineHeight: 48, marginBottom: 16 },
   heroSubtitle:        { fontSize: 16, color: '#888', textAlign: 'center', lineHeight: 24, marginBottom: 32 },
   heroBtns:            { flexDirection: 'row', gap: 12, marginBottom: 32 },
   heroBtnPrimary:      { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#C02030', paddingHorizontal: 28, paddingVertical: 16, borderRadius: 12 },
@@ -186,7 +187,7 @@ const s = StyleSheet.create({
   // SECTIONS
   section:             { paddingHorizontal: 24, paddingVertical: 60 },
   sectionTag:          { color: '#E63946', fontSize: 11, fontWeight: '800', letterSpacing: 3, marginBottom: 12, textAlign: 'center' },
-  sectionTitle:        { fontSize: isWide ? 36 : 28, fontWeight: '900', color: '#FFF', textAlign: 'center', marginBottom: 40, lineHeight: isWide ? 44 : 36 },
+  sectionTitle:        { fontSize: 28, fontWeight: '900', color: '#FFF', textAlign: 'center', marginBottom: 40, lineHeight: 36 },
   // FEATURES
   featurePrimary:         { flexDirection: 'row', marginBottom: 28, gap: 0 },
   featurePrimaryAccent:   { width: 3, borderRadius: 2, marginRight: 20 },
