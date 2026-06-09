@@ -55,6 +55,13 @@ export default function LandingPage() {
         <Image source={require('../../assets/images/FuchoMX.png')} style={s.heroLogo} resizeMode="contain" />
         <Text style={[s.heroTitle, wideHeroTitle]}>La quiniela de{'\n'}tus cuates</Text>
         <Text style={s.heroSubtitle}>Predice. Arma tu once ideal. Gana.{'\n'}Tu fut, con tus cuates.</Text>
+        <View style={[s.heroMockupWrap, isWide && s.heroMockupWrapWide]}>
+          <Image
+            source={require('../../assets/images/mockup-app.png')}
+            style={[s.heroMockupImg, isWide && s.heroMockupImgWide]}
+            resizeMode="contain"
+          />
+        </View>
         <View style={s.heroBtns}>
           <TouchableOpacity style={s.heroBtnPrimary} onPress={() => router.push('/(auth)/register')}>
             <Ionicons name="rocket" size={18} color="#FFF" />
@@ -66,6 +73,7 @@ export default function LandingPage() {
         </View>
         <Text style={s.heroTagline}>Liga MX · Cada jornada · Sin costo.</Text>
       </View>
+
 
       {/* FEATURES */}
       <View style={s.section}>
@@ -177,7 +185,11 @@ const s = StyleSheet.create({
   heroPillText:        { color: '#E63946', fontSize: 11, fontWeight: '800', letterSpacing: 2 },
   heroLogo:            { width: 140, height: 140, marginBottom: 24 },
   heroTitle:           { fontSize: 40, fontWeight: '900', color: '#FFF', textAlign: 'center', lineHeight: 48, marginBottom: 16 },
-  heroSubtitle:        { fontSize: 16, color: '#888', textAlign: 'center', lineHeight: 24, marginBottom: 32 },
+  heroSubtitle:        { fontSize: 16, color: '#888', textAlign: 'center', lineHeight: 24, marginBottom: 12 },
+  heroMockupWrap:      { alignItems: 'center', marginTop: 4, marginBottom: 36, shadowColor: '#E63946', shadowOffset: { width: 0, height: 16 }, shadowOpacity: 0.45, shadowRadius: 32, elevation: 18 },
+  heroMockupWrapWide:  { marginBottom: 44 },
+  heroMockupImg:       { width: 280, height: 356 },
+  heroMockupImgWide:   { width: 320, height: 408 },
   heroBtns:            { flexDirection: 'row', gap: 12, marginBottom: 32 },
   heroBtnPrimary:      { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#C02030', paddingHorizontal: 28, paddingVertical: 16, borderRadius: 12 },
   heroBtnPrimaryText:  { color: '#FFF', fontWeight: '900', fontSize: 16 },
