@@ -17,3 +17,7 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 30  # 30 días
 
 ADMIN_EMAIL = "contacto@distrito.digital"
+
+# Email (Resend)
+RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://fucho.com.mx')
