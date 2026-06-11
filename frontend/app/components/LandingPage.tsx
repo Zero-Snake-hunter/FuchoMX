@@ -401,6 +401,8 @@ const s = StyleSheet.create({
   // ─── SECTIONS ───────────────────────────────────────────────────────────
   section: {
     width: '100%',
+    maxWidth: 1100,
+    alignSelf: 'center',
     paddingHorizontal: 24,
     paddingVertical: 64,
   },
@@ -441,7 +443,7 @@ const s = StyleSheet.create({
 
   // ─── FEATURES secondary ─────────────────────────────────────────────────
   featuresGrid:     { marginTop: 8, gap: 20 },
-  featuresGridWide: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
+  featuresGridWide: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, maxWidth: 800, alignSelf: 'center', width: '100%' },
 
   featureSecondary:     { flexDirection: 'row', gap: 14, alignItems: 'flex-start' },
   featureSecondaryWide: { width: '47%' },
