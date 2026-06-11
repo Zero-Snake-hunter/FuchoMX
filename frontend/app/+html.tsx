@@ -26,6 +26,12 @@ const SCHEMA_ORG = JSON.stringify({
   foundingLocation: { '@type': 'Place', addressLocality: 'Aguascalientes', addressCountry: 'MX' },
 });
 
+const GLOBAL_CSS = `
+  *, *::before, *::after { box-sizing: border-box; }
+  html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; }
+  :root { scroll-behavior: smooth; }
+`;
+
 export default function Root({ children }: PropsWithChildren) {
   return (
     <html lang="es-MX">
@@ -41,6 +47,12 @@ export default function Root({ children }: PropsWithChildren) {
         <meta name="robots" content="index, follow" />
         <meta name="theme-color" content="#090909" />
 
+        {/* App meta */}
+        <meta name="application-name" content="FuchoMX" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="FuchoMX" />
+
         {/* Open Graph */}
         <meta property="og:type" content="website" />
         <meta property="og:url" content={`${SITE_URL}/`} />
@@ -49,17 +61,22 @@ export default function Root({ children }: PropsWithChildren) {
         <meta property="og:locale" content="es_MX" />
         <meta property="og:site_name" content="FuchoMX" />
 
-        {/* App meta */}
-        <meta name="application-name" content="FuchoMX" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="FuchoMX" />
-
         {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:site" content="@FuchoMX" />
         <meta name="twitter:title" content={TITLE} />
         <meta name="twitter:description" content={DESCRIPTION} />
+
+        {/* Barlow Condensed (display) + Barlow (body) — stadium energy, not on reflex-reject list */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,700;0,800;0,900;1,800&family=Barlow:wght@400;500;600&display=swap"
+          rel="stylesheet"
+        />
+
+        {/* Global render quality */}
+        <style dangerouslySetInnerHTML={{ __html: GLOBAL_CSS }} />
 
         {/* Structured data */}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: SCHEMA_WEB_APP }} />

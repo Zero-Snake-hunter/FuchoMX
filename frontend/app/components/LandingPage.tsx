@@ -1,13 +1,23 @@
 import React from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Image, Linking, useWindowDimensions, Platform,
+  View, Text, StyleSheet, ScrollView, Image,
+  Linking, useWindowDimensions, Platform, Pressable,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 
-// Emojis en lugar de Ionicons para features/steps/CTA — los Ionicons no
-// renderizan como glifos en el build web de Expo (aparecen como cuadros vacíos)
+// ─── PLATFORM HELPERS ────────────────────────────────────────────────────────
+// Barlow Condensed loaded in +html.tsx via Google Fonts. Web only — native falls back to system.
+const d = (w: string) =>
+  Platform.select({ web: { fontFamily: "'Barlow Condensed', system-ui, sans-serif", fontWeight: w } as any, default: {} }) as any;
+
+const trans = Platform.select({
+  web: { transition: 'transform 0.15s ease, box-shadow 0.15s ease, background-color 0.12s ease' } as any,
+  default: {},
+}) as any;
+
+const pointer = Platform.select({ web: { cursor: 'pointer' } as any, default: {} }) as any;
+
+// ─── DATA ────────────────────────────────────────────────────────────────────
 const PRIMARY_FEATURES = [
   {
     emoji: '⚽',
@@ -24,31 +34,31 @@ const PRIMARY_FEATURES = [
 ];
 
 const SECONDARY_FEATURES = [
-  { emoji: '👥', title: 'Ligas Privadas',       desc: 'Genera un código único y compártelo. Tus cuates entran directo — nadie más.',          color: '#FFD700' },
-  { emoji: '🏆', title: 'Logros y Rachas',       desc: 'Desbloquea 20 logros únicos. Mantén tu racha y demuestra que siempre sabes.',          color: '#2A9D8F' },
-  { emoji: '📊', title: 'Rankings en Tiempo Real', desc: 'Posiciones actualizadas al instante. Siempre sabes si vas ganando.',                 color: '#FF9800' },
-  { emoji: '🎁', title: 'Sin costo, sin trampa',  desc: 'Gratis hoy, gratis siempre. Sin suscripciones, sin cobros ocultos, sin trucos.',      color: '#4CAF50' },
+  { emoji: '👥', title: 'Ligas Privadas',          desc: 'Código único. Tus cuates entran directo — nadie más.',                         color: '#FFD700' },
+  { emoji: '🏆', title: 'Logros y Rachas',           desc: '20 logros desbloqueables. Mantén tu racha, escala de rango.',                  color: '#2A9D8F' },
+  { emoji: '📊', title: 'Rankings en Tiempo Real',   desc: 'Posiciones actualizadas al instante. Siempre sabes si vas ganando.',           color: '#FF9800' },
+  { emoji: '🎁', title: '100% Gratis',               desc: 'Gratis hoy, gratis siempre. Sin suscripciones ni cobros ocultos.',            color: '#4CAF50' },
 ];
 
 const STEPS = [
-  { n: '1', emoji: '👤', t: 'Crea tu cuenta gratis',             d: 'Solo tu correo y en 30 segundos ya tienes cuenta. Sin tarjeta, sin número de teléfono.' },
-  { n: '2', emoji: '👥', t: 'Crea tu liga y comparte el código', d: 'Tus cuates entran directo con el código. En un minuto ya están todos adentro.' },
-  { n: '3', emoji: '⚽', t: 'Predice cada jornada y compite',    d: 'Predice los 10 partidos antes de cada fecha. Al final queda claro quién sabe más de fut.' },
+  { n: '01', t: 'Crea tu cuenta',        d: 'Solo tu correo. 30 segundos. Sin tarjeta ni número de teléfono.' },
+  { n: '02', t: 'Arma tu liga',          d: 'Comparte el código. Tus cuates entran directo. Un minuto.' },
+  { n: '03', t: 'Predice y compite',     d: 'Antes de cada jornada, elige tus resultados. Al final queda claro quién sabe más.' },
 ];
 
-// PNG: 606×983 (recortado, sin naranja) → ratio ancho/alto = 0.617
+// ─── MOCKUP DIMS (unchanged) ──────────────────────────────────────────────────
 const MOCKUP_W      = 230;
-const MOCKUP_H      = Math.round(MOCKUP_W * 983 / 606);    // 373
+const MOCKUP_H      = Math.round(MOCKUP_W * 983 / 606);
 const MOCKUP_W_WIDE = 295;
-const MOCKUP_H_WIDE = Math.round(MOCKUP_W_WIDE * 983 / 606); // 479
+const MOCKUP_H_WIDE = Math.round(MOCKUP_W_WIDE * 983 / 606);
+const WRAP_H        = MOCKUP_H + 40;
+const GLOW_R        = 210;
+const GLOW_TOP      = (WRAP_H - GLOW_R) / 2;
+const RIGHT_H       = MOCKUP_H_WIDE + 48;
+const GLOW_R_WIDE   = 290;
+const GLOW_TOP_W    = (RIGHT_H - GLOW_R_WIDE) / 2;
 
-const WRAP_H      = MOCKUP_H + 40;
-const GLOW_R      = 210;
-const GLOW_TOP    = (WRAP_H - GLOW_R) / 2;
-const RIGHT_H     = MOCKUP_H_WIDE + 48;
-const GLOW_R_WIDE = 290;
-const GLOW_TOP_W  = (RIGHT_H - GLOW_R_WIDE) / 2;
-
+// ─── COMPONENT ───────────────────────────────────────────────────────────────
 export default function LandingPage() {
   const router = useRouter();
   const { width } = useWindowDimensions();
@@ -62,15 +72,21 @@ export default function LandingPage() {
         <Image source={require('../../assets/images/FuchoMX.png')} style={s.navLogo} resizeMode="contain" />
         <Text style={s.navBrand}>FUCHO MX</Text>
         <View style={{ flex: 1 }} />
-        <TouchableOpacity style={s.navBtn} onPress={() => router.push('/(auth)/login')}>
+        <Pressable
+          style={({ hovered }) => [s.navBtn, hovered && s.navBtnHover]}
+          onPress={() => router.push('/(auth)/login')}
+        >
           <Text style={s.navBtnText}>Iniciar sesión</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={s.navBtnPrimary} onPress={() => router.push('/(auth)/register')}>
+        </Pressable>
+        <Pressable
+          style={({ hovered }) => [s.navBtnPrimary, hovered && s.navBtnPrimaryHover]}
+          onPress={() => router.push('/(auth)/register')}
+        >
           <Text style={s.navBtnPrimaryText}>Registrarse</Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
 
-      {/* ─── HERO — NO TOCAR ──────────────────────────────────────────────── */}
+      {/* ─── HERO ─────────────────────────────────────────────────────────── */}
       <View style={s.hero}>
         {isWide ? (
           <View style={s.heroRow}>
@@ -83,19 +99,29 @@ export default function LandingPage() {
                 Predice resultados, arma tu once de 11 jugadores reales y compite jornada a jornada en tu liga privada.
               </Text>
               <View style={s.heroBtns}>
-                <TouchableOpacity style={s.heroBtnPrimary} onPress={() => router.push('/(auth)/register')}>
-                  <Ionicons name="rocket" size={18} color="#FFF" />
+                <Pressable
+                  style={({ hovered, pressed }) => [s.heroBtnPrimary, (hovered || pressed) && s.heroBtnPrimaryActive]}
+                  onPress={() => router.push('/(auth)/register')}
+                >
+                  <Text style={s.heroBtnEmoji}>🚀</Text>
                   <Text style={s.heroBtnPrimaryText}>Crear mi quiniela gratis</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={s.heroBtnSecondary} onPress={() => router.push('/(auth)/login')}>
+                </Pressable>
+                <Pressable
+                  style={({ hovered, pressed }) => [s.heroBtnSecondary, (hovered || pressed) && s.heroBtnSecondaryActive]}
+                  onPress={() => router.push('/(auth)/login')}
+                >
                   <Text style={s.heroBtnSecondaryText}>Ya tengo cuenta</Text>
-                </TouchableOpacity>
+                </Pressable>
               </View>
               <Text style={s.heroTaglineWide}>Sin tarjeta · Tu liga lista en 2 minutos</Text>
             </View>
             <View style={s.heroRight}>
               <View style={s.heroGlowWide} />
-              <Image source={require('../../assets/images/mockup-app.png')} style={s.heroImgWide} resizeMode="contain" />
+              <Image
+                source={require('../../assets/images/mockup-app.png')}
+                style={s.heroImgWide}
+                resizeMode="contain"
+              />
             </View>
           </View>
         ) : (
@@ -105,16 +131,26 @@ export default function LandingPage() {
             <Text style={s.heroSubtitle}>Predice resultados, arma tu once{'\n'}y sube en el ranking con tus cuates.</Text>
             <View style={s.heroMockupWrap}>
               <View style={s.heroGlow} />
-              <Image source={require('../../assets/images/mockup-app.png')} style={s.heroImg} resizeMode="contain" />
+              <Image
+                source={require('../../assets/images/mockup-app.png')}
+                style={s.heroImg}
+                resizeMode="contain"
+              />
             </View>
             <View style={s.heroBtns}>
-              <TouchableOpacity style={s.heroBtnPrimary} onPress={() => router.push('/(auth)/register')}>
-                <Ionicons name="rocket" size={18} color="#FFF" />
+              <Pressable
+                style={({ hovered, pressed }) => [s.heroBtnPrimary, (hovered || pressed) && s.heroBtnPrimaryActive]}
+                onPress={() => router.push('/(auth)/register')}
+              >
+                <Text style={s.heroBtnEmoji}>🚀</Text>
                 <Text style={s.heroBtnPrimaryText}>Jugar gratis</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={s.heroBtnSecondary} onPress={() => router.push('/(auth)/login')}>
+              </Pressable>
+              <Pressable
+                style={({ hovered, pressed }) => [s.heroBtnSecondary, (hovered || pressed) && s.heroBtnSecondaryActive]}
+                onPress={() => router.push('/(auth)/login')}
+              >
                 <Text style={s.heroBtnSecondaryText}>Ya tengo cuenta</Text>
-              </TouchableOpacity>
+              </Pressable>
             </View>
             <Text style={s.heroTagline}>Sin tarjeta · Tu liga lista en 2 minutos</Text>
           </>
@@ -130,7 +166,7 @@ export default function LandingPage() {
           Dos formas de competir, las dos gratis, las dos en tu propia liga privada.
         </Text>
 
-        {/* Primary: 2-col cards en desktop, rows en mobile */}
+        {/* Primary — 2 feature cards */}
         {isWide ? (
           <View style={s.featPrimaryRow}>
             {PRIMARY_FEATURES.map((f, i) => (
@@ -159,24 +195,34 @@ export default function LandingPage() {
 
         <View style={s.featDivider} />
 
-        {/* Secondary: mini-cards 2×2 */}
-        <View style={[s.featSecGrid, isWide && s.featSecGridWide]}>
+        {/* Secondary — stat-row list (NOT identical card grid) */}
+        <View style={[s.statGrid, isWide && s.statGridWide]}>
           {SECONDARY_FEATURES.map((f, i) => (
-            <View key={i} style={[s.featSecItem, isWide && s.featSecItemCard, isWide && { borderTopWidth: 2, borderTopColor: f.color }]}>
-              <View style={[s.featSecIcon, { backgroundColor: f.color + '28', borderColor: f.color + '55', borderWidth: 1 }]}>
-                <Text style={s.featSecEmoji}>{f.emoji}</Text>
+            <View
+              key={i}
+              style={[
+                s.statRow,
+                isWide && s.statRowWide,
+                (isWide ? i < 2 : i < SECONDARY_FEATURES.length - 1) && s.statRowBorder,
+              ]}
+            >
+              <View style={[s.statBadge, { backgroundColor: f.color + '1a' }]}>
+                <Text style={s.statEmoji}>{f.emoji}</Text>
               </View>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={s.featSecTitle}>{f.title}</Text>
-                <Text style={s.featSecDesc}>{f.desc}</Text>
+              <View style={s.statText}>
+                <Text style={[s.statTitle, isWide && s.statTitleWide]}>{f.title}</Text>
+                <Text style={s.statDesc}>{f.desc}</Text>
               </View>
             </View>
           ))}
         </View>
 
-        <TouchableOpacity style={s.featCta} onPress={() => router.push('/(auth)/register')}>
+        <Pressable
+          style={({ hovered, pressed }) => [s.featCta, (hovered || pressed) && s.featCtaActive]}
+          onPress={() => router.push('/(auth)/register')}
+        >
           <Text style={s.featCtaText}>Empezar gratis ahora →</Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
 
       {/* ─── 3 PASOS ─────────────────────────────────────────────────────── */}
@@ -188,26 +234,11 @@ export default function LandingPage() {
           <View style={[s.stepsStack, isWide && s.stepsColumns]}>
             {STEPS.map((step, i) => (
               <View key={i} style={[s.stepCard, isWide && s.stepCardWide]}>
-                {isWide ? (
-                  <>
-                    <View style={s.stepBubble}>
-                      <Text style={s.stepBubbleEmoji}>{step.emoji}</Text>
-                    </View>
-                    <Text style={s.stepLabel}>{step.n} de 3</Text>
-                    <Text style={s.stepTitleWide}>{step.t}</Text>
-                    <Text style={s.stepDescWide}>{step.d}</Text>
-                  </>
-                ) : (
-                  <>
-                    <View style={s.stepNum}>
-                      <Text style={s.stepNumText}>{step.n}</Text>
-                    </View>
-                    <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text style={s.stepTitle}>{step.t}</Text>
-                      <Text style={s.stepDesc}>{step.d}</Text>
-                    </View>
-                  </>
-                )}
+                <Text style={[s.stepDecoNum, isWide && s.stepDecoNumWide]}>{step.n}</Text>
+                <View style={[s.stepContent, isWide && s.stepContentWide]}>
+                  <Text style={[s.stepTitle, isWide && s.stepTitleWide]}>{step.t}</Text>
+                  <Text style={s.stepDesc}>{step.d}</Text>
+                </View>
               </View>
             ))}
           </View>
@@ -223,7 +254,6 @@ export default function LandingPage() {
           La app gratuita se sostiene con patrocinios locales. Tu marca aparece donde los aficionados de Liga MX en Aguascalientes ya están — en cada jornada, en cada ranking.
         </Text>
 
-        {/* ORO — tier destacado */}
         <View style={s.sponsorGold}>
           <View style={s.sponsorGoldBadge}>
             <Text style={s.sponsorGoldBadgeText}>MAYOR VISIBILIDAD</Text>
@@ -239,7 +269,6 @@ export default function LandingPage() {
           </Text>
         </View>
 
-        {/* PLATA + BRONCE */}
         <View style={s.sponsorRow}>
           {[
             { tier: 'PLATA',  color: '#AAAAAA', desc: 'Visibilidad rotativa por jornada' },
@@ -252,13 +281,13 @@ export default function LandingPage() {
           ))}
         </View>
 
-        <TouchableOpacity
-          style={s.sponsorBtn}
+        <Pressable
+          style={({ hovered, pressed }) => [s.sponsorBtn, (hovered || pressed) && s.sponsorBtnActive]}
           onPress={() => Linking.openURL('https://wa.me/524492807269?text=Hola,%20me%20interesa%20ser%20patrocinador%20de%20FuchoMX')}
         >
           <Text style={s.sponsorBtnIcon}>📲</Text>
           <Text style={s.sponsorBtnText}>Quiero ser patrocinador</Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
 
       {/* ─── CTA FINAL ────────────────────────────────────────────────────── */}
@@ -271,10 +300,13 @@ export default function LandingPage() {
           <Text style={s.ctaSub}>
             Únete gratis hoy. Sin tarjeta, sin trampa.{'\n'}Solo queda demostrarlo.
           </Text>
-          <TouchableOpacity style={s.ctaBtn} onPress={() => router.push('/(auth)/register')}>
+          <Pressable
+            style={({ hovered, pressed }) => [s.ctaBtn, (hovered || pressed) && s.ctaBtnActive]}
+            onPress={() => router.push('/(auth)/register')}
+          >
             <Text style={s.ctaBtnEmoji}>🚀</Text>
             <Text style={s.ctaBtnText}>Crear mi quiniela gratis</Text>
-          </TouchableOpacity>
+          </Pressable>
           <Text style={s.ctaMicro}>Sin tarjeta · Sin suscripción · 100% gratis</Text>
         </View>
       </View>
@@ -284,9 +316,9 @@ export default function LandingPage() {
         <Image source={require('../../assets/images/FuchoMX.png')} style={s.footerLogo} resizeMode="contain" />
         <Text style={s.footerBrand}>FUCHO MX</Text>
         <Text style={s.footerSub}>Tu fut, con tus cuates.</Text>
-        <TouchableOpacity onPress={() => Linking.openURL('mailto:contacto@distrito.digital')}>
+        <Pressable onPress={() => Linking.openURL('mailto:contacto@distrito.digital')}>
           <Text style={s.footerContact}>contacto@distrito.digital</Text>
-        </TouchableOpacity>
+        </Pressable>
         <Text style={s.footerCopy}>© 2026 FuchoMX · Aguascalientes, México</Text>
       </View>
 
@@ -294,7 +326,7 @@ export default function LandingPage() {
   );
 }
 
-/* ─────────────────────────────────────────────────────────────────────────── */
+// ─────────────────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
 
@@ -309,14 +341,16 @@ const s = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: '#1a1a1a',
     width: '100%',
   },
-  navLogo:           { width: 36, height: 36, marginRight: 8 },
-  navBrand:          { color: '#FFF', fontWeight: '900', fontSize: 16, letterSpacing: 1, marginRight: 16 },
-  navBtn:            { paddingHorizontal: 16, paddingVertical: 12, marginRight: 8, minHeight: 44, justifyContent: 'center' },
-  navBtnText:        { color: '#AAA', fontSize: 14 },
-  navBtnPrimary:     { backgroundColor: '#C02030', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 8, minHeight: 44, justifyContent: 'center' },
-  navBtnPrimaryText: { color: '#FFF', fontWeight: '700', fontSize: 14 },
+  navLogo:            { width: 36, height: 36, marginRight: 8 },
+  navBrand:           { ...d('900'), color: '#FFF', fontSize: 16, letterSpacing: 1.5, marginRight: 16 },
+  navBtn:             { ...trans, ...pointer, paddingHorizontal: 16, paddingVertical: 12, marginRight: 8, minHeight: 44, justifyContent: 'center', borderRadius: 8 },
+  navBtnHover:        { backgroundColor: '#151515' },
+  navBtnText:         { color: '#AAA', fontSize: 14 },
+  navBtnPrimary:      { ...trans, ...pointer, backgroundColor: '#C02030', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 8, minHeight: 44, justifyContent: 'center' },
+  navBtnPrimaryHover: { backgroundColor: '#E63946' },
+  navBtnPrimaryText:  { ...d('700'), color: '#FFF', fontSize: 14 },
 
-  // ─── HERO (sin cambios) ────────────────────────────────────────────────────
+  // ─── HERO ─────────────────────────────────────────────────────────────────
   hero:            { width: '100%', alignItems: 'center', paddingHorizontal: 24, paddingTop: 72, paddingBottom: 72 },
   heroRow:         { flexDirection: 'row', alignItems: 'center', width: '100%', maxWidth: 1100, gap: 64 },
   heroLeft:        { flex: 1, minWidth: 0 },
@@ -328,20 +362,38 @@ const s = StyleSheet.create({
     ...Platform.select({ web: { filter: 'blur(90px)' } as any, default: {} }),
   },
   heroImgWide:      { width: MOCKUP_W_WIDE, height: MOCKUP_H_WIDE },
-  heroPill:         { borderWidth: 1, borderColor: '#E6394655', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 5, marginBottom: 24 },
-  heroPillText:     { color: '#E63946', fontSize: 11, fontWeight: '800', letterSpacing: 2.5 },
-  heroTitle:        { fontSize: 40, fontWeight: '900', color: '#FFF', textAlign: 'center', lineHeight: 48, marginBottom: 16 },
-  heroTitleWide:    { fontSize: 60, fontWeight: '900', color: '#FFF', lineHeight: 68, marginBottom: 24 },
+
+  heroPill:         { ...{ alignSelf: 'flex-start' }, borderWidth: 1, borderColor: '#E6394655', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 5, marginBottom: 24 },
+  heroPillText:     { ...d('800'), color: '#E63946', fontSize: 11, letterSpacing: 2.5 },
+
+  heroTitle:        { ...d('900'), fontSize: 44, color: '#FFF', textAlign: 'center', lineHeight: 50, marginBottom: 16, letterSpacing: -0.5 },
+  heroTitleWide:    { ...d('900'), fontSize: 66, color: '#FFF', lineHeight: 72, marginBottom: 24, letterSpacing: -1 },
   heroSubtitle:     { fontSize: 16, color: '#999', textAlign: 'center', lineHeight: 26, marginBottom: 12 },
-  heroSubtitleWide: { fontSize: 17, color: '#999', lineHeight: 28, marginBottom: 40 },
+  heroSubtitleWide: { fontSize: 18, color: '#999', lineHeight: 29, marginBottom: 40, maxWidth: 480 },
   heroTagline:      { fontSize: 13, color: '#888', textAlign: 'center', letterSpacing: 0.4, marginTop: 20 },
   heroTaglineWide:  { fontSize: 13, color: '#888', letterSpacing: 0.4, marginTop: 20 },
-  heroBtns:         { flexDirection: 'row', gap: 12, flexWrap: 'wrap' },
-  heroBtnPrimary:   { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#E63946', paddingHorizontal: 28, paddingVertical: 18, borderRadius: 12 },
-  heroBtnPrimaryText:   { color: '#FFF', fontWeight: '900', fontSize: 16 },
-  heroBtnSecondary:     { paddingHorizontal: 24, paddingVertical: 18, borderRadius: 12, borderWidth: 1, borderColor: '#383838', backgroundColor: '#111', justifyContent: 'center' },
-  heroBtnSecondaryText: { color: '#AAA', fontSize: 15 },
-  heroMockupWrap:   { alignItems: 'center', justifyContent: 'center', width: '100%', height: WRAP_H, marginTop: 8, marginBottom: 40 },
+
+  heroBtns:              { flexDirection: 'row', gap: 12, flexWrap: 'wrap' },
+  heroBtnEmoji:          { fontSize: 16, lineHeight: 20 },
+  heroBtnPrimary: {
+    ...trans, ...pointer,
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#E63946', paddingHorizontal: 28, paddingVertical: 18, borderRadius: 12,
+  },
+  heroBtnPrimaryActive: {
+    ...Platform.select({ web: { transform: [{ translateY: -2 }], boxShadow: '0 8px 28px rgba(230,57,70,0.55)' } as any, default: {} }),
+    backgroundColor: '#FF4455',
+  },
+  heroBtnPrimaryText:   { ...d('900'), color: '#FFF', fontSize: 16 },
+  heroBtnSecondary: {
+    ...trans, ...pointer,
+    paddingHorizontal: 24, paddingVertical: 18, borderRadius: 12,
+    borderWidth: 1, borderColor: '#383838', backgroundColor: '#111', justifyContent: 'center',
+  },
+  heroBtnSecondaryActive: { borderColor: '#555', backgroundColor: '#1a1a1a' },
+  heroBtnSecondaryText:   { color: '#AAA', fontSize: 15 },
+
+  heroMockupWrap: { alignItems: 'center', justifyContent: 'center', width: '100%', height: WRAP_H, marginTop: 8, marginBottom: 40 },
   heroGlow: {
     position: 'absolute', alignSelf: 'center', top: GLOW_TOP,
     width: GLOW_R, height: GLOW_R, borderRadius: GLOW_R / 2,
@@ -351,60 +403,87 @@ const s = StyleSheet.create({
   heroImg: { width: MOCKUP_W, height: MOCKUP_H },
 
   // ─── SECTION ──────────────────────────────────────────────────────────────
-  section:      { width: '100%', maxWidth: 1100, alignSelf: 'center', paddingHorizontal: 24, paddingVertical: 72 },
-  secTag:       { color: '#E63946', fontSize: 11, fontWeight: '800', letterSpacing: 3, marginBottom: 12, textAlign: 'center' },
-  secTitle:     { fontSize: 28, fontWeight: '900', color: '#FFF', textAlign: 'center', marginBottom: 48, lineHeight: 36 },
-  secTitleWide: { fontSize: 38, lineHeight: 46 },
+  section:      { width: '100%', maxWidth: 1100, alignSelf: 'center', paddingHorizontal: 24, paddingVertical: 80 },
+  secTitle:     { ...d('900'), fontSize: 30, color: '#FFF', textAlign: 'center', marginBottom: 48, lineHeight: 36, letterSpacing: 0.2 },
+  secTitleWide: { fontSize: 42, lineHeight: 50, letterSpacing: -0.5 },
   secSub:       { color: '#777', fontSize: 16, textAlign: 'center', maxWidth: 540, alignSelf: 'center', lineHeight: 25, marginTop: -28, marginBottom: 44 },
 
   // ─── FEATURES primary ─────────────────────────────────────────────────────
   featPrimaryRow: { flexDirection: 'row', gap: 20 },
-  featCard:       { flex: 1, backgroundColor: '#0d0d0d', borderWidth: 1, borderRadius: 16, padding: 32 },
+  featCard: {
+    flex: 1, backgroundColor: '#0d0d0d', borderWidth: 1, borderRadius: 16, padding: 32,
+    ...Platform.select({ web: { transition: 'border-color 0.2s ease' } as any, default: {} }),
+  },
   featCardIcon:   { width: 76, height: 76, borderRadius: 20, borderWidth: 1, justifyContent: 'center', alignItems: 'center', marginBottom: 22 },
   featCardEmoji:  { fontSize: 34, lineHeight: 40 },
-  featCardTitle:  { color: '#FFF', fontWeight: '900', fontSize: 22, marginBottom: 10 },
+  featCardTitle:  { ...d('900'), color: '#FFF', fontSize: 24, marginBottom: 10, letterSpacing: 0.2 },
   featCardDesc:   { color: '#888', fontSize: 15, lineHeight: 24 },
 
-  featPrimaryRow2: { flexDirection: 'row', marginBottom: 28, alignItems: 'flex-start' },
-  featIcon:        { width: 64, height: 64, borderRadius: 16, borderWidth: 1, justifyContent: 'center', alignItems: 'center', marginRight: 20, flexShrink: 0 },
-  featIconEmoji:   { fontSize: 28, lineHeight: 34 },
+  featPrimaryRow2:  { flexDirection: 'row', marginBottom: 28, alignItems: 'flex-start' },
+  featIcon:         { width: 64, height: 64, borderRadius: 16, borderWidth: 1, justifyContent: 'center', alignItems: 'center', marginRight: 20, flexShrink: 0 },
+  featIconEmoji:    { fontSize: 28, lineHeight: 34 },
   featPrimaryText:  { flex: 1, paddingTop: 6, minWidth: 0 },
-  featPrimaryTitle: { color: '#FFF', fontWeight: '900', fontSize: 20, marginBottom: 6 },
+  featPrimaryTitle: { ...d('800'), color: '#FFF', fontSize: 20, marginBottom: 6 },
   featPrimaryDesc:  { color: '#888', fontSize: 14, lineHeight: 22 },
 
   featDivider: { height: 1, backgroundColor: '#1c1c1c', marginTop: 48, marginBottom: 48 },
-  featCta:     { alignSelf: 'center', marginTop: 40, paddingHorizontal: 28, paddingVertical: 14, borderRadius: 10, backgroundColor: '#E63946' },
-  featCtaText: { color: '#FFF', fontWeight: '700', fontSize: 15 },
+  featCta:     { ...trans, ...pointer, alignSelf: 'center', marginTop: 40, paddingHorizontal: 28, paddingVertical: 14, borderRadius: 10, backgroundColor: '#E63946' },
+  featCtaActive: {
+    ...Platform.select({ web: { transform: [{ translateY: -1 }], boxShadow: '0 6px 20px rgba(230,57,70,0.45)' } as any, default: {} }),
+    backgroundColor: '#FF4455',
+  },
+  featCtaText: { ...d('700'), color: '#FFF', fontSize: 16 },
 
-  // ─── FEATURES secondary ───────────────────────────────────────────────────
-  featSecGrid:     { gap: 14 },
-  featSecGridWide: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, maxWidth: 820, alignSelf: 'center', width: '100%' },
-  featSecItem:     { flexDirection: 'row', gap: 14, alignItems: 'flex-start' },
-  featSecItemCard: { width: '47%', backgroundColor: '#0d0d0d', borderWidth: 1, borderColor: '#1e1e1e', borderRadius: 14, padding: 20 },
-  featSecIcon:     { width: 42, height: 42, borderRadius: 12, justifyContent: 'center', alignItems: 'center', flexShrink: 0, marginTop: 1 },
-  featSecEmoji:    { fontSize: 20, lineHeight: 24 },
-  featSecTitle:    { color: '#FFF', fontWeight: '700', fontSize: 14, marginBottom: 4 },
-  featSecDesc:     { color: '#888', fontSize: 13, lineHeight: 19 },
+  // ─── FEATURES secondary — STAT ROWS (replaces identical card grid) ─────────
+  statGrid:       { width: '100%' },
+  statGridWide:   { flexDirection: 'row', flexWrap: 'wrap' },
+  statRow: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 14,
+    paddingVertical: 22,
+  },
+  statRowWide:    { width: '50%', paddingHorizontal: 12 },
+  statRowBorder:  { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#252525' },
+  statBadge:      { width: 46, height: 46, borderRadius: 12, justifyContent: 'center', alignItems: 'center', flexShrink: 0 },
+  statEmoji:      { fontSize: 22, lineHeight: 26 },
+  statText:       { flex: 1, minWidth: 0, paddingTop: 2 },
+  statTitle:      { color: '#FFF', fontWeight: '700', fontSize: 15, marginBottom: 4 },
+  statTitleWide:  { ...d('800'), fontSize: 17, letterSpacing: 0.1 },
+  statDesc:       { color: '#666', fontSize: 13, lineHeight: 20 },
 
   // ─── 3 PASOS ──────────────────────────────────────────────────────────────
   stepsBg:    { width: '100%', backgroundColor: '#0d0d0d' },
-  stepsInner: { width: '100%', maxWidth: 1100, alignSelf: 'center', paddingHorizontal: 24, paddingVertical: 72 },
+  stepsInner: { width: '100%', maxWidth: 1100, alignSelf: 'center', paddingHorizontal: 24, paddingVertical: 80 },
   stepsStack:   { gap: 14, maxWidth: 560, alignSelf: 'center', width: '100%' },
-  stepsColumns: { flexDirection: 'row', gap: 20, maxWidth: 940, alignSelf: 'center', width: '100%' },
+  stepsColumns: { flexDirection: 'row', gap: 20, maxWidth: 980, alignSelf: 'center', width: '100%' },
 
-  stepCard:     { flexDirection: 'row', alignItems: 'flex-start', backgroundColor: '#141414', borderRadius: 14, padding: 20, gap: 16 },
-  stepCardWide: { flex: 1, flexDirection: 'column', alignItems: 'flex-start', backgroundColor: '#141414', borderRadius: 16, padding: 28 },
-
-  stepNum:     { width: 48, height: 48, borderRadius: 24, backgroundColor: '#E63946', justifyContent: 'center', alignItems: 'center', flexShrink: 0 },
-  stepNumText: { color: '#FFF', fontWeight: '900', fontSize: 20 },
-  stepTitle:   { color: '#FFF', fontWeight: '700', fontSize: 16, marginBottom: 4 },
-  stepDesc:    { color: '#888', fontSize: 13, lineHeight: 19 },
-
-  stepBubble:      { width: 60, height: 60, borderRadius: 30, backgroundColor: '#E63946', justifyContent: 'center', alignItems: 'center', marginBottom: 18 },
-  stepBubbleEmoji: { fontSize: 26, lineHeight: 30 },
-  stepLabel:       { color: '#E63946', fontSize: 11, fontWeight: '800', letterSpacing: 2.5, marginBottom: 10 },
-  stepTitleWide:   { color: '#FFF', fontWeight: '900', fontSize: 18, lineHeight: 24, marginBottom: 8 },
-  stepDescWide:    { color: '#888', fontSize: 13, lineHeight: 20 },
+  stepCard: {
+    backgroundColor: '#141414', borderRadius: 16, padding: 24,
+    flexDirection: 'row', alignItems: 'flex-start', gap: 16,
+  },
+  stepCardWide: {
+    flex: 1,
+    flexDirection: 'column', alignItems: 'flex-start',
+    paddingTop: 32, paddingBottom: 28, paddingHorizontal: 28,
+  },
+  stepDecoNum: {
+    ...d('900'),
+    color: '#FFF', fontSize: 15,
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: '#E63946',
+    textAlign: 'center',
+    flexShrink: 0,
+    ...Platform.select({ web: { lineHeight: '40px' } as any, default: { textAlignVertical: 'center' } }),
+  },
+  stepDecoNumWide: {
+    width: 44, height: 44, borderRadius: 22, fontSize: 16,
+    marginBottom: 20,
+    ...Platform.select({ web: { lineHeight: '44px' } as any, default: {} }),
+  },
+  stepContent:     { flex: 1, minWidth: 0 },
+  stepContentWide: { flex: undefined, width: '100%' },
+  stepTitle:       { color: '#FFF', fontWeight: '700', fontSize: 16, marginBottom: 6 },
+  stepTitleWide:   { ...d('800'), fontSize: 20, lineHeight: 26, marginBottom: 10 },
+  stepDesc:        { color: '#777', fontSize: 13, lineHeight: 20 },
 
   // ─── PATROCINADORES ───────────────────────────────────────────────────────
   sponsorSub: { color: '#888', fontSize: 15, textAlign: 'center', marginBottom: 44, maxWidth: 520, alignSelf: 'center', lineHeight: 24 },
@@ -415,38 +494,54 @@ const s = StyleSheet.create({
     maxWidth: 480, alignSelf: 'center', width: '100%', marginBottom: 16,
   },
   sponsorGoldBadge:     { backgroundColor: '#FFD70015', borderWidth: 1, borderColor: '#FFD70040', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 4, marginBottom: 16 },
-  sponsorGoldBadgeText: { color: '#FFD700', fontSize: 10, fontWeight: '800', letterSpacing: 2.5 },
+  sponsorGoldBadgeText: { ...d('800'), color: '#FFD700', fontSize: 10, letterSpacing: 2.5 },
   sponsorStars:         { flexDirection: 'row', gap: 4, marginBottom: 12 },
   sponsorStarEmoji:     { fontSize: 18, lineHeight: 22 },
-  sponsorGoldTier:      { color: '#FFD700', fontWeight: '900', fontSize: 30, letterSpacing: 4, marginBottom: 12 },
+  sponsorGoldTier:      { ...d('900'), color: '#FFD700', fontSize: 32, letterSpacing: 4, marginBottom: 12 },
   sponsorGoldDesc:      { color: '#CCC', fontSize: 15, textAlign: 'center', lineHeight: 23 },
 
   sponsorRow:  { flexDirection: 'row', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 40, maxWidth: 480, alignSelf: 'center', width: '100%' },
   sponsorCard: { flex: 1, minWidth: 130, borderWidth: 1, borderRadius: 12, padding: 24, alignItems: 'center', backgroundColor: '#0d0d0d' },
-  sponsorTier: { fontWeight: '900', fontSize: 16, letterSpacing: 2, marginBottom: 8 },
+  sponsorTier: { ...d('900'), fontSize: 17, letterSpacing: 2, marginBottom: 8 },
   sponsorDesc: { color: '#888', fontSize: 12, textAlign: 'center', lineHeight: 18 },
 
-  sponsorBtn:     { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#25D366', paddingHorizontal: 28, paddingVertical: 16, borderRadius: 12, alignSelf: 'center' },
+  sponsorBtn: {
+    ...trans, ...pointer,
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: '#25D366', paddingHorizontal: 28, paddingVertical: 16, borderRadius: 12, alignSelf: 'center',
+  },
+  sponsorBtnActive: {
+    ...Platform.select({ web: { transform: [{ translateY: -1 }], boxShadow: '0 6px 20px rgba(37,211,102,0.4)' } as any, default: {} }),
+    backgroundColor: '#30e070',
+  },
   sponsorBtnIcon: { fontSize: 18, lineHeight: 22 },
-  sponsorBtnText: { color: '#FFF', fontWeight: '700', fontSize: 16 },
+  sponsorBtnText: { ...d('700'), color: '#FFF', fontSize: 16 },
 
   // ─── CTA FINAL ────────────────────────────────────────────────────────────
   ctaWrap:       { width: '100%', backgroundColor: '#C02030' },
-  ctaInner:      { maxWidth: 680, alignSelf: 'center', width: '100%', paddingHorizontal: 24, paddingVertical: 80, alignItems: 'center' },
-  ctaDecorEmoji: { fontSize: 44, lineHeight: 52, marginBottom: 20, opacity: 0.4 },
-  ctaTitle:      { fontSize: 30, fontWeight: '900', color: '#FFF', textAlign: 'center', lineHeight: 38, marginBottom: 16 },
-  ctaTitleWide:  { fontSize: 42, lineHeight: 50 },
-  ctaSub:        { fontSize: 17, color: 'rgba(255,255,255,0.80)', textAlign: 'center', lineHeight: 26 },
-  ctaBtn:        { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FFF', paddingHorizontal: 36, paddingVertical: 18, borderRadius: 12, marginTop: 36 },
+  ctaInner:      { maxWidth: 680, alignSelf: 'center', width: '100%', paddingHorizontal: 24, paddingVertical: 88, alignItems: 'center' },
+  ctaDecorEmoji: { fontSize: 48, lineHeight: 56, marginBottom: 20, opacity: 0.35 },
+  ctaTitle:      { ...d('900'), fontSize: 32, color: '#FFF', textAlign: 'center', lineHeight: 38, marginBottom: 16, letterSpacing: -0.3 },
+  ctaTitleWide:  { fontSize: 48, lineHeight: 56, letterSpacing: -0.8 },
+  ctaSub:        { fontSize: 17, color: 'rgba(255,255,255,0.82)', textAlign: 'center', lineHeight: 27, marginBottom: 0 },
+  ctaBtn: {
+    ...trans, ...pointer,
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#FFF', paddingHorizontal: 36, paddingVertical: 18, borderRadius: 12, marginTop: 36,
+  },
+  ctaBtnActive: {
+    ...Platform.select({ web: { transform: [{ translateY: -2 }], boxShadow: '0 8px 28px rgba(0,0,0,0.3)' } as any, default: {} }),
+    backgroundColor: '#F0F0F0',
+  },
   ctaBtnEmoji:   { fontSize: 16, lineHeight: 20 },
-  ctaBtnText:    { color: '#C02030', fontWeight: '900', fontSize: 16 },
-  ctaMicro:      { color: 'rgba(255,255,255,0.85)', fontSize: 13, marginTop: 16, letterSpacing: 0.3 },
+  ctaBtnText:    { ...d('900'), color: '#C02030', fontSize: 17 },
+  ctaMicro:      { color: 'rgba(255,255,255,0.82)', fontSize: 13, marginTop: 16, letterSpacing: 0.3 },
 
   // ─── FOOTER ───────────────────────────────────────────────────────────────
-  footer:        { alignItems: 'center', paddingVertical: 48, borderTopWidth: 1, borderTopColor: '#1a1a1a', width: '100%' },
+  footer:        { alignItems: 'center', paddingVertical: 56, borderTopWidth: 1, borderTopColor: '#1a1a1a', width: '100%' },
   footerLogo:    { width: 60, height: 60, marginBottom: 8 },
-  footerBrand:   { color: '#FFF', fontWeight: '900', fontSize: 18, letterSpacing: 1 },
-  footerSub:     { color: '#888', fontSize: 14, marginTop: 4, marginBottom: 16 },
-  footerContact: { color: '#E63946', fontSize: 13, marginBottom: 8 },
-  footerCopy:    { color: '#888', fontSize: 12 },
+  footerBrand:   { ...d('900'), color: '#FFF', fontSize: 18, letterSpacing: 1.5 },
+  footerSub:     { color: '#666', fontSize: 14, marginTop: 4, marginBottom: 16 },
+  footerContact: { ...trans, ...pointer, color: '#E63946', fontSize: 13, marginBottom: 8 },
+  footerCopy:    { color: '#444', fontSize: 12 },
 });
