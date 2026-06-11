@@ -1,52 +1,53 @@
-// Archivo: /app/frontend/app/index.tsx
-// En web: muestra landing page
-// En móvil: onboarding (1ra vez) → login/home según token
-
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
+import { Platform, View } from 'react-native';
 import LandingPage from './components/LandingPage';
+import { useAuth } from './context/AuthContext';
 
 export default function Index() {
   const router = useRouter();
-  const [showLanding, setShowLanding] = useState(false);
+  const { token, isReady } = useAuth();
 
   useEffect(() => {
-    checkAppState();
-  }, []);
+    if (!isReady) return;
 
-  const checkAppState = async () => {
-    try {
-      // En web: si no tiene token, mostrar landing
-      if (Platform.OS === 'web') {
-        const token = await AsyncStorage.getItem('auth_token');
-        if (token) {
-          router.replace('/(tabs)/home');
-        } else {
-          setShowLanding(true);
-        }
-        return;
+    if (Platform.OS === 'web') {
+      if (token) {
+        router.replace('/(tabs)/home');
       }
+      // Sin token en web: el componente renderiza LandingPage abajo
+      return;
+    }
 
-      // En móvil: flujo normal
+    handleMobileRouting();
+  }, [isReady, token]);
+
+  const handleMobileRouting = async () => {
+    try {
       const onboardingDone = await AsyncStorage.getItem('onboarding_completed');
       if (!onboardingDone) {
         router.replace('/onboarding');
         return;
       }
-      const token = await AsyncStorage.getItem('auth_token');
       if (token) {
         router.replace('/(tabs)/home');
       } else {
         router.replace('/(auth)/login');
       }
-    } catch (error) {
+    } catch {
       router.replace('/(auth)/login');
     }
   };
 
-  if (showLanding) {
+  // Mientras el estado de auth carga, mostrar pantalla negra para que
+  // Expo Router no navegue a una ruta por defecto antes de que termine la verificación
+  if (!isReady) {
+    return <View style={{ flex: 1, backgroundColor: '#000' }} />;
+  }
+
+  // Web sin sesión → landing page
+  if (Platform.OS === 'web' && !token) {
     return <LandingPage />;
   }
 
