@@ -28,7 +28,6 @@ export default function LandingPage() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const isWide = width > 768;
-  const wideHeroTitle    = isWide ? { fontSize: 56, lineHeight: 64 } : undefined;
   const wideSectionTitle = isWide ? { fontSize: 36, lineHeight: 44 } : undefined;
 
   return (
@@ -49,44 +48,81 @@ export default function LandingPage() {
 
       {/* HERO */}
       <View style={s.hero}>
-        <View style={s.heroPill}>
-          <Text style={s.heroPillText}>LIGA MX · QUINIELA · ONCE</Text>
-        </View>
-        <Image source={require('../../assets/images/FuchoMX.png')} style={s.heroLogo} resizeMode="contain" />
-        <Text style={[s.heroTitle, wideHeroTitle]}>La quiniela de{'\n'}tus cuates</Text>
-        <Text style={s.heroSubtitle}>Predice. Arma tu once ideal. Gana.{'\n'}Tu fut, con tus cuates.</Text>
-        <View style={[s.heroMockupWrap, isWide && s.heroMockupWrapWide]}>
-          <View style={[s.heroMockupGlow, isWide && s.heroMockupGlowWide]} />
-          <Image
-            source={require('../../assets/images/mockup-app.png')}
-            style={[s.heroMockupImg, isWide && s.heroMockupImgWide]}
-            resizeMode="contain"
-          />
-        </View>
-        <View style={s.heroBtns}>
-          <TouchableOpacity style={s.heroBtnPrimary} onPress={() => router.push('/(auth)/register')}>
-            <Ionicons name="rocket" size={18} color="#FFF" />
-            <Text style={s.heroBtnPrimaryText}>Jugar gratis</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={s.heroBtnSecondary} onPress={() => router.push('/(auth)/login')}>
-            <Text style={s.heroBtnSecondaryText}>Ya tengo cuenta</Text>
-          </TouchableOpacity>
-        </View>
-        <Text style={s.heroTagline}>Liga MX · Cada jornada · Sin costo.</Text>
+        {isWide ? (
+          // Desktop: texto izquierda, mockup derecha
+          <View style={s.heroRow}>
+            <View style={s.heroLeft}>
+              <View style={s.heroPill}>
+                <Text style={s.heroPillText}>LIGA MX · QUINIELA · ONCE</Text>
+              </View>
+              <Text style={s.heroTitleWide}>La quiniela{'\n'}de tus cuates</Text>
+              <Text style={[s.heroSubtitle, { textAlign: 'left', marginBottom: 36 }]}>
+                Predice resultados de Liga MX, arma tu once ideal y compite en tu liga privada con tus cuates.
+              </Text>
+              <View style={s.heroBtns}>
+                <TouchableOpacity style={s.heroBtnPrimary} onPress={() => router.push('/(auth)/register')}>
+                  <Ionicons name="rocket" size={18} color="#FFF" />
+                  <Text style={s.heroBtnPrimaryText}>Jugar gratis</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={s.heroBtnSecondary} onPress={() => router.push('/(auth)/login')}>
+                  <Text style={s.heroBtnSecondaryText}>Ya tengo cuenta</Text>
+                </TouchableOpacity>
+              </View>
+              <Text style={[s.heroTagline, { textAlign: 'left' }]}>
+                Sin tarjeta · 100% gratis · Tu liga en 2 minutos
+              </Text>
+            </View>
+            <View style={s.heroRight}>
+              <View style={s.heroMockupGlowWide} />
+              <Image
+                source={require('../../assets/images/mockup-app.png')}
+                style={s.heroMockupImgWide}
+                resizeMode="contain"
+              />
+            </View>
+          </View>
+        ) : (
+          // Mobile: stacked
+          <>
+            <View style={s.heroPill}>
+              <Text style={s.heroPillText}>LIGA MX · QUINIELA · ONCE</Text>
+            </View>
+            <Text style={s.heroTitle}>La quiniela de{'\n'}tus cuates</Text>
+            <Text style={s.heroSubtitle}>
+              Predice resultados, arma tu once{'\n'}y compite con tus cuates.
+            </Text>
+            <View style={s.heroMockupWrap}>
+              <View style={s.heroMockupGlow} />
+              <Image
+                source={require('../../assets/images/mockup-app.png')}
+                style={s.heroMockupImg}
+                resizeMode="contain"
+              />
+            </View>
+            <View style={s.heroBtns}>
+              <TouchableOpacity style={s.heroBtnPrimary} onPress={() => router.push('/(auth)/register')}>
+                <Ionicons name="rocket" size={18} color="#FFF" />
+                <Text style={s.heroBtnPrimaryText}>Jugar gratis</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.heroBtnSecondary} onPress={() => router.push('/(auth)/login')}>
+                <Text style={s.heroBtnSecondaryText}>Ya tengo cuenta</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={s.heroTagline}>Sin tarjeta · 100% gratis · Tu liga en 2 minutos</Text>
+          </>
+        )}
       </View>
-
 
       {/* FEATURES */}
       <View style={s.section}>
         <Text style={[s.sectionTitle, wideSectionTitle]}>Quiniela y fantasy.{'\n'}Un solo lugar.</Text>
         {PRIMARY_FEATURES.map((f, i) => (
           <View key={i} style={s.featurePrimary}>
-            <View style={[s.featurePrimaryAccent, { backgroundColor: f.color }]} />
+            <View style={[s.featurePrimaryIcon, { backgroundColor: f.color + '22' }]}>
+              <Ionicons name={f.icon as any} size={24} color={f.color} />
+            </View>
             <View style={s.featurePrimaryContent}>
-              <View style={s.featurePrimaryHeader}>
-                <Ionicons name={f.icon as any} size={22} color={f.color} />
-                <Text style={s.featurePrimaryTitle}>{f.title}</Text>
-              </View>
+              <Text style={s.featurePrimaryTitle}>{f.title}</Text>
               <Text style={s.featurePrimaryDesc}>{f.desc}</Text>
             </View>
           </View>
@@ -171,28 +207,32 @@ export default function LandingPage() {
 }
 
 const s = StyleSheet.create({
-  container:           { flex: 1, backgroundColor: '#090909' },
+  container:              { flex: 1, backgroundColor: '#090909' },
   // NAV
-  nav:                 { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#1a1a1a' },
-  navLogo:             { width: 36, height: 36, marginRight: 8 },
-  navBrand:            { color: '#FFF', fontWeight: '900', fontSize: 16, letterSpacing: 1, marginRight: 16 },
-  navBtn:              { paddingHorizontal: 16, paddingVertical: 12, marginRight: 8, minHeight: 44, justifyContent: 'center' },
-  navBtnText:          { color: '#AAAAAA', fontSize: 14 },
-  navBtnPrimary:       { backgroundColor: '#C02030', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 8, minHeight: 44, justifyContent: 'center' },
-  navBtnPrimaryText:   { color: '#FFF', fontWeight: '700', fontSize: 14 },
+  nav:                    { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#1a1a1a' },
+  navLogo:                { width: 36, height: 36, marginRight: 8 },
+  navBrand:               { color: '#FFF', fontWeight: '900', fontSize: 16, letterSpacing: 1, marginRight: 16 },
+  navBtn:                 { paddingHorizontal: 16, paddingVertical: 12, marginRight: 8, minHeight: 44, justifyContent: 'center' },
+  navBtnText:             { color: '#AAAAAA', fontSize: 14 },
+  navBtnPrimary:          { backgroundColor: '#C02030', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 8, minHeight: 44, justifyContent: 'center' },
+  navBtnPrimaryText:      { color: '#FFF', fontWeight: '700', fontSize: 14 },
   // HERO
-  hero:                { alignItems: 'center', paddingHorizontal: 24, paddingTop: 60, paddingBottom: 60 },
-  heroPill:            { borderWidth: 1, borderColor: '#E6394655', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 5, marginBottom: 24 },
-  heroPillText:        { color: '#E63946', fontSize: 11, fontWeight: '800', letterSpacing: 2 },
-  heroLogo:            { width: 140, height: 140, marginBottom: 24 },
-  heroTitle:           { fontSize: 40, fontWeight: '900', color: '#FFF', textAlign: 'center', lineHeight: 48, marginBottom: 16 },
-  heroSubtitle:        { fontSize: 16, color: '#888', textAlign: 'center', lineHeight: 24, marginBottom: 12 },
-  heroMockupWrap:      { alignItems: 'center', justifyContent: 'center', width: '100%', height: 390, marginTop: 8, marginBottom: 40 },
-  heroMockupWrapWide:  { height: 510, marginBottom: 48 },
-  heroMockupGlow:      {
+  hero:                   { alignItems: 'center', paddingHorizontal: 24, paddingTop: 72, paddingBottom: 72 },
+  heroPill:               { borderWidth: 1, borderColor: '#E6394655', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 5, marginBottom: 24 },
+  heroPillText:           { color: '#E63946', fontSize: 11, fontWeight: '800', letterSpacing: 2 },
+  heroTitle:              { fontSize: 40, fontWeight: '900', color: '#FFF', textAlign: 'center', lineHeight: 48, marginBottom: 16 },
+  heroTitleWide:          { fontSize: 56, fontWeight: '900', color: '#FFF', lineHeight: 64, marginBottom: 20 },
+  heroSubtitle:           { fontSize: 16, color: '#999', textAlign: 'center', lineHeight: 26, marginBottom: 12 },
+  // Hero desktop layout
+  heroRow:                { flexDirection: 'row', alignItems: 'center', width: '100%', maxWidth: 1100, gap: 56 },
+  heroLeft:               { flex: 1 },
+  heroRight:              { width: 400, height: 510, alignItems: 'center', justifyContent: 'center' },
+  // Mockup (mobile stacked)
+  heroMockupWrap:         { alignItems: 'center', justifyContent: 'center', width: '100%', height: 390, marginTop: 8, marginBottom: 40 },
+  heroMockupGlow:         {
     position: 'absolute',
     alignSelf: 'center',
-    top: (390 - 230) / 2,
+    top: 80,
     width: 230,
     height: 230,
     borderRadius: 115,
@@ -200,60 +240,64 @@ const s = StyleSheet.create({
     opacity: 0.22,
     ...Platform.select({ web: { filter: 'blur(76px)' } as any, default: {} }),
   },
-  heroMockupGlowWide:  {
-    top: (510 - 320) / 2,
+  // Mockup (desktop, inside heroRight)
+  heroMockupGlowWide:     {
+    position: 'absolute',
+    alignSelf: 'center',
+    top: 95,
     width: 320,
     height: 320,
     borderRadius: 160,
+    backgroundColor: '#E63946',
+    opacity: 0.22,
     ...Platform.select({ web: { filter: 'blur(100px)' } as any, default: {} }),
   },
-  heroMockupImg:       { width: 280, height: 356 },
-  heroMockupImgWide:   { width: 370, height: 470 },
-  heroBtns:            { flexDirection: 'row', gap: 12, marginBottom: 32 },
-  heroBtnPrimary:      { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#C02030', paddingHorizontal: 28, paddingVertical: 16, borderRadius: 12 },
-  heroBtnPrimaryText:  { color: '#FFF', fontWeight: '900', fontSize: 16 },
-  heroBtnSecondary:    { paddingHorizontal: 28, paddingVertical: 16, borderRadius: 12, borderWidth: 1, borderColor: '#333' },
-  heroBtnSecondaryText:{ color: '#AAA', fontSize: 16 },
-  heroTagline:         { fontSize: 13, color: '#888', textAlign: 'center', letterSpacing: 0.5 },
+  heroMockupImg:          { width: 280, height: 356 },
+  heroMockupImgWide:      { width: 370, height: 470 },
+  heroBtns:               { flexDirection: 'row', gap: 12 },
+  heroBtnPrimary:         { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#C02030', paddingHorizontal: 28, paddingVertical: 16, borderRadius: 12 },
+  heroBtnPrimaryText:     { color: '#FFF', fontWeight: '900', fontSize: 16 },
+  heroBtnSecondary:       { paddingHorizontal: 28, paddingVertical: 16, borderRadius: 12, borderWidth: 1, borderColor: '#333' },
+  heroBtnSecondaryText:   { color: '#AAA', fontSize: 16 },
+  heroTagline:            { fontSize: 13, color: '#888', textAlign: 'center', letterSpacing: 0.5, marginTop: 20 },
   // SECTIONS
-  section:             { paddingHorizontal: 24, paddingVertical: 60 },
-  sectionTag:          { color: '#E63946', fontSize: 11, fontWeight: '800', letterSpacing: 3, marginBottom: 12, textAlign: 'center' },
-  sectionTitle:        { fontSize: 28, fontWeight: '900', color: '#FFF', textAlign: 'center', marginBottom: 40, lineHeight: 36 },
+  section:                { paddingHorizontal: 24, paddingVertical: 60 },
+  sectionTag:             { color: '#E63946', fontSize: 11, fontWeight: '800', letterSpacing: 3, marginBottom: 12, textAlign: 'center' },
+  sectionTitle:           { fontSize: 28, fontWeight: '900', color: '#FFF', textAlign: 'center', marginBottom: 40, lineHeight: 36 },
   // FEATURES
-  featurePrimary:         { flexDirection: 'row', marginBottom: 28, gap: 0 },
-  featurePrimaryAccent:   { width: 3, borderRadius: 2, marginRight: 20 },
+  featurePrimary:         { flexDirection: 'row', marginBottom: 32, alignItems: 'flex-start' },
+  featurePrimaryIcon:     { width: 52, height: 52, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginRight: 20, flexShrink: 0 },
   featurePrimaryContent:  { flex: 1 },
-  featurePrimaryHeader:   { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
-  featurePrimaryTitle:    { color: '#FFF', fontWeight: '900', fontSize: 20 },
-  featurePrimaryDesc:     { color: '#AAA', fontSize: 14, lineHeight: 22 },
+  featurePrimaryTitle:    { color: '#FFF', fontWeight: '900', fontSize: 20, marginBottom: 6 },
+  featurePrimaryDesc:     { color: '#999', fontSize: 14, lineHeight: 22 },
   featuresSecondary:      { marginTop: 8, gap: 16 },
   featureSecondary:       { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
   featureSecondaryIcon:   { marginTop: 2 },
   featureSecondaryTitle:  { color: '#FFF', fontWeight: '700', fontSize: 14, marginBottom: 2 },
   featureSecondaryDesc:   { color: '#888', fontSize: 13, lineHeight: 18 },
   // STEPS
-  steps:               { gap: 16, maxWidth: 600, alignSelf: 'center', width: '100%' },
-  stepCard:            { flexDirection: 'row', alignItems: 'center', backgroundColor: '#181818', borderRadius: 16, padding: 20, gap: 16 },
-  stepNum:             { width: 48, height: 48, borderRadius: 24, backgroundColor: '#E63946', justifyContent: 'center', alignItems: 'center' },
-  stepNumText:         { color: '#FFF', fontWeight: '900', fontSize: 20 },
-  stepTitle:           { color: '#FFF', fontWeight: '700', fontSize: 16, marginBottom: 4 },
-  stepDesc:            { color: '#AAA', fontSize: 13 },
+  steps:                  { gap: 16, maxWidth: 600, alignSelf: 'center', width: '100%' },
+  stepCard:               { flexDirection: 'row', alignItems: 'center', backgroundColor: '#181818', borderRadius: 16, padding: 20, gap: 16 },
+  stepNum:                { width: 48, height: 48, borderRadius: 24, backgroundColor: '#E63946', justifyContent: 'center', alignItems: 'center' },
+  stepNumText:            { color: '#FFF', fontWeight: '900', fontSize: 20 },
+  stepTitle:              { color: '#FFF', fontWeight: '700', fontSize: 16, marginBottom: 4 },
+  stepDesc:               { color: '#AAA', fontSize: 13 },
   // SPONSORS
-  sponsorSubtitle:     { color: '#888', fontSize: 15, textAlign: 'center', marginBottom: 32, maxWidth: 500, alignSelf: 'center' },
-  sponsorCards:        { flexDirection: 'row', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 32 },
-  sponsorCard:         { borderWidth: 2, borderRadius: 16, padding: 24, minWidth: 140, alignItems: 'center' },
-  sponsorTier:         { fontWeight: '900', fontSize: 18, letterSpacing: 2, marginBottom: 8 },
-  sponsorDesc:         { color: '#888', fontSize: 13, textAlign: 'center' },
-  sponsorBtn:          { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#25D366', paddingHorizontal: 28, paddingVertical: 16, borderRadius: 12, alignSelf: 'center' },
-  sponsorBtnText:      { color: '#FFF', fontWeight: '700', fontSize: 16 },
+  sponsorSubtitle:        { color: '#888', fontSize: 15, textAlign: 'center', marginBottom: 32, maxWidth: 500, alignSelf: 'center' },
+  sponsorCards:           { flexDirection: 'row', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 32 },
+  sponsorCard:            { borderWidth: 2, borderRadius: 16, padding: 24, minWidth: 140, alignItems: 'center' },
+  sponsorTier:            { fontWeight: '900', fontSize: 18, letterSpacing: 2, marginBottom: 8 },
+  sponsorDesc:            { color: '#888', fontSize: 13, textAlign: 'center' },
+  sponsorBtn:             { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#25D366', paddingHorizontal: 28, paddingVertical: 16, borderRadius: 12, alignSelf: 'center' },
+  sponsorBtnText:         { color: '#FFF', fontWeight: '700', fontSize: 16 },
   // CTA
-  ctaBtn:              { backgroundColor: '#FFF', paddingHorizontal: 32, paddingVertical: 18, borderRadius: 12, marginTop: 24 },
-  ctaBtnText:          { color: '#C02030', fontWeight: '900', fontSize: 16 },
+  ctaBtn:                 { backgroundColor: '#FFF', paddingHorizontal: 32, paddingVertical: 18, borderRadius: 12, marginTop: 24 },
+  ctaBtnText:             { color: '#C02030', fontWeight: '900', fontSize: 16 },
   // FOOTER
-  footer:              { alignItems: 'center', paddingVertical: 48, borderTopWidth: 1, borderTopColor: '#1a1a1a' },
-  footerLogo:          { width: 60, height: 60, marginBottom: 8 },
-  footerBrand:         { color: '#FFF', fontWeight: '900', fontSize: 18, letterSpacing: 1 },
-  footerSub:           { color: '#888', fontSize: 14, marginTop: 4, marginBottom: 16 },
-  footerContact:       { color: '#E63946', fontSize: 13, marginBottom: 8 },
-  footerCopy:          { color: '#888', fontSize: 12 },
+  footer:                 { alignItems: 'center', paddingVertical: 48, borderTopWidth: 1, borderTopColor: '#1a1a1a' },
+  footerLogo:             { width: 60, height: 60, marginBottom: 8 },
+  footerBrand:            { color: '#FFF', fontWeight: '900', fontSize: 18, letterSpacing: 1 },
+  footerSub:              { color: '#888', fontSize: 14, marginTop: 4, marginBottom: 16 },
+  footerContact:          { color: '#E63946', fontSize: 13, marginBottom: 8 },
+  footerCopy:             { color: '#888', fontSize: 12 },
 });
