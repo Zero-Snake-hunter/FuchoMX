@@ -49,8 +49,15 @@ export default function Root({ children }: PropsWithChildren) {
         <meta property="og:locale" content="es_MX" />
         <meta property="og:site_name" content="FuchoMX" />
 
+        {/* App meta */}
+        <meta name="application-name" content="FuchoMX" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="FuchoMX" />
+
         {/* Twitter Card */}
-        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:site" content="@FuchoMX" />
         <meta name="twitter:title" content={TITLE} />
         <meta name="twitter:description" content={DESCRIPTION} />
 

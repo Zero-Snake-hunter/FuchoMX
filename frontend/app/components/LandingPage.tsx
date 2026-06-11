@@ -12,28 +12,28 @@ const PRIMARY_FEATURES = [
   {
     emoji: '⚽',
     title: 'FuchoQuiniela',
-    desc: 'Predice los 10 partidos de cada jornada antes de que arranquen. Cada acierto sube tu posición en el ranking de tu liga.',
+    desc: 'Predice los 10 partidos de cada jornada antes de que arranquen. El que más aciertos junta, gana la jornada en su liga.',
     color: '#E63946',
   },
   {
     emoji: '👕',
     title: 'FuchoOnce',
-    desc: 'Selecciona 11 jugadores reales de Liga MX cada semana. Sus goles, asistencias y actuaciones se convierten en tus puntos.',
+    desc: 'Arma tu once con 11 jugadores reales de Liga MX. Sus goles, asistencias y actuaciones suman puntos para ti cada semana.',
     color: '#1D88E5',
   },
 ];
 
 const SECONDARY_FEATURES = [
-  { emoji: '👥', title: 'Ligas Privadas',      desc: 'Crea tu liga con código único. Solo entran tus cuates, nadie más.',             color: '#FFD700' },
-  { emoji: '🏆', title: 'Logros y Rachas',      desc: '20 logros desbloqueables. Cada racha de aciertos tiene su recompensa.',         color: '#2A9D8F' },
-  { emoji: '📊', title: 'Rankings en Vivo',     desc: 'Posiciones actualizadas al minuto. Sabes exactamente dónde estás.',             color: '#FF9800' },
-  { emoji: '🎁', title: 'Sin costo, sin trampa', desc: 'Gratis hoy, gratis siempre. Sin suscripciones ni cobros ocultos.',             color: '#4CAF50' },
+  { emoji: '👥', title: 'Ligas Privadas',       desc: 'Genera un código único y compártelo. Tus cuates entran directo — nadie más.',          color: '#FFD700' },
+  { emoji: '🏆', title: 'Logros y Rachas',       desc: 'Desbloquea 20 logros únicos. Mantén tu racha y demuestra que siempre sabes.',          color: '#2A9D8F' },
+  { emoji: '📊', title: 'Rankings en Tiempo Real', desc: 'Posiciones actualizadas al instante. Siempre sabes si vas ganando.',                 color: '#FF9800' },
+  { emoji: '🎁', title: 'Sin costo, sin trampa',  desc: 'Gratis hoy, gratis siempre. Sin suscripciones, sin cobros ocultos, sin trucos.',      color: '#4CAF50' },
 ];
 
 const STEPS = [
-  { n: '1', emoji: '👤', t: 'Crea tu cuenta gratis',             d: 'Regístrate con tu correo en 30 segundos. Sin tarjeta, sin número de teléfono.' },
+  { n: '1', emoji: '👤', t: 'Crea tu cuenta gratis',             d: 'Solo tu correo y en 30 segundos ya tienes cuenta. Sin tarjeta, sin número de teléfono.' },
   { n: '2', emoji: '👥', t: 'Crea tu liga y comparte el código', d: 'Tus cuates entran directo con el código. En un minuto ya están todos adentro.' },
-  { n: '3', emoji: '⚽', t: 'Predice cada jornada y compite',    d: 'Antes de cada fecha, predice los 10 partidos. Al final sabes quién sabe más de fut.' },
+  { n: '3', emoji: '⚽', t: 'Predice cada jornada y compite',    d: 'Predice los 10 partidos antes de cada fecha. Al final queda claro quién sabe más de fut.' },
 ];
 
 // PNG: 606×983 (recortado, sin naranja) → ratio ancho/alto = 0.617
@@ -124,7 +124,10 @@ export default function LandingPage() {
       {/* ─── FEATURES ─────────────────────────────────────────────────────── */}
       <View style={s.section}>
         <Text style={[s.secTitle, isWide && s.secTitleWide]}>
-          Quiniela y fantasy.{'\n'}Un solo lugar.
+          Quiniela y Fantasy.{'\n'}Con tus cuates. Sin costo.
+        </Text>
+        <Text style={s.secSub}>
+          Dos formas de competir, las dos gratis, las dos en tu propia liga privada.
         </Text>
 
         {/* Primary: 2-col cards en desktop, rows en mobile */}
@@ -159,7 +162,7 @@ export default function LandingPage() {
         {/* Secondary: mini-cards 2×2 */}
         <View style={[s.featSecGrid, isWide && s.featSecGridWide]}>
           {SECONDARY_FEATURES.map((f, i) => (
-            <View key={i} style={[s.featSecItem, isWide && s.featSecItemCard]}>
+            <View key={i} style={[s.featSecItem, isWide && s.featSecItemCard, isWide && { borderTopWidth: 2, borderTopColor: f.color }]}>
               <View style={[s.featSecIcon, { backgroundColor: f.color + '28', borderColor: f.color + '55', borderWidth: 1 }]}>
                 <Text style={s.featSecEmoji}>{f.emoji}</Text>
               </View>
@@ -172,7 +175,7 @@ export default function LandingPage() {
         </View>
 
         <TouchableOpacity style={s.featCta} onPress={() => router.push('/(auth)/register')}>
-          <Text style={s.featCtaText}>Crear mi cuenta gratis →</Text>
+          <Text style={s.featCtaText}>Empezar gratis ahora →</Text>
         </TouchableOpacity>
       </View>
 
@@ -180,7 +183,7 @@ export default function LandingPage() {
       <View style={s.stepsBg}>
         <View style={s.stepsInner}>
           <Text style={[s.secTitle, isWide && s.secTitleWide]}>
-            3 pasos y ya{'\n'}estás jugando
+            3 pasos y ya{'\n'}estás compitiendo
           </Text>
           <View style={[s.stepsStack, isWide && s.stepsColumns]}>
             {STEPS.map((step, i) => (
@@ -214,10 +217,10 @@ export default function LandingPage() {
       {/* ─── PATROCINADORES ───────────────────────────────────────────────── */}
       <View style={s.section}>
         <Text style={[s.secTitle, isWide && s.secTitleWide]}>
-          Llega directo a los fanáticos{'\n'}del fut en Aguascalientes
+          Conecta tu marca{'\n'}con los fans de Liga MX
         </Text>
         <Text style={s.sponsorSub}>
-          FuchoMX conecta marcas locales con aficionados de Liga MX. Gratis para los jugadores, sostenido por sponsors que quieren aparecer donde sí se ven.
+          La app gratuita se sostiene con patrocinios locales. Tu marca aparece donde los aficionados de Liga MX en Aguascalientes ya están — en cada jornada, en cada ranking.
         </Text>
 
         {/* ORO — tier destacado */}
@@ -266,7 +269,7 @@ export default function LandingPage() {
             ¿Quién de tu grupo{'\n'}sabe más de fut?
           </Text>
           <Text style={s.ctaSub}>
-            Crea tu quiniela ahora y demuéstralo esta jornada.
+            Únete gratis hoy. Sin tarjeta, sin trampa.{'\n'}Solo queda demostrarlo.
           </Text>
           <TouchableOpacity style={s.ctaBtn} onPress={() => router.push('/(auth)/register')}>
             <Text style={s.ctaBtnEmoji}>🚀</Text>
@@ -352,6 +355,7 @@ const s = StyleSheet.create({
   secTag:       { color: '#E63946', fontSize: 11, fontWeight: '800', letterSpacing: 3, marginBottom: 12, textAlign: 'center' },
   secTitle:     { fontSize: 28, fontWeight: '900', color: '#FFF', textAlign: 'center', marginBottom: 48, lineHeight: 36 },
   secTitleWide: { fontSize: 38, lineHeight: 46 },
+  secSub:       { color: '#777', fontSize: 16, textAlign: 'center', maxWidth: 540, alignSelf: 'center', lineHeight: 25, marginTop: -28, marginBottom: 44 },
 
   // ─── FEATURES primary ─────────────────────────────────────────────────────
   featPrimaryRow: { flexDirection: 'row', gap: 20 },
