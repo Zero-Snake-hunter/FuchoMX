@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Image, Linking, useWindowDimensions,
+  Image, Linking, useWindowDimensions, Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -56,6 +56,7 @@ export default function LandingPage() {
         <Text style={[s.heroTitle, wideHeroTitle]}>La quiniela de{'\n'}tus cuates</Text>
         <Text style={s.heroSubtitle}>Predice. Arma tu once ideal. Gana.{'\n'}Tu fut, con tus cuates.</Text>
         <View style={[s.heroMockupWrap, isWide && s.heroMockupWrapWide]}>
+          <View style={[s.heroMockupGlow, isWide && s.heroMockupGlowWide]} />
           <Image
             source={require('../../assets/images/mockup-app.png')}
             style={[s.heroMockupImg, isWide && s.heroMockupImgWide]}
@@ -186,10 +187,28 @@ const s = StyleSheet.create({
   heroLogo:            { width: 140, height: 140, marginBottom: 24 },
   heroTitle:           { fontSize: 40, fontWeight: '900', color: '#FFF', textAlign: 'center', lineHeight: 48, marginBottom: 16 },
   heroSubtitle:        { fontSize: 16, color: '#888', textAlign: 'center', lineHeight: 24, marginBottom: 12 },
-  heroMockupWrap:      { alignItems: 'center', marginTop: 4, marginBottom: 36, shadowColor: '#E63946', shadowOffset: { width: 0, height: 16 }, shadowOpacity: 0.45, shadowRadius: 32, elevation: 18 },
-  heroMockupWrapWide:  { marginBottom: 44 },
+  heroMockupWrap:      { alignItems: 'center', justifyContent: 'center', width: '100%', height: 390, marginTop: 8, marginBottom: 40 },
+  heroMockupWrapWide:  { height: 510, marginBottom: 48 },
+  heroMockupGlow:      {
+    position: 'absolute',
+    alignSelf: 'center',
+    top: (390 - 230) / 2,
+    width: 230,
+    height: 230,
+    borderRadius: 115,
+    backgroundColor: '#E63946',
+    opacity: 0.22,
+    ...Platform.select({ web: { filter: 'blur(76px)' } as any, default: {} }),
+  },
+  heroMockupGlowWide:  {
+    top: (510 - 320) / 2,
+    width: 320,
+    height: 320,
+    borderRadius: 160,
+    ...Platform.select({ web: { filter: 'blur(100px)' } as any, default: {} }),
+  },
   heroMockupImg:       { width: 280, height: 356 },
-  heroMockupImgWide:   { width: 320, height: 408 },
+  heroMockupImgWide:   { width: 370, height: 470 },
   heroBtns:            { flexDirection: 'row', gap: 12, marginBottom: 32 },
   heroBtnPrimary:      { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#C02030', paddingHorizontal: 28, paddingVertical: 16, borderRadius: 12 },
   heroBtnPrimaryText:  { color: '#FFF', fontWeight: '900', fontSize: 16 },
