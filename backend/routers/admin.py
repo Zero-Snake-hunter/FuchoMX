@@ -551,6 +551,42 @@ async def list_all_jornadas(current_user: dict = Depends(get_admin_user)):
     return {"jornadas": result, "total": len(result)}
 
 
+@router.get("/admin/jornada/{jornada_id}/matches")
+async def list_jornada_matches(jornada_id: str, current_user: dict = Depends(get_admin_user)):
+    try:
+        jornada_oid = ObjectId(jornada_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="ID de jornada inválido")
+
+    jornada = await db.jornadas.find_one({"_id": jornada_oid})
+    if not jornada:
+        raise HTTPException(status_code=404, detail="Jornada no encontrada")
+
+    matches = await db.matches.find({"jornada_id": jornada_oid}).to_list(50)
+
+    result = []
+    for m in matches:
+        home_team = await db.teams.find_one({"_id": m["home_team_id"]})
+        away_team = await db.teams.find_one({"_id": m["away_team_id"]})
+        result.append({
+            "match_id":   str(m["_id"]),
+            "home_team":  home_team.get("name", "?") if home_team else "?",
+            "away_team":  away_team.get("name", "?") if away_team else "?",
+            "home_score": m.get("home_score"),
+            "away_score": m.get("away_score"),
+            "status":     m.get("status", "scheduled"),
+            "start_at":   m["start_at"].isoformat() if m.get("start_at") else None,
+        })
+
+    return {
+        "jornada_id":  jornada_id,
+        "week_number": jornada.get("week_number"),
+        "competition": jornada.get("competition"),
+        "matches":     result,
+        "total":       len(result),
+    }
+
+
 # ── Quiniela admin ────────────────────────────────────────────────────────────
 
 @router.put("/admin/match/{match_id}/score")
