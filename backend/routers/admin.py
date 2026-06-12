@@ -14,7 +14,8 @@ from database import db, get_active_competition
 from dependencies import get_admin_user, get_current_user
 from fantasy_scoring import calculate_fantasy_points
 from jornada_processor import _process_jornada_core
-from models import UpdateScoreRequest
+from models import UpdateScoreRequest, WCMatchStatsRequest
+from services.world_cup_stats_service import get_wc_match_stats
 from real_liga_mx_data import (
     CLAUSURA_2026_DATES,
     CLAUSURA_2026_J13_MATCHES,
@@ -711,6 +712,44 @@ async def simulate_fantasy_jornada(jornada_id: str, current_user: dict = Depends
         "message": "Jornada simulada exitosamente", "jornada_id": jornada_id,
         "matches_simulated": len(match_results),
         "match_results": match_results, "fantasy_results": fantasy_results
+    }
+
+
+@router.post("/admin/wc/process-match-stats")
+async def process_wc_match_stats(
+    body: WCMatchStatsRequest,
+    current_user: dict = Depends(get_admin_user),
+):
+    try:
+        match_oid = ObjectId(body.match_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="match_id inválido")
+
+    match = await db.matches.find_one({"_id": match_oid})
+    if not match:
+        raise HTTPException(status_code=404, detail="Partido no encontrado")
+
+    jornada_id = str(match["jornada_id"])
+
+    stats_result = await get_wc_match_stats(body.game_id, db)
+    if "error" in stats_result:
+        raise HTTPException(status_code=502, detail=stats_result["error"])
+
+    fantasy_results = await calculate_fantasy_points(jornada_id)
+
+    logger.info(
+        f"WC process-match-stats: game {body.game_id}, match {body.match_id} — "
+        f"{stats_result['players_processed']} jugadores, jornada {jornada_id}"
+    )
+    return {
+        "game_id":           body.game_id,
+        "match_id":          body.match_id,
+        "jornada_id":        jornada_id,
+        "players_processed": stats_result["players_processed"],
+        "score":             stats_result.get("score"),
+        "home":              stats_result.get("home"),
+        "away":              stats_result.get("away"),
+        "fantasy_results":   fantasy_results,
     }
 
 

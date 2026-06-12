@@ -80,6 +80,11 @@ class UpdateScoreRequest(BaseModel):
     away_score: int
 
 
+class WCMatchStatsRequest(BaseModel):
+    game_id: int
+    match_id: str
+
+
 # ── Fantasy ───────────────────────────────────────────────────────────────────
 
 class FantasyTeamCreate(BaseModel):
