@@ -2,7 +2,8 @@ import asyncio
 import logging
 from datetime import datetime, timedelta
 
-from database import client, db
+from database import client, db, get_active_competition
+from fantasy_scoring import calculate_fantasy_points
 from jornada_processor import _process_jornada_core
 from services.push_service import notify_jornada_reminder
 from services.scores_service import (
@@ -10,6 +11,7 @@ from services.scores_service import (
     _STATUS_MAP,
     get_match_results as _svc_get_match_results,
 )
+from services.world_cup_stats_service import get_wc_match_stats
 
 logger = logging.getLogger(__name__)
 
@@ -189,6 +191,55 @@ async def _auto_update_scores():
                             )
                     except Exception as e:
                         logger.error(f"❌ Scheduler scores error: {e}")
+
+            # ── World Cup auto-processing ──────────────────────────────────────
+            try:
+                active_competition = await get_active_competition()
+                if active_competition == "world_cup_2026":
+                    wc_games = await _fetch_365scores(
+                        today_start, today_end, competition_id=5930
+                    )
+                    ended_wc = [
+                        g for g in wc_games
+                        if g.get("statusText") == "Ended"
+                    ]
+                    for game in ended_wc:
+                        game_id = game.get("id")
+                        if not game_id:
+                            continue
+                        already = await db.player_match_stats.find_one(
+                            {"game_id": game_id, "competition": "world_cup_2026"}
+                        )
+                        if already:
+                            continue
+                        wc_jornada = await db.jornadas.find_one(
+                            {"competition": "world_cup_2026", "is_active": True}
+                        )
+                        if not wc_jornada:
+                            logger.warning(
+                                f"⚠️ WC game {game_id}: no hay jornada activa world_cup_2026"
+                            )
+                            continue
+                        jornada_id = str(wc_jornada["_id"])
+                        try:
+                            stats_result = await get_wc_match_stats(game_id, db)
+                            if "error" not in stats_result:
+                                await calculate_fantasy_points(jornada_id)
+                                logger.info(
+                                    f"✅ WC game {game_id} procesado: "
+                                    f"{stats_result.get('players_processed', 0)} jugadores | "
+                                    f"{stats_result.get('home')} {stats_result.get('score')} "
+                                    f"{stats_result.get('away')}"
+                                )
+                            else:
+                                logger.warning(
+                                    f"⚠️ WC game {game_id} error: {stats_result['error']}"
+                                )
+                        except Exception as exc:
+                            logger.error(f"❌ Error procesando WC game {game_id}: {exc}")
+            except Exception as exc:
+                logger.error(f"❌ Error en WC auto-processing: {exc}")
+            # ──────────────────────────────────────────────────────────────────
 
             if finished_games and not live_games and not scheduled_games:
                 logger.info("🏁 Todos los partidos del día terminaron — verificando proceso")

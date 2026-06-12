@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 # ── Constantes ─────────────────────────────────────────────────────────────
 _365SCORES_GAMES_URL = (
     "https://webws.365scores.com/web/games/"
-    "?appTypeId=5&langId=8&competitions=141"
+    "?appTypeId=5&langId=8&competitions={competition_id}"
     "&startDate={start}&endDate={end}"
 )
 _365SCORES_HEADERS = {
@@ -73,11 +73,12 @@ def _normalize_name(name: str) -> str:
 
 
 async def _fetch_365scores(
-    start_date: datetime, end_date: datetime
+    start_date: datetime, end_date: datetime, competition_id: int = 141
 ) -> list[dict]:
-    """Fetches Liga MX games from 365Scores API for a date range."""
+    """Fetches games from 365Scores API for a date range. Default competition: Liga MX (141)."""
     try:
         url = _365SCORES_GAMES_URL.format(
+            competition_id=competition_id,
             start=start_date.strftime("%d/%m/%Y"),
             end=end_date.strftime("%d/%m/%Y"),
         )
