@@ -21,6 +21,11 @@ from real_liga_mx_data import (
     CLAUSURA_2026_J13_MATCHES,
     LIGA_MX_TEAMS,
 )
+from apertura_2026_data import (
+    APERTURA_2026_TEAMS,
+    APERTURA_2026_J1_RESULTS,
+    APERTURA_2026_J2_FIXTURE,
+)
 from services.api_football_service import (
     get_fixtures_by_date as _af_get_by_date,
     get_live_fixtures as _af_get_live,
@@ -827,6 +832,123 @@ async def sync_players_from_api_football(current_user: dict = Depends(get_curren
             logger.error(f"❌ Error sincronizando {team_name}: {e}")
 
     return {"message": "Sincronización completada", "players_updated": total_updated, "errors": errors}
+
+
+# ── Migración Apertura 2026 ─────────────────────────────────────────────────────
+
+@router.post("/admin/migrate-apertura-2026")
+async def migrate_apertura_2026(current_user: dict = Depends(get_admin_user)):
+    """
+    Migración Mundial 2026 -> Liga MX Apertura 2026.
+    - Desactiva cualquier jornada activa (incluye la del Mundial atorada en is_active=true).
+    - NO borra equipos/jornadas/partidos del Mundial — quedan como historial.
+    - Reemplaza (o re-siembra, es idempotente) los equipos/jugadores tageados "liga_mx".
+    - Crea Jornada 1 (finished, resultados reales) y Jornada 2 (in_progress, fixture real).
+    - Al final, cambia active_competition a "liga_mx" (cutover).
+    """
+    now = datetime.utcnow()
+
+    deactivated = await db.jornadas.update_many(
+        {"is_active": True}, {"$set": {"is_active": False}}
+    )
+
+    await db.teams.delete_many({"competition": "liga_mx"})
+    await db.players.delete_many({"competition": "liga_mx"})
+
+    team_ids: dict = {}
+    teams_created = 0
+    players_created = 0
+    base_stats = {"minutes_played": 0, "goals": 0, "assists": 0, "saves": 0,
+                  "clean_sheets": 0, "defensive_actions": 0,
+                  "yellow_cards": 0, "red_cards": 0}
+
+    for team_data in APERTURA_2026_TEAMS:
+        team_result = await db.teams.insert_one({
+            "name": team_data["name"], "short_name": team_data["short_name"],
+            "color": team_data.get("color", "#000000"),
+            "shield_url": team_data["shield_url"],
+            "competition": "liga_mx", "created_at": now,
+        })
+        team_ids[team_data["short_name"]] = team_result.inserted_id
+        teams_created += 1
+
+        for player_data in team_data.get("players", []):
+            await db.players.insert_one({
+                "name": player_data["name"], "team_id": team_result.inserted_id,
+                "team_name": team_data["name"],
+                "position": player_data["position"], "number": player_data["number"],
+                "competition": "liga_mx", "stats": base_stats.copy(),
+                "created_at": now,
+            })
+            players_created += 1
+
+    old_jornadas = await db.jornadas.find(
+        {"competition": "liga_mx", "week_number": {"$in": [1, 2]}, "type": {"$ne": "liguilla"}}
+    ).to_list(10)
+    old_jornada_ids = [j["_id"] for j in old_jornadas]
+    if old_jornada_ids:
+        await db.matches.delete_many({"jornada_id": {"$in": old_jornada_ids}})
+        await db.jornadas.delete_many({"_id": {"$in": old_jornada_ids}})
+
+    j1_result = await db.jornadas.insert_one({
+        "week_number": 1, "competition": "liga_mx",
+        "start_date": datetime(2026, 7, 16), "end_date": datetime(2026, 7, 20, 12, 0),
+        "status": "finished", "is_active": False, "processed": True, "created_at": now,
+    })
+    j1_id = j1_result.inserted_id
+    j1_matches = [
+        {
+            "jornada_id": j1_id,
+            "home_team_id": team_ids[home_sn], "away_team_id": team_ids[away_sn],
+            "home_score": home_score, "away_score": away_score,
+            "status": "finished", "start_at": start_at, "created_at": now,
+        }
+        for (home_sn, away_sn, home_score, away_score, start_at) in APERTURA_2026_J1_RESULTS
+        if home_sn in team_ids and away_sn in team_ids
+    ]
+    if j1_matches:
+        await db.matches.insert_many(j1_matches)
+
+    j2_result = await db.jornadas.insert_one({
+        "week_number": 2, "competition": "liga_mx",
+        "start_date": datetime(2026, 7, 21), "end_date": datetime(2026, 7, 27),
+        "status": "in_progress", "is_active": True, "processed": False, "created_at": now,
+    })
+    j2_id = j2_result.inserted_id
+    j2_matches = [
+        {
+            "jornada_id": j2_id,
+            "home_team_id": team_ids[home_sn], "away_team_id": team_ids[away_sn],
+            "home_score": None, "away_score": None,
+            "status": ("finished" if start_at < now else "scheduled"),
+            "start_at": start_at, "created_at": now,
+        }
+        for (home_sn, away_sn, start_at) in APERTURA_2026_J2_FIXTURE
+        if home_sn in team_ids and away_sn in team_ids
+    ]
+    if j2_matches:
+        await db.matches.insert_many(j2_matches)
+
+    await db.config.update_one(
+        {"key": "active_competition"},
+        {"$set": {"key": "active_competition", "value": "liga_mx"}},
+        upsert=True
+    )
+
+    logger.info(
+        f"✅ Migración Apertura 2026: {teams_created} equipos, {players_created} jugadores, "
+        f"J1={len(j1_matches)} partidos, J2={len(j2_matches)} partidos, "
+        f"{deactivated.modified_count} jornada(s) previa(s) desactivada(s)"
+    )
+    return {
+        "message": "✅ Migración a Liga MX Apertura 2026 completada",
+        "world_cup_jornadas_desactivadas": deactivated.modified_count,
+        "teams_created": teams_created,
+        "players_created": players_created,
+        "jornada_1": {"id": str(j1_id), "matches": len(j1_matches)},
+        "jornada_2": {"id": str(j2_id), "matches": len(j2_matches)},
+        "active_competition": "liga_mx",
+    }
 
 
 @router.post("/admin/close-all-jornadas")
