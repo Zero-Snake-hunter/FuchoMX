@@ -25,6 +25,7 @@ from apertura_2026_data import (
     APERTURA_2026_TEAMS,
     APERTURA_2026_J1_RESULTS,
     APERTURA_2026_J2_FIXTURE,
+    APERTURA_2026_REMAINING_JORNADAS,
 )
 from services.api_football_service import (
     get_fixtures_by_date as _af_get_by_date,
@@ -948,6 +949,47 @@ async def migrate_apertura_2026(current_user: dict = Depends(get_admin_user)):
         "jornada_1": {"id": str(j1_id), "matches": len(j1_matches)},
         "jornada_2": {"id": str(j2_id), "matches": len(j2_matches)},
         "active_competition": "liga_mx",
+    }
+
+
+@router.post("/admin/create-remaining-jornadas")
+async def create_remaining_jornadas(current_user: dict = Depends(get_admin_user)):
+    """
+    Crea J3-J17 del Apertura 2026 como "upcoming", sin partidos.
+    Idempotente: si una jornada (competition="liga_mx", week_number=N) ya
+    existe, se omite — no la duplica ni la modifica.
+    El fixture real de cada jornada se carga por separado cuando se activa.
+    """
+    now = datetime.utcnow()
+    created = []
+    skipped = []
+
+    for week_number, start_date, end_date, note in APERTURA_2026_REMAINING_JORNADAS:
+        existing = await db.jornadas.find_one({
+            "competition": "liga_mx", "week_number": week_number,
+        })
+        if existing:
+            skipped.append(week_number)
+            continue
+
+        jornada_doc = {
+            "week_number": week_number, "competition": "liga_mx",
+            "start_date": start_date, "end_date": end_date,
+            "status": "upcoming", "is_active": False, "processed": False,
+            "created_at": now,
+        }
+        if note:
+            jornada_doc["note"] = note
+        await db.jornadas.insert_one(jornada_doc)
+        created.append(week_number)
+
+    logger.info(
+        f"✅ create-remaining-jornadas: creadas={created}, ya existían={skipped}"
+    )
+    return {
+        "message": f"✅ {len(created)} jornada(s) creada(s), {len(skipped)} ya existían",
+        "created": created,
+        "skipped": skipped,
     }
 
 

@@ -92,3 +92,27 @@ APERTURA_2026_J2_FIXTURE = [
     ("NEC", "MTY", datetime(2026, 7, 26, 18, 0)),   # Dom 26 — hora aprox., confirmar
     ("PAC", "QRO", datetime(2026, 7, 26, 18, 0)),   # Dom 26 — hora aprox., confirmar
 ]
+
+# ──────────────────────────────────────────────
+#  JORNADAS 3-17 — Calendario (fechas dadas por Jorge, sin fixture aún)
+#  Se crean como "upcoming", sin partidos. El fixture real de cada una se
+#  carga cuando esa jornada se activa (mismo patrón que J1/J2).
+#  (week_number, start_date_utc, end_date_utc, note)
+# ──────────────────────────────────────────────
+APERTURA_2026_REMAINING_JORNADAS = [
+    (3,  datetime(2026, 7, 31), datetime(2026, 8, 3, 12, 0),  None),
+    (4,  datetime(2026, 8, 15), datetime(2026, 8, 18, 12, 0), "post Leagues Cup"),
+    (5,  datetime(2026, 8, 21), datetime(2026, 8, 24, 12, 0), None),
+    (6,  datetime(2026, 8, 28), datetime(2026, 8, 31, 12, 0), None),
+    (7,  datetime(2026, 9, 4),  datetime(2026, 9, 7, 12, 0),  None),
+    (8,  datetime(2026, 9, 11), datetime(2026, 9, 14, 12, 0), None),
+    (9,  datetime(2026, 9, 18), datetime(2026, 9, 21, 12, 0), None),
+    (10, datetime(2026, 9, 25), datetime(2026, 9, 28, 12, 0), None),
+    (11, datetime(2026, 10, 9), datetime(2026, 10, 12, 12, 0), None),
+    (12, datetime(2026, 10, 16), datetime(2026, 10, 19, 12, 0), None),
+    (13, datetime(2026, 10, 20), datetime(2026, 10, 22, 12, 0), "jornada doble"),
+    (14, datetime(2026, 10, 23), datetime(2026, 10, 26, 12, 0), None),
+    (15, datetime(2026, 10, 30), datetime(2026, 11, 2, 12, 0), None),
+    (16, datetime(2026, 11, 6), datetime(2026, 11, 9, 12, 0), None),
+    (17, datetime(2026, 11, 20), datetime(2026, 11, 23, 12, 0), None),
+]
