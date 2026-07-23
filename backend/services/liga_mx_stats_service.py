@@ -14,6 +14,7 @@ Los jugadores se emparejan por nombre normalizado contra el roster propio
 (db.players, filtrado por team_id) — si un jugador de la alineación real no
 existe en nuestro roster sembrado, se omite y se reporta en "unmatched".
 """
+import json
 import logging
 import re
 import unicodedata
@@ -77,7 +78,10 @@ async def sync_match_stats_365(match: dict, db) -> dict:
             resp = await client.get(url, headers=_365SCORES_HEADERS)
         if resp.status_code != 200:
             return {"error": f"HTTP {resp.status_code}", "game_id": game_id}
-        data = resp.json()
+        # 365Scores no siempre declara charset en el Content-Type, y la
+        # detección automática de httpx a veces decodifica como Latin-1
+        # ("í" -> "Ã­"), rompiendo el match por nombre. Forzamos UTF-8 explícito.
+        data = json.loads(resp.content.decode("utf-8"))
     except Exception as exc:
         logger.error(f"365Scores fetch error (game {game_id}): {exc}")
         return {"error": str(exc), "game_id": game_id}

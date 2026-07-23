@@ -3,6 +3,7 @@ scores_service.py
 Obtiene resultados de partidos de Liga MX desde 365Scores.
 Fallback: ESPN API (ya integrada).
 """
+import json
 import logging
 import httpx
 from datetime import datetime, timedelta
@@ -68,6 +69,7 @@ def _normalize_name(name: str) -> str:
         "Toluca":                 "Toluca",
         "Atlas":                  "Atlas",
         "Necaxa":                 "Necaxa",
+        "Atlante":                "Atlante",
     }
     return MAPPING.get(name, name)
 
@@ -88,7 +90,10 @@ async def _fetch_365scores(
             logger.warning(f"365Scores API → {resp.status_code}")
             return []
 
-        data = resp.json()
+        # Ver nota en liga_mx_stats_service.py: forzamos UTF-8 explícito en vez
+        # de confiar en la detección de charset de httpx (corrompía nombres
+        # con tildes/ñ, ej. "León" -> "LeÃ³n", rompiendo el match por nombre).
+        data = json.loads(resp.content.decode("utf-8"))
         games = data.get("games", [])
         logger.info(f"365Scores: {len(games)} games found for range")
         return games
