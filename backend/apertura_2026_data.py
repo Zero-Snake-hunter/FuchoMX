@@ -51,22 +51,27 @@ APERTURA_2026_TEAMS = [_BY_SHORT_NAME[sn] for sn in _REUSED_SHORT_NAMES] + [
 #  ElUniversal, Mediotiempo — jul 2026):
 #   - El partido de Puebla fue vs Juárez (Juárez 0-1 Puebla), NO vs Tigres.
 #   - Tigres perdió 3-1 vs Tijuana (no hay partido "Tigres vs Puebla").
-#  Único dato de fecha/hora confirmado por fuente: Tijuana-Tigres, jueves 16
-#  jul (CT = UTC-6). El resto de horas de kickoff son PLACEHOLDER para
-#  ordenar dentro del rango 16-18 jul dado — no están verificadas por fuente
-#  y no afectan el cálculo de puntos (los partidos ya están "finished" con
-#  el marcador correcto). Ajustar si se necesita precisión real de horario.
+#
+#  ACTUALIZACIÓN: se reemplazaron todos los marcadores/horas por datos reales
+#  obtenidos directamente de la API de 365Scores (competition_id=141,
+#  gameId por partido — ver game_id abajo), que es la fuente de verdad. Esto
+#  corrigió DOS resultados más que venían mal (de la búsqueda web anterior):
+#   - Atlético San Luis 2-3 Cruz Azul (Cruz Azul GANÓ, no perdió 2-1 como se
+#     tenía antes).
+#   - León 2-3 Atlas (León fue LOCAL, no Atlas — el rival y marcador final
+#     ya estaban bien, solo el local/visitante estaba invertido).
+#  Formato: (game_id_365scores, home_short, away_short, home_score, away_score, datetime_utc)
 # ──────────────────────────────────────────────
 APERTURA_2026_J1_RESULTS = [
-    ("TIJ", "TIG", 3, 1, datetime(2026, 7, 17, 1, 0)),   # confirmado: jueves 16 jul 19:00 CT
-    ("NEC", "ATE", 2, 1, datetime(2026, 7, 17, 23, 0)),  # placeholder: vie 17 jul
-    ("ASL", "CAZ", 2, 1, datetime(2026, 7, 18, 1, 5)),   # placeholder: vie 17 jul
-    ("PUM", "PAC", 0, 3, datetime(2026, 7, 18, 1, 5)),   # placeholder: vie 17 jul
-    ("GDL", "TOL", 0, 2, datetime(2026, 7, 19, 0, 5)),   # placeholder: sáb 18 jul
-    ("MTY", "SAN", 3, 2, datetime(2026, 7, 19, 1, 5)),   # placeholder: sáb 18 jul
-    ("ATL", "LEO", 3, 2, datetime(2026, 7, 19, 2, 5)),   # placeholder: sáb 18 jul
-    ("JUA", "PUE", 0, 1, datetime(2026, 7, 19, 23, 5)),  # placeholder: sáb 18 jul
-    ("QRO", "AME", 0, 1, datetime(2026, 7, 20, 0, 5)),   # placeholder: sáb 18 jul
+    (4735762, "TIJ", "TIG", 3, 1, datetime(2026, 7, 17,  3, 10)),
+    (4735763, "NEC", "ATE", 2, 1, datetime(2026, 7, 17,  1,  0)),
+    (4735761, "ASL", "CAZ", 2, 3, datetime(2026, 7, 18,  1,  0)),   # corregido: CAZ ganó
+    (4735758, "PUM", "PAC", 0, 3, datetime(2026, 7, 18, 23,  0)),
+    (4735757, "GDL", "TOL", 0, 2, datetime(2026, 7, 19,  1,  7)),
+    (4735756, "MTY", "SAN", 3, 2, datetime(2026, 7, 19,  1,  5)),
+    (4735760, "LEO", "ATL", 2, 3, datetime(2026, 7, 18,  1,  0)),   # corregido: LEO era local
+    (4735759, "JUA", "PUE", 0, 1, datetime(2026, 7, 18,  3,  0)),
+    (4735755, "QRO", "AME", 0, 1, datetime(2026, 7, 19,  3, 10)),
 ]
 
 # ──────────────────────────────────────────────

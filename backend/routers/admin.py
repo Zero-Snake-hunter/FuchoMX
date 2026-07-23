@@ -16,6 +16,7 @@ from fantasy_scoring import calculate_fantasy_points
 from jornada_processor import _process_jornada_core
 from models import UpdateScoreRequest, WCMatchStatsRequest
 from services.world_cup_stats_service import get_wc_match_stats
+from services.liga_mx_stats_service import sync_match_stats_365
 from real_liga_mx_data import (
     CLAUSURA_2026_DATES,
     CLAUSURA_2026_J13_MATCHES,
@@ -903,8 +904,9 @@ async def migrate_apertura_2026(current_user: dict = Depends(get_admin_user)):
             "home_team_id": team_ids[home_sn], "away_team_id": team_ids[away_sn],
             "home_score": home_score, "away_score": away_score,
             "status": "finished", "start_at": start_at, "created_at": now,
+            "ext_id_365": game_id,
         }
-        for (home_sn, away_sn, home_score, away_score, start_at) in APERTURA_2026_J1_RESULTS
+        for (game_id, home_sn, away_sn, home_score, away_score, start_at) in APERTURA_2026_J1_RESULTS
         if home_sn in team_ids and away_sn in team_ids
     ]
     if j1_matches:
@@ -990,6 +992,55 @@ async def create_remaining_jornadas(current_user: dict = Depends(get_admin_user)
         "message": f"✅ {len(created)} jornada(s) creada(s), {len(skipped)} ya existían",
         "created": created,
         "skipped": skipped,
+    }
+
+
+@router.post("/admin/jornada/{jornada_id}/sync-365-stats")
+async def sync_jornada_stats_365(jornada_id: str, current_user: dict = Depends(get_admin_user)):
+    """
+    Trae stats reales (goles, tarjetas, minutos) de 365Scores para cada
+    partido "finished" de la jornada que tenga ext_id_365, empareja
+    jugadores contra el roster propio y guarda en player_match_stats.
+    Al final recalcula puntos fantasy de la jornada.
+    Reporta jugadores de la alineación real que NO se pudieron emparejar
+    contra el roster sembrado (roster desactualizado = jugadores sin puntos).
+    """
+    try:
+        jornada_oid = ObjectId(jornada_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="ID de jornada inválido")
+
+    jornada = await db.jornadas.find_one({"_id": jornada_oid})
+    if not jornada:
+        raise HTTPException(status_code=404, detail="Jornada no encontrada")
+
+    matches = await db.matches.find({
+        "jornada_id": jornada_oid, "status": "finished", "ext_id_365": {"$exists": True},
+    }).to_list(50)
+
+    results = []
+    total_matched = 0
+    total_unmatched = 0
+    for match in matches:
+        result = await sync_match_stats_365(match, db)
+        results.append(result)
+        total_matched += result.get("players_matched", 0)
+        total_unmatched += result.get("players_unmatched", 0)
+
+    fantasy_result = await calculate_fantasy_points(jornada_id)
+
+    logger.info(
+        f"sync-365-stats jornada {jornada_id}: {len(matches)} partidos, "
+        f"{total_matched} jugadores emparejados, {total_unmatched} sin match"
+    )
+    return {
+        "message": f"✅ {len(matches)} partido(s) procesados desde 365Scores",
+        "jornada_id": jornada_id,
+        "matches_processed": len(matches),
+        "players_matched": total_matched,
+        "players_unmatched": total_unmatched,
+        "match_results": results,
+        "fantasy_teams_processed": fantasy_result.get("teams_processed", 0),
     }
 
 
