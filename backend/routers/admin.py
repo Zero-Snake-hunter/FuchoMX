@@ -954,6 +954,65 @@ async def migrate_apertura_2026(current_user: dict = Depends(get_admin_user)):
     }
 
 
+@router.post("/admin/jornada/{jornada_id}/patch-ext-ids")
+async def patch_jornada_ext_ids(jornada_id: str, current_user: dict = Depends(get_admin_user)):
+    """
+    Backfill de ext_id_365 en matches que ya existían antes de que
+    migrate_apertura_2026 empezara a guardarlo (corridas de la migración
+    hechas con una versión anterior del endpoint). Busca cada match por
+    home_team_id/away_team_id (resueltos desde short_name) y le hace $set
+    de ext_id_365 con el game_id real de 365Scores.
+    Por ahora solo hay datos para Jornada 1 (APERTURA_2026_J1_RESULTS) — si
+    se llama con otra jornada, no aplica nada y lo reporta explícitamente.
+    """
+    try:
+        jornada_oid = ObjectId(jornada_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="ID de jornada inválido")
+
+    jornada = await db.jornadas.find_one({"_id": jornada_oid})
+    if not jornada:
+        raise HTTPException(status_code=404, detail="Jornada no encontrada")
+
+    if jornada.get("competition") != "liga_mx" or jornada.get("week_number") != 1:
+        return {
+            "message": "Sin datos de ext_id_365 para esta jornada (solo Jornada 1 por ahora)",
+            "patched": [],
+            "not_found": [],
+        }
+
+    teams = await db.teams.find({"competition": "liga_mx"}).to_list(30)
+    team_id_by_short_name = {t["short_name"]: t["_id"] for t in teams}
+
+    patched = []
+    not_found = []
+    for game_id, home_sn, away_sn, _home_score, _away_score, _start_at in APERTURA_2026_J1_RESULTS:
+        home_id = team_id_by_short_name.get(home_sn)
+        away_id = team_id_by_short_name.get(away_sn)
+        if not home_id or not away_id:
+            not_found.append(f"{home_sn} vs {away_sn} (equipo no encontrado en DB)")
+            continue
+
+        result = await db.matches.update_one(
+            {"jornada_id": jornada_oid, "home_team_id": home_id, "away_team_id": away_id},
+            {"$set": {"ext_id_365": game_id}},
+        )
+        if result.matched_count:
+            patched.append(f"{home_sn} vs {away_sn} -> {game_id}")
+        else:
+            not_found.append(f"{home_sn} vs {away_sn} (match no encontrado en esta jornada)")
+
+    logger.info(
+        f"patch-ext-ids jornada {jornada_id}: {len(patched)} actualizados, "
+        f"{len(not_found)} no encontrados"
+    )
+    return {
+        "message": f"✅ {len(patched)} partido(s) actualizados con ext_id_365",
+        "patched": patched,
+        "not_found": not_found,
+    }
+
+
 @router.post("/admin/create-remaining-jornadas")
 async def create_remaining_jornadas(current_user: dict = Depends(get_admin_user)):
     """
