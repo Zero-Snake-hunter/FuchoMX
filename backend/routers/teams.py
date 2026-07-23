@@ -24,6 +24,72 @@ async def get_teams():
     return {"teams": teams}
 
 
+@router.get("/standings")
+async def get_standings():
+    """
+    Tabla general calculada desde partidos "finished" en nuestra propia DB
+    (no depende de ESPN ni 365Scores en vivo) — PJ, PG, PE, PP, GF, GC, DG, PTS.
+    Orden: puntos desc, luego diferencia de goles desc, luego goles a favor desc.
+    """
+    competition = await get_active_competition()
+    teams = await db.teams.find({"competition": competition}).to_list(30)
+
+    jornadas = await db.jornadas.find({
+        "competition": competition, "type": {"$ne": "liguilla"},
+    }).to_list(25)
+    jornada_ids = [j["_id"] for j in jornadas]
+
+    matches = await db.matches.find({
+        "jornada_id": {"$in": jornada_ids}, "status": "finished",
+        "home_score": {"$ne": None}, "away_score": {"$ne": None},
+    }).to_list(500)
+
+    table = {
+        t["_id"]: {
+            "id": str(t["_id"]), "name": t["name"],
+            "short_name": t.get("short_name", ""), "shield_url": t.get("shield_url", ""),
+            "pj": 0, "pg": 0, "pe": 0, "pp": 0, "gf": 0, "gc": 0,
+        }
+        for t in teams
+    }
+
+    for m in matches:
+        home_id, away_id = m["home_team_id"], m["away_team_id"]
+        if home_id not in table or away_id not in table:
+            continue
+        home_score, away_score = m["home_score"], m["away_score"]
+        h, a = table[home_id], table[away_id]
+
+        h["pj"] += 1
+        a["pj"] += 1
+        h["gf"] += home_score
+        h["gc"] += away_score
+        a["gf"] += away_score
+        a["gc"] += home_score
+
+        if home_score > away_score:
+            h["pg"] += 1
+            a["pp"] += 1
+        elif home_score < away_score:
+            a["pg"] += 1
+            h["pp"] += 1
+        else:
+            h["pe"] += 1
+            a["pe"] += 1
+
+    standings = []
+    for row in table.values():
+        dg = row["gf"] - row["gc"]
+        pts = row["pg"] * 3 + row["pe"]
+        standings.append({**row, "dg": dg, "pts": pts})
+
+    standings.sort(key=lambda r: (-r["pts"], -r["dg"], -r["gf"]))
+    for i, row in enumerate(standings):
+        row["position"] = i + 1
+
+    return {"competition": competition, "standings": standings}
+
+
 @router.get("/jornadas/current")
 async def get_current_jornada():
     now = datetime.utcnow()
