@@ -44,14 +44,18 @@ APERTURA_2026_TEAMS = [dict(_BY_SHORT_NAME[sn]) for sn in _REUSED_SHORT_NAMES] +
 
 # ──────────────────────────────────────────────
 #  Rosters reales verificados en ESPN (espn.com.mx) — Apertura 2026.
-#  Reemplazan el roster placeholder/reusado-de-Clausura de estos 5 equipos.
+#  Reemplazan el roster placeholder/reusado-de-Clausura de los 18 equipos.
 #  Fuente verificada en vivo (con confirmación de identidad de equipo antes
-#  de extraer, porque los IDs iniciales de ESPN venían cruzados):
-#   AME=id/227, GDL=id/219, CAZ=id/218, MTY=id/220, ATE=id/226
+#  de extraer en TODOS los casos — varios IDs iniciales venían cruzados a
+#  otro equipo o incluso a otro deporte/liga, ver historial de chat):
+#   AME=227, GDL=219, CAZ=218, MTY=220, ATE=226, TOL=223, TIG=232, PUM=233,
+#   SAN=225, ATL=216, LEO=228, PAC=234, TIJ=10125, NEC=229, QRO=222,
+#   PUE=231, JUA=17851, ASL=15720
 #  (todos en espn.com.mx/futbol/equipo/plantel/_/id/{id}/mex.{slug})
-#  Cruce de verificación: varios de estos jugadores (Isaías Violante-AME,
-#  Eugenio Pizzuto/Walter Portales-ATE) ya habían aparecido anotando/con
-#  tarjeta en los partidos reales de J1 obtenidos de 365Scores.
+#  Cruce de verificación: varios jugadores (Isaías Violante-AME, Eugenio
+#  Pizzuto/Walter Portales-ATE, Julián Carranza-NEC, Ramiro Árciga/Mourad
+#  El Ghezouani-TIJ, Ignacio Maestro Puch-PUE) ya habían aparecido
+#  anotando/con tarjeta en los partidos reales de J1 obtenidos de 365Scores.
 # ──────────────────────────────────────────────
 _ESPN_ROSTERS = {
     "AME": [
@@ -109,6 +113,148 @@ _ESPN_ROSTERS = {
         ("Edgar Jiménez", "MED", 34),
         ("Walter Portales", "DEL", None), ("Joaquín Moxica", "DEL", None), ("Luis Puente", "DEL", 9), ("Jairon Charcopa", "DEL", 15),
         ("Rubén Coubert", "DEL", 25),
+    ],
+    "TOL": [
+        ("David Shrem", "POR", 18), ("Luis García", "POR", 22),
+        ("Brian García", "DEF", None), ("Diego Zaragoza", "DEF", 2), ("Antonio Briseño", "DEF", 3), ("Bruno Méndez", "DEF", 4),
+        ("Federico Pereira", "DEF", 6), ("Luan", "DEF", 13), ("Jesús Gallardo", "DEF", 20), ("Everardo López", "DEF", 25),
+        ("Alek Álvarez", "DEF", 35), ("Luis Navarrete", "DEF", 192), ("Erick Orta", "DEF", 206),
+        ("Érick Gutiérrez", "MED", None), ("Víctor Guzmán", "MED", None), ("Franco Romero", "MED", 5), ("Nicolás Castro", "MED", 8),
+        ("Jesús Angulo", "MED", 10), ("Marcel Ruiz", "MED", 14), ("Pável Pérez", "MED", 15), ("Santiago Simón", "MED", 19),
+        ("Fernando Arce", "MED", 24), ("Jorge Díaz", "MED", 29), ("Francisco Pumpido", "MED", 187), ("José Arroyo", "MED", 207),
+        ("Jose Estrada", "MED", 250),
+        ("Edgar López", "DEL", None), ("Alexis Vega", "DEL", 9), ("Helinho", "DEL", 11), ("Oswaldo Virgen", "DEL", 23),
+        ("Paulinho", "DEL", 26), ("Franco Rossi", "DEL", 27), ("Giovani Bravo", "DEL", 189),
+    ],
+    "TIG": [
+        ("Nahuel Guzmán", "POR", 1), ("Antonio Carrera", "POR", 13), ("Carlos Rodríguez", "POR", 25),
+        ("Marco Farfan", "DEF", 3), ("Juanjo Purata", "DEF", 4), ("Jesús Garza", "DEF", 14), ("Alan Franco", "DEF", 15),
+        ("Fernando Ordóñez", "DEF", 26), ("Jesús Angulo", "DEF", 27), ("Joaquim", "DEF", 28), ("Vladimir Loroña", "DEF", 32),
+        ("Rafael Guerrero", "DEF", 33), ("Osvaldo Rodríguez", "DEF", 35), ("Marcelo Salinas Villarreal", "DEF", 193),
+        ("César Araujo", "MED", 5), ("Juan Pablo Vigón", "MED", 6), ("Fernando Gorriarán", "MED", 8), ("Juan Brunetta", "MED", 11),
+        ("Diego Lainez", "MED", 16), ("Marcelo Flores", "MED", 20), ("Rômulo", "MED", 23), ("Isac Galván", "MED", 198),
+        ("Henrique Simeone Koifman", "MED", 204),
+        ("Ángel Correa", "DEL", 7), ("André-Pierre Gignac", "DEL", 10), ("Rodrigo Aguirre", "DEL", 17), ("Diego Sánchez", "DEL", 30),
+        ("Ozziel Herrera", "DEL", 77), ("Antonio De María Y Campos", "DEL", 205),
+    ],
+    "PUM": [
+        ("Keylor Navas", "POR", 1), ("Miguel Paul", "POR", 32), ("Pablo Lara", "POR", 35),
+        ("Pablo Bennevendo", "DEF", 2), ("Rubén Duarte", "DEF", 5), ("Nathan Silva", "DEF", 6), ("Cristian Calderón", "DEF", 12),
+        ("Pablo Alfonso Monroy", "DEF", 13), ("Antonio Leone", "DEF", 24), ("Ángel Azuaje", "DEF", 34), ("Álvaro Angulo", "DEF", 77),
+        ("Kleber Carranza", "DEF", None),
+        ("Rodrigo López", "MED", 7), ("Adalberto Carrasquilla", "MED", 8), ("Ulises Rivas", "MED", 15), ("Sebastián Córdova", "MED", 17),
+        ("Victor Arteaga", "MED", 18), ("Jesús Rivas", "MED", 19), ("Santiago Trigos", "MED", 20), ("Ángel Rico", "MED", 26),
+        ("Pedro Vite", "MED", 45), ("Dennis Ramirez", "MED", 193), ("Stanley García", "MED", 203), ("Piero Quispe", "MED", None),
+        ("Guillermo Martínez", "DEL", 9), ("José Macías", "DEL", 11), ("Uriel Antuna", "DEL", 21), ("Alan Medina", "DEL", 22),
+        ("Juninho", "DEL", 23), ("Santiago López", "DEL", 30), ("Robert Morales", "DEL", 31),
+    ],
+    "SAN": [
+        ("Carlos Acevedo", "POR", 1), ("Hector Holguin Perez", "POR", 33),
+        ("Bruno Amione", "DEF", 2), ("Mauricio Cuevas", "DEF", 3), ("José Abella", "DEF", 4), ("Emmanuel Echeverría", "DEF", 17),
+        ("Franco Pardo", "DEF", 18), ("Kevin Picón", "DEF", 22), ("Felipe Sanchez", "DEF", 25), ("Jonathan Pérez", "DEF", 28),
+        ("Juan Echilvestre", "DEF", 185),
+        ("Aldo López", "MED", 5), ("Javier Güemez", "MED", 6), ("Salvador Mariscal", "MED", 8), ("Ezequiel Bullaude", "MED", 10),
+        ("Carlos Gruezo", "MED", 11), ("Efraín Orona", "MED", 14), ("Joshua Mancha", "MED", 15), ("Francisco Villalba", "MED", 21),
+        ("Diego Medina", "MED", 24), ("Ramiro Sordo", "MED", 26), ("Kevin Palacios", "MED", 77),
+        ("José Alfonso Ulloa Naranjo", "MED", 192), ("Luis Gómez", "MED", 193), ("Nelson Cedillo", "MED", 195),
+        ("Diego González", "DEL", 7), ("Lucas Di Yorio", "DEL", 9), ("Eduardo Aguirre", "DEL", 19), ("Tahiel Jiménez", "DEL", 29),
+        ("Lucca Vuoso", "DEL", 254),
+    ],
+    "ATL": [
+        ("Camilo Vargas", "POR", 12), ("Antonio Sánchez", "POR", 22),
+        ("Carlos Robles", "DEF", None), ("Milton Valenzuela", "DEF", None), ("Adrián Mora", "DEF", 4), ("Gaddi Aguirre", "DEF", 13),
+        ("Paulo Ramírez", "DEF", 15), ("José Lozano", "DEF", 17), ("Rodrigo Schlegel", "DEF", 21), ("Jorge Rodríguez", "DEF", 25),
+        ("Manuel Capasso", "DEF", 28), ("Róber", "DEF", 44), ("Luis Blanco", "DEF", 183), ("Jorge San Martín", "DEF", 218),
+        ("Luís Esteves", "MED", None), ("Edgar Zaldivar", "MED", 6), ("Mateo García", "MED", 8), ("Aldo Rocha", "MED", 26),
+        ("Víctor Ríos", "MED", 27), ("Abraham Bass", "MED", 30), ("Jesús Serrato", "MED", 192), ("Jesús Guillén", "MED", 208),
+        ("Duk", "DEL", None), ("Gustavo Ferrareis", "DEL", 3), ("Agustín Rodríguez", "DEL", 9), ("Gustavo Del Prete", "DEL", 10),
+        ("Alfonso González", "DEL", 58), ("Sergio Hernandez", "DEL", 199), ("José Martín", "DEL", 203), ("Luis Gamboa", "DEL", 251),
+    ],
+    "LEO": [
+        ("Alfonso Blanco", "POR", None), ("Rodolfo Cota", "POR", None), ("Jordan García", "POR", 1), ("Oscar García", "POR", 23),
+        ("Juan Guevara", "DEF", None), ("Luís Cervantes", "DEF", None), ("Valentín Gauthier", "DEF", 2), ("Paolo Medina", "DEF", 3),
+        ("Bryan Colula", "DEF", 4), ("Sebastián Vegas", "DEF", 5), ("Iván Moreno", "DEF", 7), ("Rodrigo Echeverría", "DEF", 20),
+        ("Christopher Mora", "DEF", 185),
+        ("Santiago Colombatto", "MED", None), ("Nicolás Fonseca", "MED", None), ("Edgar Guerra", "MED", None), ("Ángel Estrada", "MED", None),
+        ("Fernando Beltrán", "MED", 6), ("Juan Domínguez", "MED", 8), ("Daniel Arcila", "MED", 13), ("Jordi Cortizo", "MED", 16),
+        ("Salvador Reyes", "MED", 26), ("José David Ramírez", "MED", 28), ("José Rodríguez", "MED", 29), ("Luis Valadez", "MED", 183),
+        ("Jesús Lara", "MED", 203),
+        ("Federico Viñas", "DEL", None), ("Ismael Díaz", "DEL", 11), ("Gael García", "DEL", 17), ("Rogelio Funes Mori", "DEL", 18),
+        ("José Alvarado", "DEL", 19), ("Javier Vallejo", "DEL", 22), ("Diber Cambindo", "DEL", 27),
+    ],
+    "PAC": [
+        ("Carlos Moreno", "POR", 1), ("Jose Eulogio Téllez", "POR", None),
+        ("Sergio Barreto", "DEF", 2), ("Eduardo Bauermann", "DEF", 4), ("Mauricio Isais", "DEF", 6), ("Jorge Berlanga", "DEF", 13),
+        ("Carlos Sánchez", "DEF", 14), ("Francisco Venegas", "DEF", 15), ("René López", "DEF", 21), ("Alan Mozo", "DEF", 22),
+        ("Pedro Budib", "DEF", 32), ("Pedro Martínez", "DEF", 35), ("Ari Contreras", "DEF", 185), ("Edwin Soto", "DEF", 195),
+        ("Juan Gamez", "DEF", 196), ("Andrés Micolta", "DEF", 222),
+        ("Owen González", "MED", None), ("Rodolfo Pizarro", "MED", 7), ("Elías Montiel", "MED", 10), ("Israel Luna", "MED", 15),
+        ("Christian Rivera", "MED", 16), ("Alan Bautista", "MED", 26), ("Kenedy", "MED", 29), ("Sergio Rodríguez", "MED", 30),
+        ("Adrián Alcaraz", "DEL", None), ("Alexéi Domínguez", "DEL", 8), ("Oussama Idrissi", "DEL", 11), ("Illian Hernandez", "DEL", 19),
+        ("Salomón Rondón", "DEL", 23), ("Jonatan Ramirez", "DEL", 139), ("Gael Álvarez", "DEL", 187), ("Daniel Méndez", "DEL", 199),
+        ("Cristóbal Hernández", "DEL", 267),
+    ],
+    "TIJ": [
+        ("Kevin Balanta", "DEF", None), ("Nicolás Diaz", "DEF", None), ("Rafael Fernández", "DEF", 3), ("Unai Bilbao", "DEF", 4),
+        ("Kevin Escamilla", "DEF", 5), ("Jesús Gómez", "DEF", 6), ("Jackson Porozo", "DEF", 12), ("Jesus Vega", "DEF", 16),
+        ("Oscar Manzanares", "DEF", 25), ("Pablo Nicolás Ortíz", "DEF", 33), ("Alejandro Magallon", "DEF", 188),
+        ("Iván Tona", "MED", 8), ("Joe Corona", "MED", 15), ("Gilberto Mora", "MED", 19), ("Ángel Zapata", "MED", 20),
+        ("Ignacio Rivero", "MED", 22), ("Aldahir Perez", "MED", 26), ("Domingo Blanco", "MED", 27), ("Frank Thierry Boya", "MED", 34),
+        ("German Padilla", "MED", 187),
+        ("Adonis Preciado", "DEL", 11), ("Ramiro Árciga", "DEL", 17), ("Mourad El Ghezouani", "DEL", 21), ("Josef Martínez", "DEL", 30),
+        ("Diego Abreu", "DEL", 31), ("Christian Castillo", "DEL", 196), ("Joban González", "DEL", 202),
+    ],
+    "NEC": [
+        ("Christopher Josué Andrade Martín", "POR", 1), ("Luis Jiménez", "POR", 12),
+        ("Kaiky Naves", "DEF", None), ("Emilio Martínez", "DEF", 2), ("Agustín Oliveros", "DEF", 3), ("Alexis Peña", "DEF", 4),
+        ("Diego Ochoa", "DEF", 15), ("Francisco Méndez", "DEF", 20), ("Raúl Martínez", "DEF", 33), ("Carlos Vargas", "DEF", 88),
+        ("Daniel Leyva", "MED", 6), ("Lorenzo Faravelli", "MED", 8), ("Javier Ruiz", "MED", 10), ("Juan Torres", "MED", 11),
+        ("Mauro Zaleta", "MED", 14), ("Pedro Pedraza", "MED", 16), ("Rogelio Cortéz", "MED", 17), ("Matías Espíndola", "MED", 21),
+        ("Miguel Rodríguez", "MED", 99), ("Israel Tello", "MED", 188), ("Arath Moreno", "MED", 197), ("Joshua Palacios", "MED", 210),
+        ("Ricardo Alonso", "MED", 232),
+        ("Kevin Rosero", "DEL", 7), ("Julián Carranza", "DEL", 9), ("Miguel Pedroza", "DEL", 27), ("Ricardo Monreal", "DEL", 30),
+        ("Juan Valencia", "DEL", 90),
+    ],
+    "QRO": [
+        ("José Hernández", "POR", 1), ("Luis Garcia", "POR", 24), ("Guillermo Allison", "POR", 25),
+        ("Lucas Abascia", "DEF", 2), ("Diego Reyes", "DEF", 9), ("Bayron Duarte", "DEF", 22),
+        ("Carlo García", "MED", 4), ("Santiago Homenchenko", "MED", 6), ("Bernardo Parra", "MED", 8), ("Lucas Rodríguez", "MED", 10),
+        ("Jaime Valencia", "MED", 12), ("Jean Unjanque", "MED", 14), ("Erik Dueñas", "MED", 18), ("Alejandro Alcala", "MED", 20),
+        ("Fernando González Peña", "MED", 21), ("Juan Eduardo Robles", "MED", 23), ("Jesús Arellano", "MED", 30),
+        ("Mateo Coronel", "MED", 37), ("Victor Lopez", "MED", 47), ("Michael Carcelen", "MED", 55), ("Darío Rodríguez", "MED", 188),
+        ("Juan Pablo Cázares", "MED", 190),
+        ("Eduardo Pérez", "DEL", 26), ("Ali Avila", "DEL", 31), ("Luis Gutiérrez", "DEL", 33), ("Claudio Robles", "DEL", 187),
+    ],
+    "PUE": [
+        ("Julio González", "POR", 1), ("Ricardo Gutiérrez", "POR", 28), ("Jesus Rodriguez", "POR", 33),
+        ("Oscar Villa", "DEF", None), ("Ángel Leyva", "DEF", None), ("Juan Pablo Vargas", "DEF", 4), ("Facundo Almada", "DEF", 5),
+        ("Fernando Monarrez", "DEF", 7), ("Eduardo Navarro", "DEF", 13), ("Jose Pachuca", "DEF", 20), ("Alvaro Burgos", "DEF", 195),
+        ("Alberto Herrera", "MED", None), ("Mathías Tomás", "MED", None), ("Raúl Castillo", "MED", 10), ("Iker Moreno", "MED", 12),
+        ("Alonso Ramirez", "MED", 16), ("Sergio Sanabria", "MED", 21), ("Alejandro Organista", "MED", 24), ("Lucas Camilo", "MED", 34),
+        ("Ángel Robles", "DEL", None), ("Omar Moreno", "DEL", None), ("Luifer Hernández", "DEL", 9), ("Emiliano Gomez", "DEL", 11),
+        ("Ignacio Maestro Puch", "DEL", 19), ("Kevin Velasco", "DEL", 26), ("Brayan Garnica", "DEL", 27), ("Eduardo Mustre", "DEL", 29),
+    ],
+    "JUA": [
+        ("Sebastián Jurado", "POR", 1), ("Benny Díaz", "POR", 24), ("Guillermo Ruiz", "POR", 27),
+        ("Gilberto Sepúlveda", "DEF", None), ("Jesús Murillo", "DEF", 2), ("Alejandro Mayorga", "DEF", 4), ("Oscar Ortega", "DEF", 23),
+        ("José García", "DEF", 26), ("Francisco Nevarez", "DEF", 33), ("Bryan Romero", "DEF", 184), ("Ricardo Juárez", "DEF", 198),
+        ("Luis Carmona", "DEF", 203),
+        ("Lucas Romero", "MED", None), ("Said Godínez", "MED", None), ("Juan Sigala", "MED", None), ("Denzell García", "MED", 5),
+        ("Monchu", "MED", 6), ("Guilherme Castilho", "MED", 8), ("Dieter Villalpando", "MED", 10), ("José Luis Rodríguez", "MED", 11),
+        ("Raymundo Fulgencio", "MED", 13), ("Homer Martínez", "MED", 18), ("Ricardinho", "MED", 21), ("Javier Aquino", "MED", 22),
+        ("Leonardo Silva", "MED", 183), ("Kenneth Martínez", "MED", 186), ("Jan Carmona", "MED", 201), ("Eder López", "MED", 237),
+        ("Madson", "DEL", 9), ("Luca Martinez", "DEL", 17), ("Óscar Estupiñán", "DEL", 19), ("Jairo Torres", "DEL", 20),
+        ("Ettson Ayón", "DEL", 29), ("Israel Larios", "DEL", 208),
+    ],
+    "ASL": [
+        ("Andrés Sánchez", "POR", 1), ("César López", "POR", 23), ("Gibrán Lajud", "POR", 34),
+        ("Román Torres", "DEF", 2), ("Robson Bambu", "DEF", 3), ("Juanpe", "DEF", 6), ("Lucas Esteves", "DEF", 15),
+        ("Aldo Cruz", "DEF", 18), ("Benjamín Galindo", "DEF", 30), ("Eduardo Águila", "DEF", 31), ("Luis Alberto Carrillo", "DEF", 188),
+        ("Johan Caicedo", "MED", None), ("Roberto Meraz", "MED", 5), ("Benjamín Galdames", "MED", 7),
+        ("Sébastien Salles-Lamonge", "MED", 10), ("David Rodriguez", "MED", 11), ("Miguel García", "MED", 14), ("Leonardo Flores", "MED", 20),
+        ("Oscar Macías", "MED", 21), ("Sergio", "MED", 22), ("Luis Nájera", "MED", 24), ("Sebastián Pérez Bouquet", "MED", 26),
+        ("Jesús Medina", "MED", 28), ("Ángel Reyes", "MED", 242),
+        ("João Pedro", "DEL", 9), ("Anderson Duarte", "DEL", 17), ("Santiago Muñoz", "DEL", 19),
     ],
 }
 
