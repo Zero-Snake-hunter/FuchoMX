@@ -85,6 +85,21 @@ class WCMatchStatsRequest(BaseModel):
     match_id: str
 
 
+class RosterPlayerIn(BaseModel):
+    name: str
+    position: str  # POR/DEF/MED/DEL
+    number: Optional[int] = None
+
+
+class TeamRosterUpdate(BaseModel):
+    team_short_name: str
+    players: List[RosterPlayerIn]
+
+
+class UpdateRostersRequest(BaseModel):
+    teams: List[TeamRosterUpdate]
+
+
 # ── Fantasy ───────────────────────────────────────────────────────────────────
 
 class FantasyTeamCreate(BaseModel):

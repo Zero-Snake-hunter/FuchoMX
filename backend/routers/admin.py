@@ -14,9 +14,9 @@ from database import db, get_active_competition
 from dependencies import get_admin_user, get_current_user
 from fantasy_scoring import calculate_fantasy_points
 from jornada_processor import _process_jornada_core
-from models import UpdateScoreRequest, WCMatchStatsRequest
+from models import UpdateScoreRequest, WCMatchStatsRequest, UpdateRostersRequest
 from services.world_cup_stats_service import get_wc_match_stats
-from services.liga_mx_stats_service import sync_match_stats_365
+from services.liga_mx_stats_service import sync_match_stats_365, _normalize_player_name
 from real_liga_mx_data import (
     CLAUSURA_2026_DATES,
     CLAUSURA_2026_J13_MATCHES,
@@ -1011,6 +1011,85 @@ async def patch_jornada_ext_ids(jornada_id: str, current_user: dict = Depends(ge
         "patched": patched,
         "not_found": not_found,
     }
+
+
+@router.post("/admin/update-rosters-from-espn")
+async def update_rosters_from_espn(
+    body: UpdateRostersRequest, current_user: dict = Depends(get_admin_user)
+):
+    """
+    Reconcilia el roster de uno o más equipos (competition="liga_mx") contra
+    una lista de jugadores dada — borra los que ya no están, inserta los que
+    faltan, y NO toca a los que coinciden (conserva su _id, stats acumuladas,
+    etc.). Idempotente por equipo.
+
+    IMPORTANTE — por qué esto no consulta a ESPN en vivo por sí mismo:
+    ESPN (espn.com.mx) está detrás de un challenge de AWS WAF — cualquier
+    request HTTP simple (httpx, requests, curl) recibe un HTTP 202 con una
+    página de JS de verificación en vez del HTML real, verificado en vivo
+    contra este mismo endpoint de plantel. No hay forma de resolver ese
+    challenge desde un backend sin un navegador real. Por eso este endpoint
+    recibe el roster ya extraído (vía WebFetch en una sesión de Claude Code,
+    o cualquier otro método que sí pueda pasar el challenge) en vez de
+    scrapear la URL él mismo — el nombre se mantiene porque el dato en sí
+    sigue viniendo de ESPN, solo que la extracción pasa por fuera del backend.
+    """
+    results = []
+    for team_update in body.teams:
+        team = await db.teams.find_one({
+            "competition": "liga_mx", "short_name": team_update.team_short_name,
+        })
+        if not team:
+            results.append({
+                "team_short_name": team_update.team_short_name,
+                "error": "Equipo no encontrado (competition=liga_mx)",
+            })
+            continue
+
+        team_id = team["_id"]
+        current_players = await db.players.find({"team_id": team_id}).to_list(60)
+        current_by_norm = {_normalize_player_name(p["name"]): p for p in current_players}
+        incoming_by_norm = {
+            _normalize_player_name(p.name): p for p in team_update.players
+        }
+
+        to_delete = [p for norm, p in current_by_norm.items() if norm not in incoming_by_norm]
+        to_insert = [p for norm, p in incoming_by_norm.items() if norm not in current_by_norm]
+        kept = len(current_by_norm) - len(to_delete)
+
+        if to_delete:
+            await db.players.delete_many({"_id": {"$in": [p["_id"] for p in to_delete]}})
+
+        base_stats = {"minutes_played": 0, "goals": 0, "assists": 0, "saves": 0,
+                      "clean_sheets": 0, "defensive_actions": 0,
+                      "yellow_cards": 0, "red_cards": 0}
+        if to_insert:
+            await db.players.insert_many([
+                {
+                    "name": p.name, "team_id": team_id, "team_name": team["name"],
+                    "position": p.position, "number": p.number,
+                    "competition": "liga_mx", "stats": base_stats.copy(),
+                    "created_at": datetime.utcnow(),
+                }
+                for p in to_insert
+            ])
+
+        results.append({
+            "team_short_name": team_update.team_short_name,
+            "team_name": team["name"],
+            "deleted": [p["name"] for p in to_delete],
+            "inserted": [p.name for p in to_insert],
+            "kept": kept,
+        })
+
+    logger.info(
+        "update-rosters-from-espn: " +
+        ", ".join(
+            f"{r.get('team_short_name')}=+{len(r.get('inserted', []))}/-{len(r.get('deleted', []))}"
+            for r in results
+        )
+    )
+    return {"message": f"✅ {len(results)} equipo(s) procesados", "results": results}
 
 
 @router.post("/admin/create-remaining-jornadas")
