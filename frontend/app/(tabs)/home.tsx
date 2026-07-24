@@ -201,20 +201,28 @@ export default function HomeScreen() {
                     {genuinelyLive.length} partido{genuinelyLive.length !== 1 ? 's' : ''}
                   </Text>
                 </View>
-                {genuinelyLive.map((m, i) => (
-                  <View key={i} style={styles.liveMatch}>
-                    <Text style={styles.liveMatchHome} numberOfLines={1}>{m.home_name}</Text>
-                    <View style={styles.liveScore}>
-                      <Text style={styles.liveScoreText}>
-                        {m.home_score ?? '-'} - {m.away_score ?? '-'}
-                      </Text>
-                      {m.game_time ? (
-                        <Text style={styles.liveTime}>{m.game_time}'</Text>
-                      ) : null}
+                {genuinelyLive.map((m, i) => {
+                  const hasScore =
+                    m.home_score !== null && m.home_score !== -1 &&
+                    m.away_score !== null && m.away_score !== -1;
+                  const scheduledTime = m.start_time
+                    ? new Date(m.start_time).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+                    : '-';
+                  return (
+                    <View key={i} style={styles.liveMatch}>
+                      <Text style={styles.liveMatchHome} numberOfLines={1}>{m.home_name}</Text>
+                      <View style={styles.liveScore}>
+                        <Text style={styles.liveScoreText}>
+                          {hasScore ? `${m.home_score} - ${m.away_score}` : scheduledTime}
+                        </Text>
+                        {hasScore && m.game_time ? (
+                          <Text style={styles.liveTime}>{m.game_time}'</Text>
+                        ) : null}
+                      </View>
+                      <Text style={styles.liveMatchAway} numberOfLines={1}>{m.away_name}</Text>
                     </View>
-                    <Text style={styles.liveMatchAway} numberOfLines={1}>{m.away_name}</Text>
-                  </View>
-                ))}
+                  );
+                })}
               </View>
             );
           })()}
