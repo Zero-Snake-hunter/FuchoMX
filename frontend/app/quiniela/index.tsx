@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Platform,
   RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -121,10 +122,20 @@ export default function QuinielaScreen() {
   };
 
   const handleSubmit = async () => {
+    console.log('[Quiniela] handleSubmit ejecutado', { hasNewPicks, jornadaId: jornada?.id });
+
     if (!jornada) return;
 
     if (!hasNewPicks) {
       Alert.alert('Nada por guardar', 'No hay picks nuevos o modificados para guardar.');
+      return;
+    }
+
+    // En web, Alert.alert con array de botones no dispara sus onPress de forma
+    // confiable (mismo caso ya resuelto así en handleLogout de profile.tsx) —
+    // ahí es donde el botón "no hacía nada": el submit nunca llegaba a correr.
+    if (Platform.OS === 'web') {
+      await submitQuiniela();
       return;
     }
 
@@ -143,12 +154,19 @@ export default function QuinielaScreen() {
   };
 
   const submitQuiniela = async () => {
-    if (!jornada || !token) return;
+    console.log('[Quiniela] submitQuiniela ejecutado');
+
+    if (!jornada || !token) {
+      console.log('[Quiniela] submitQuiniela abortado: falta jornada o token');
+      return;
+    }
 
     // Solo se mandan picks nuevos/modificados de partidos que aún no arrancan
     const selectionsArray = jornada.matches
       .filter(m => m.status === 'scheduled' && selections[m.id] && selections[m.id] !== savedSelections[m.id])
       .map(m => ({ match_id: m.id, selection: selections[m.id] }));
+
+    console.log('[Quiniela] picks a enviar:', selectionsArray);
 
     if (selectionsArray.length === 0) return;
 
@@ -158,6 +176,7 @@ export default function QuinielaScreen() {
         jornada_id: jornada.id,
         selections: selectionsArray,
       });
+      console.log('[Quiniela] respuesta del servidor:', response.data);
 
       const saved: { match_id: string; selection: string }[] = response.data.saved || [];
       if (saved.length > 0) {
@@ -219,8 +238,14 @@ export default function QuinielaScreen() {
       });
 
     } catch (error: any) {
+      console.error('[Quiniela] Error al guardar picks:', error?.response?.data || error?.message || error);
+      // El 401 ya lo maneja el interceptor global de api.ts (redirige a login)
       if (error.response?.status !== 401) {
-        Alert.alert('Error', error.response?.data?.detail || 'Error al enviar quiniela');
+        const message = error.response?.data?.detail
+          || (error.message === 'Network Error'
+            ? 'Sin conexión — revisa tu internet e intenta de nuevo'
+            : 'No se pudieron guardar tus picks. Intenta de nuevo.');
+        Alert.alert('Error al guardar', message);
       }
     } finally {
       setSubmitting(false);
