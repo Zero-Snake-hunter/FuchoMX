@@ -48,6 +48,61 @@ def _normalize_player_name(name: str) -> str:
     return re.sub(r"[^a-z ]", "", stripped.lower()).strip()
 
 
+# Apodos comunes en español que 365Scores y ESPN usan de forma inconsistente
+# entre sí (uno reporta el apodo, el otro el nombre de pila) — verificado
+# contra casos reales de J1/J2 (ej. "Danny Leyva" en 365Scores vs "Daniel
+# Leyva" en el roster ESPN, "Nico Carrera" vs "Nicolás Carrera").
+_NICKNAMES = {
+    "tony": "antonio", "tono": "antonio",
+    "nico": "nicolas", "nacho": "ignacio",
+    "danny": "daniel", "dani": "daniel",
+    "alex": "alejandro", "ale": "alejandro",
+    "pepe": "jose",
+    "chuy": "jesus",
+    "memo": "guillermo", "willy": "guillermo",
+    "beto": "alberto", "tito": "alberto",
+    "lalo": "eduardo", "edu": "eduardo",
+    "kike": "enrique", "quique": "enrique",
+    "chicho": "francisco", "paco": "francisco", "pancho": "francisco",
+    "lucho": "luis", "luisito": "luis",
+    "fer": "fernando", "checo": "sergio", "vico": "victor",
+    "fran": "francisco",
+}
+
+
+def _canon_tokens(name: str) -> frozenset:
+    tokens = _normalize_player_name(name).split()
+    return frozenset(_NICKNAMES.get(t, t) for t in tokens)
+
+
+def _fuzzy_match_player(name: str, fuzzy_roster: list) -> tuple | None:
+    """
+    Fallback para cuando el nombre normalizado no matchea exacto contra el
+    roster propio. Solo resuelve el caso de nombre truncado/con apodo donde
+    el conjunto de tokens (con apodos canonizados) de una de las dos fuentes
+    es subconjunto del de la otra — ej. "Frank Boya" (365Scores) ⊆ "Frank
+    Thierry Boya" (ESPN), o "Tony Leone" -> {antonio, leone} == "Antonio
+    Leone" -> {antonio, leone}.
+
+    NO incluye fallback por apellido solo: se probó contra casos reales de
+    J1/J2 y producía falsos positivos (ej. "Carlos Rotondi" emparejaba con
+    "Rodolfo Rotondi", "Daniel Gonzalez" con "José González" — nombres de
+    pila distintos, casi seguro personas distintas). Preferimos reportar
+    unmatched a asignar stats al jugador equivocado.
+    """
+    incoming_tokens = _canon_tokens(name)
+    if not incoming_tokens:
+        return None
+
+    candidates = [
+        (pid, pos) for (tokens, pid, pos, _name) in fuzzy_roster
+        if tokens and (tokens <= incoming_tokens or incoming_tokens <= tokens)
+    ]
+    if len(candidates) == 1:
+        return candidates[0]
+    return None  # sin match único (0 o ambiguo) -> se reporta unmatched
+
+
 def _parse_minutes(raw) -> int:
     if not raw:
         return 0
@@ -128,14 +183,20 @@ async def sync_match_stats_365(match: dict, db) -> dict:
         away.get("id"): match["away_team_id"],
     }
 
-    # Índice de roster propio por equipo: {team_id: {nombre_normalizado: (player_id, position)}}
+    # Índice de roster propio por equipo: exacto (nombre normalizado) +
+    # fuzzy (tokens canonizados, para el fallback de _fuzzy_match_player).
     roster_index: dict = {}
+    roster_fuzzy_index: dict = {}
     for team_id in (match["home_team_id"], match["away_team_id"]):
         players = await db.players.find({"team_id": team_id}).to_list(50)
         roster_index[team_id] = {
             _normalize_player_name(p["name"]): (p["_id"], p.get("position", "MED"))
             for p in players
         }
+        roster_fuzzy_index[team_id] = [
+            (_canon_tokens(p["name"]), p["_id"], p.get("position", "MED"), p["name"])
+            for p in players
+        ]
 
     player_docs = []
     unmatched = []
@@ -163,6 +224,8 @@ async def sync_match_stats_365(match: dict, db) -> dict:
                 continue
 
             match_entry = roster.get(_normalize_player_name(name))
+            if not match_entry:
+                match_entry = _fuzzy_match_player(name, roster_fuzzy_index.get(team_id, []))
             if not match_entry:
                 unmatched.append(name)
                 continue
