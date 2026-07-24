@@ -20,6 +20,13 @@ interface Liga {
   creada: string;
 }
 
+interface JornadaActivaInfo {
+  week_number: number;
+  start_date: string | null;
+  end_date: string | null;
+  status: string;
+}
+
 interface AdminStats {
   usuarios: {
     total: number;
@@ -32,6 +39,12 @@ interface AdminStats {
   predicciones: { total: number };
   ligas: { total: number; detalle: Liga[] };
   fantasy: { total_lineups: number };
+  competencia_activa: string;
+  jornada_activa_info: JornadaActivaInfo | null;
+  engagement_jornada_activa: {
+    picks_guardados: number;
+    alineaciones_guardadas: number;
+  };
 }
 
 type Tab = 'resumen' | 'usuarios' | 'ligas';
@@ -43,6 +56,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('resumen');
+  const [actionLoading, setActionLoading] = useState<{ [key: string]: boolean }>({});
 
   const closeJornada = async () => {
     try {
@@ -54,15 +68,47 @@ export default function AdminDashboard() {
     }
   };
 
-  const seedData = async (endpoint: string, label: string) => {
+  const runAdminAction = async (
+    key: string,
+    action: () => Promise<any>,
+    formatSuccess: (data: any) => string
+  ) => {
+    setActionLoading(prev => ({ ...prev, [key]: true }));
     try {
-      const response = await api.post(endpoint);
-      Alert.alert('✅ Éxito', `${label}: ${JSON.stringify(response.data).substring(0, 100)}`);
+      const response = await action();
+      Alert.alert('✅ Éxito', formatSuccess(response.data));
       fetchStats();
     } catch (error: any) {
-      Alert.alert('Error', `${label}: ${error.message}`);
+      Alert.alert('❌ Error', error.response?.data?.detail || error.message || 'Ocurrió un error inesperado');
+    } finally {
+      setActionLoading(prev => ({ ...prev, [key]: false }));
     }
   };
+
+  const syncResultadosJornadaActiva = () => runAdminAction(
+    'sync',
+    async () => {
+      const current = await api.get('/api/jornadas/current');
+      const jornadaId = current.data?.jornada?.id;
+      if (!jornadaId) throw new Error('No hay jornada activa');
+      return api.post(`/api/admin/jornada/${jornadaId}/sync-365-stats`);
+    },
+    (data) =>
+      `${data.matches_processed ?? 0} partido(s) procesados — ` +
+      `${data.players_matched ?? 0} jugadores matched, ${data.players_unmatched ?? 0} sin match`
+  );
+
+  const fixNegativeScores = () => runAdminAction(
+    'fix',
+    () => api.post('/api/admin/fix-negative-scores'),
+    (data) => data.message || `${data.modified ?? 0} partido(s) corregidos`
+  );
+
+  const syncDtNames = () => runAdminAction(
+    'dt',
+    () => api.post('/api/admin/sync-dt-names'),
+    (data) => data.message || `${data.updated?.length ?? 0} equipo(s) actualizados`
+  );
 
   useEffect(() => {
     if (user && user.email !== ADMIN_EMAIL) {
@@ -92,6 +138,12 @@ export default function AdminDashboard() {
     try {
       return new Date(dateStr).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
     } catch { return dateStr; }
+  };
+
+  const competitionLabel = (c?: string) => {
+    if (c === 'world_cup_2026') return 'Mundial 2026';
+    if (c === 'liga_mx') return 'Liga MX Apertura 2026';
+    return c || '-';
   };
 
   if (!user || user.email !== ADMIN_EMAIL) return null;
@@ -139,42 +191,74 @@ export default function AdminDashboard() {
           {/* TAB RESUMEN */}
           {activeTab === 'resumen' && (
             <>
+              {/* ── RESUMEN AUTOMÁTICO ───────────────────────────────────── */}
+              <Text style={s.sectionTitle}>📋 Resumen</Text>
+              <View style={s.summaryCard}>
+                <View style={s.summaryRow}>
+                  <Text style={s.summaryLabel}>Competición activa</Text>
+                  <Text style={s.summaryValue}>{competitionLabel(stats.competencia_activa)}</Text>
+                </View>
+                <View style={s.summaryRow}>
+                  <Text style={s.summaryLabel}>Jornada activa</Text>
+                  <Text style={s.summaryValue}>
+                    {stats.jornada_activa_info
+                      ? `J${stats.jornada_activa_info.week_number} · ${formatDate(stats.jornada_activa_info.start_date || '')} - ${formatDate(stats.jornada_activa_info.end_date || '')}`
+                      : 'Sin jornada activa'}
+                  </Text>
+                </View>
+                <View style={s.summaryRow}>
+                  <Text style={s.summaryLabel}>Total usuarios</Text>
+                  <Text style={s.summaryValue}>{stats.usuarios.total}</Text>
+                </View>
+                <View style={s.summaryRow}>
+                  <Text style={s.summaryLabel}>Picks guardados (jornada)</Text>
+                  <Text style={s.summaryValue}>{stats.engagement_jornada_activa?.picks_guardados ?? 0}</Text>
+                </View>
+                <View style={[s.summaryRow, { borderBottomWidth: 0 }]}>
+                  <Text style={s.summaryLabel}>Alineaciones guardadas (jornada)</Text>
+                  <Text style={s.summaryValue}>{stats.engagement_jornada_activa?.alineaciones_guardadas ?? 0}</Text>
+                </View>
+              </View>
+
               <Text style={s.sectionTitle}>🔧 Herramientas de Admin</Text>
 
-              {/* ── MUNDIAL 2026 ─────────────────────────────────────────── */}
-              <Text style={s.subSectionTitle}>🌍 Mundial 2026</Text>
+              {/* ── LIGA MX APERTURA 2026 ────────────────────────────────── */}
+              <Text style={s.subSectionTitle}>⚽ Liga MX Apertura 2026</Text>
 
-              <TouchableOpacity style={[s.seedBtn, {backgroundColor: '#1D88E5'}]} onPress={() => seedData('/api/admin/seed-world-cup', 'Mundial 2026')}>
-                <Text style={s.syncBtnText}>1. Cargar Equipos, Jornadas y Partidos</Text>
+              <TouchableOpacity
+                style={[s.actionBtn, actionLoading.sync && s.actionBtnDisabled]}
+                onPress={syncResultadosJornadaActiva}
+                disabled={actionLoading.sync}
+              >
+                {actionLoading.sync
+                  ? <ActivityIndicator color="#FFF" />
+                  : <Text style={s.syncBtnText}>🔄 Sync resultados jornada activa</Text>}
               </TouchableOpacity>
 
-              <TouchableOpacity style={[s.seedBtn, {backgroundColor: '#9C27B0'}]} onPress={() =>
-                api.post('/api/admin/seed-world-cup-players')
-                  .then(r => { Alert.alert('✅ Plantillas cargadas', r.data.message); fetchStats(); })
-                  .catch(e => Alert.alert('Error', e.response?.data?.detail || e.message))
-              }>
-                <Text style={s.syncBtnText}>2. Cargar Plantillas — 48 Selecciones</Text>
+              <TouchableOpacity
+                style={[s.actionBtn, actionLoading.fix && s.actionBtnDisabled]}
+                onPress={fixNegativeScores}
+                disabled={actionLoading.fix}
+              >
+                {actionLoading.fix
+                  ? <ActivityIndicator color="#FFF" />
+                  : <Text style={s.syncBtnText}>🔧 Fix marcadores -1/-1</Text>}
               </TouchableOpacity>
 
-              <TouchableOpacity style={[s.seedBtn, {backgroundColor: '#2A9D8F'}]} onPress={() =>
-                api.post('/api/admin/activate-competition', {competition: 'world_cup_2026'})
-                  .then(r => { Alert.alert('✅ Éxito', r.data.message || 'Mundial 2026 activado'); fetchStats(); })
-                  .catch(e => Alert.alert('Error', e.message))
-              }>
-                <Text style={s.syncBtnText}>3. Activar competición: Mundial 2026</Text>
+              <TouchableOpacity
+                style={[s.actionBtn, actionLoading.dt && s.actionBtnDisabled]}
+                onPress={syncDtNames}
+                disabled={actionLoading.dt}
+              >
+                {actionLoading.dt
+                  ? <ActivityIndicator color="#FFF" />
+                  : <Text style={s.syncBtnText}>💊 Sync nombres DT</Text>}
               </TouchableOpacity>
 
-              <TouchableOpacity style={[s.seedBtn, {backgroundColor: '#FF6B35'}]} onPress={() =>
-                api.post('/api/admin/reset-jornada?week=1')
-                  .then(r => { Alert.alert('✅ Jornada 1 activa', r.data.message || '¡Los usuarios ya pueden apostar!'); fetchStats(); })
-                  .catch(e => Alert.alert('Error', e.response?.data?.detail || e.message))
-              }>
-                <Text style={s.syncBtnText}>4. Activar Jornada 1 del Mundial</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={[s.seedBtn, {backgroundColor: '#444'}]} onPress={closeJornada}>
+              <TouchableOpacity style={[s.seedBtn, { backgroundColor: '#444' }]} onPress={closeJornada}>
                 <Text style={s.syncBtnText}>🔒 Cerrar todas las jornadas activas</Text>
               </TouchableOpacity>
+
               <Text style={s.sectionTitle}>👥 Usuarios</Text>
               <View style={s.row}>
                 <StatCard label="Total" value={stats.usuarios.total} icon="people" color="#E63946" />
@@ -357,6 +441,12 @@ const s = StyleSheet.create({
   seedBtn:           { borderRadius: 12, padding: 14, alignItems: 'center', marginBottom: 10 },
   syncBtn:           { backgroundColor: '#1D88E5', borderRadius: 12, padding: 14, alignItems: 'center', marginBottom: 16, flexDirection: 'row', justifyContent: 'center' },
   syncBtnText:       { color: '#FFF', fontWeight: '700', fontSize: 14 },
+  actionBtn:         { backgroundColor: '#E63946', borderRadius: 12, padding: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 10, minHeight: 48 },
+  actionBtnDisabled: { opacity: 0.6 },
+  summaryCard:       { backgroundColor: '#181818', borderRadius: 12, padding: 4, marginBottom: 20 },
+  summaryRow:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#2a2a2a' },
+  summaryLabel:      { color: '#AAAAAA', fontSize: 13 },
+  summaryValue:      { color: '#FFF', fontSize: 13, fontWeight: '700', textAlign: 'right', marginLeft: 12 },
   logoutBtn:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 16, marginTop: 8 },
   logoutText:        { color: '#999', fontSize: 14 },
 });

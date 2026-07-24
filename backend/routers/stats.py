@@ -5,7 +5,7 @@ from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException
 
 from config import ADMIN_EMAIL
-from database import db
+from database import db, get_active_competition
 from dependencies import get_current_user
 
 logger = logging.getLogger(__name__)
@@ -86,8 +86,27 @@ async def get_admin_stats(current_user: dict = Depends(get_current_user)):
     nuevos_semana = await db.users.count_documents({"created_at": {"$gte": week_start}})
     nuevos_mes = await db.users.count_documents({"created_at": {"$gte": month_start}})
 
+    competencia_activa = await get_active_competition()
+
     total_jornadas = await db.jornadas.count_documents({})
     jornada_activa = await db.jornadas.find_one({"is_active": True})
+
+    jornada_activa_info = None
+    picks_guardados_jornada = 0
+    lineups_guardados_jornada = 0
+    if jornada_activa:
+        jornada_activa_info = {
+            "week_number": jornada_activa.get("week_number"),
+            "start_date":  jornada_activa["start_date"].isoformat() if jornada_activa.get("start_date") else None,
+            "end_date":    jornada_activa["end_date"].isoformat() if jornada_activa.get("end_date") else None,
+            "status":      jornada_activa.get("status"),
+        }
+        picks_guardados_jornada = len(
+            await db.quiniela_selections.distinct("user_id", {"jornada_id": jornada_activa["_id"]})
+        )
+        lineups_guardados_jornada = len(
+            await db.fantasy_lineups.distinct("fantasy_team_id", {"jornada_id": jornada_activa["_id"]})
+        )
 
     try:
         total_predicciones = await db.quiniela_selections.count_documents({})
@@ -142,4 +161,10 @@ async def get_admin_stats(current_user: dict = Depends(get_current_user)):
         "predicciones": {"total": total_predicciones},
         "ligas": {"total": total_ligas, "detalle": ligas_detalle},
         "fantasy": {"total_lineups": total_fantasy},
+        "competencia_activa": competencia_activa,
+        "jornada_activa_info": jornada_activa_info,
+        "engagement_jornada_activa": {
+            "picks_guardados":        picks_guardados_jornada,
+            "alineaciones_guardadas": lineups_guardados_jornada,
+        },
     }
