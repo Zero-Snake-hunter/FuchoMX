@@ -198,16 +198,21 @@ export default function HomeScreen() {
           </View>
 
           {/* ── HOY: partidos de la jornada activa programados para hoy, sin
-              importar su status (scheduled/live/finished) ── */}
+              importar su status (scheduled/live/finished) ──
+              start_at llega de Mongo en UTC pero SIN sufijo "Z" (naive) —
+              hay que forzar el parseo como UTC, si no JS lo toma como hora
+              local y el día calculado queda corrido (ej. un partido a las
+              21:00 hora México se guarda como "03:00" del día siguiente
+              en UTC, y sin el fix aparecía fechado un día después). */}
           {(() => {
+            const parseUtc = (dateStr: string) =>
+              new Date(/[Z+-]\d{2}:?\d{2}$|Z$/.test(dateStr) ? dateStr : `${dateStr}Z`);
             const now = new Date();
             const todayMatches = jornadaMatches.filter((m) => {
               if (!m.start_at) return false;
-              const d = new Date(m.start_at);
+              const d = parseUtc(m.start_at);
               return !isNaN(d.getTime())
-                && d.getFullYear() === now.getFullYear()
-                && d.getMonth() === now.getMonth()
-                && d.getDate() === now.getDate();
+                && d.toLocaleDateString() === now.toLocaleDateString();
             });
             if (todayMatches.length === 0) return null;
             return (
@@ -224,7 +229,7 @@ export default function HomeScreen() {
                   const isLive = m.status === 'live';
                   const value = (isFinished || isLive)
                     ? `${m.home_score ?? '-'} - ${m.away_score ?? '-'}`
-                    : new Date(m.start_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+                    : parseUtc(m.start_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
                   return (
                     <View key={m.id} style={styles.todayMatch}>
                       <Text style={styles.todayMatchHome} numberOfLines={1}>
