@@ -26,7 +26,7 @@ export default function HomeScreen() {
   const [toast, setToast] = useState({ visible: false, emoji: '', title: '', description: '' });
   const [liveScores, setLiveScores] = useState<{
     has_live: boolean;
-    live_matches: { home_name: string; away_name: string; home_score: number | null; away_score: number | null; game_time: string; status: string }[];
+    live_matches: { home_name: string; away_name: string; home_score: number | null; away_score: number | null; game_time: string; status: string; start_time: string }[];
   }>({ has_live: false, live_matches: [] });
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
@@ -176,32 +176,48 @@ export default function HomeScreen() {
             </Text>
           </View>
 
-          {/* ── EN VIVO section — solo cuando hay partidos activos ── */}
-          {liveScores.has_live && (
-            <View style={styles.liveSection}>
-              <View style={styles.liveHeader}>
-                <Animated.View style={[styles.liveDot, { opacity: pulseAnim }]} />
-                <Text style={styles.liveLabel}>EN VIVO</Text>
-                <Text style={styles.liveCount}>
-                  {liveScores.live_matches.length} partido{liveScores.live_matches.length !== 1 ? 's' : ''}
-                </Text>
-              </View>
-              {liveScores.live_matches.map((m, i) => (
-                <View key={i} style={styles.liveMatch}>
-                  <Text style={styles.liveMatchHome} numberOfLines={1}>{m.home_name}</Text>
-                  <View style={styles.liveScore}>
-                    <Text style={styles.liveScoreText}>
-                      {m.home_score ?? 0} - {m.away_score ?? 0}
-                    </Text>
-                    {m.game_time ? (
-                      <Text style={styles.liveTime}>{m.game_time}'</Text>
-                    ) : null}
-                  </View>
-                  <Text style={styles.liveMatchAway} numberOfLines={1}>{m.away_name}</Text>
+          {/* ── EN VIVO section — solo cuando hay partidos realmente en curso ──
+              El backend ya filtra por status, pero se vuelve a cruzar acá
+              contra la hora real por si algún partido sin arrancar se cuela
+              (statusGroup de 365Scores no siempre es confiable). Un partido
+              "en vivo" siempre tiene marcador real (nunca null a esta altura,
+              ya sanitizado en el backend) — si por algún motivo no lo trae,
+              se muestra "-" en vez de inventar un 0. */}
+          {(() => {
+            const now = new Date();
+            const genuinelyLive = liveScores.live_matches.filter((m) => {
+              if (m.status !== 'live') return false;
+              if (!m.start_time) return true;
+              const start = new Date(m.start_time);
+              return !isNaN(start.getTime()) && now >= start;
+            });
+            if (genuinelyLive.length === 0) return null;
+            return (
+              <View style={styles.liveSection}>
+                <View style={styles.liveHeader}>
+                  <Animated.View style={[styles.liveDot, { opacity: pulseAnim }]} />
+                  <Text style={styles.liveLabel}>EN VIVO</Text>
+                  <Text style={styles.liveCount}>
+                    {genuinelyLive.length} partido{genuinelyLive.length !== 1 ? 's' : ''}
+                  </Text>
                 </View>
-              ))}
-            </View>
-          )}
+                {genuinelyLive.map((m, i) => (
+                  <View key={i} style={styles.liveMatch}>
+                    <Text style={styles.liveMatchHome} numberOfLines={1}>{m.home_name}</Text>
+                    <View style={styles.liveScore}>
+                      <Text style={styles.liveScoreText}>
+                        {m.home_score ?? '-'} - {m.away_score ?? '-'}
+                      </Text>
+                      {m.game_time ? (
+                        <Text style={styles.liveTime}>{m.game_time}'</Text>
+                      ) : null}
+                    </View>
+                    <Text style={styles.liveMatchAway} numberOfLines={1}>{m.away_name}</Text>
+                  </View>
+                ))}
+              </View>
+            );
+          })()}
 
 
         </View>

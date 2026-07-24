@@ -29,15 +29,34 @@ _ESPN_SCOREBOARD_URL = (
     "?dates={date}&limit=20"
 )
 
-# Status map 365Scores statusGroup → internal status
+# Status map 365Scores statusGroup → internal status.
+# Verificado en vivo contra la API real (jul 2026): statusGroup=2 viene con
+# statusText="Scheduled" para partidos que NO han arrancado (ej. J2 con
+# fechas futuras) — el mapeo anterior lo marcaba como "live", causando que
+# partidos sin empezar aparecieran en la sección EN VIVO con marcador -1
+# (el sentinel de "sin resultado" de 365Scores, ver _sanitize_score).
+# statusGroup=4 confirmado como "Ended". statusGroup=3 se deja como "live"
+# sin confirmar en vivo (no hubo partido en curso al verificar) — por eso
+# el consumidor de este mapa (routers/live.py) además cruza contra la hora
+# real del partido antes de mostrarlo como en vivo.
 _STATUS_MAP = {
     1: "scheduled",
-    2: "live",
+    2: "scheduled",
     3: "live",
     4: "finished",
     5: "postponed",
     6: "cancelled",
 }
+
+
+def _sanitize_score(raw) -> int | None:
+    """365Scores usa -1 como sentinel de 'sin resultado aún' (partido no
+    iniciado) en vez de null — sin esto, un partido programado se ve como
+    -1 - -1 en vez de sin marcador."""
+    if raw is None:
+        return None
+    value = int(raw)
+    return value if value >= 0 else None
 
 
 def _normalize_name(name: str) -> str:
@@ -190,8 +209,8 @@ async def get_match_results(jornada_id: str, db) -> dict:
         away_n = _normalize_name(g.get("awayCompetitor", {}).get("name", ""))
         status_grp = g.get("statusGroup", 1)
         scores_lookup[(home_n, away_n)] = {
-            "home_score": g.get("homeCompetitor", {}).get("score"),
-            "away_score": g.get("awayCompetitor", {}).get("score"),
+            "home_score": _sanitize_score(g.get("homeCompetitor", {}).get("score")),
+            "away_score": _sanitize_score(g.get("awayCompetitor", {}).get("score")),
             "status": _STATUS_MAP.get(status_grp, "scheduled"),
             "source": "365scores",
             "ext_id": g.get("id"),

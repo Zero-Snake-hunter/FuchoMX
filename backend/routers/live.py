@@ -9,7 +9,7 @@ from services.api_football_service import (
     get_fixtures_by_date as _af_get_by_date,
     get_live_fixtures as _af_get_live,
 )
-from services.scores_service import _fetch_365scores, _normalize_name, _STATUS_MAP
+from services.scores_service import _fetch_365scores, _normalize_name, _STATUS_MAP, _sanitize_score
 
 logger = logging.getLogger(__name__)
 
@@ -45,21 +45,33 @@ async def get_live_scores():
 
         home_name = _normalize_name(g.get("homeCompetitor", {}).get("name", ""))
         away_name = _normalize_name(g.get("awayCompetitor", {}).get("name", ""))
-        home_score = g.get("homeCompetitor", {}).get("score")
-        away_score = g.get("awayCompetitor", {}).get("score")
+        start_time_raw = g.get("startTime", "")
 
         match_data = {
             "home_name": home_name,
             "away_name": away_name,
-            "home_score": int(home_score) if home_score is not None else None,
-            "away_score": int(away_score) if away_score is not None else None,
+            "home_score": _sanitize_score(g.get("homeCompetitor", {}).get("score")),
+            "away_score": _sanitize_score(g.get("awayCompetitor", {}).get("score")),
             "status": st,
             "game_time": g.get("gameTimeDisplay", ""),
-            "start_time": g.get("startTime", ""),
+            "start_time": start_time_raw,
         }
         all_matches.append(match_data)
+
+        # No confiar solo en statusGroup para marcar "en vivo" — verificado
+        # que 365Scores reporta partidos sin arrancar con statusGroup
+        # equivocado en algunos casos. Cruza contra la hora real: solo
+        # cuenta como en vivo si ya pasó su start_time.
         if st == "live":
-            live_matches.append(match_data)
+            already_started = True
+            if start_time_raw:
+                try:
+                    start_dt = datetime.fromisoformat(start_time_raw.replace("Z", "+00:00"))
+                    already_started = now >= start_dt.replace(tzinfo=None)
+                except ValueError:
+                    pass
+            if already_started:
+                live_matches.append(match_data)
 
     # Fallback a DB cuando 365Scores no devuelve datos
     if not all_matches:
