@@ -25,25 +25,28 @@ const DEFAULT_KIT_COLORS: [string, string] = ['#666666', '#444444'];
 // anuncios oficiales de cada club (jul 2026) — no son el "color" genérico
 // de marca que ya vive en db.teams.color, son los 2-3 colores del jersey
 // que se usan para el gradiente del círculo del jugador en el once.
+// Verificado contra Wikipedia/anuncios oficiales del uniforme titular
+// Apertura 2026 (jul 2026). Toluca no tenía entrada en el pedido original —
+// se mantiene el rojo/blanco ya verificado en la ronda anterior.
 const TEAM_KIT_COLORS: { [shortName: string]: [string, string, ...string[]] } = {
-  AME: ['#F5D06F', '#14213D', '#C8102E'],
-  GDL: ['#D51F2A', '#FFFFFF', '#0F4C9C'],
-  CAZ: ['#0046AB', '#FFFFFF'],
-  TIG: ['#FFC72C', '#0C2340'],
+  AME: ['#FFD700', '#003087', '#C8102E'],
+  GDL: ['#CE1126', '#FFFFFF', '#003087'],
+  CAZ: ['#0066CC', '#FFFFFF'],
+  TIG: ['#FFB800', '#003087'],
   MTY: ['#0F3D75', '#FFFFFF'],
-  ATL: ['#D2232A', '#111111'],
+  ATL: ['#8B0000', '#000000'],
   TOL: ['#B0182D', '#FFFFFF'],
-  LEO: ['#00693E', '#FFFFFF', '#111111'],
-  SAN: ['#00693C', '#FFFFFF'],
-  TIJ: ['#111111', '#C8102E'],
-  NEC: ['#E4002B', '#FFFFFF'],
-  QRO: ['#00305C', '#FFFFFF', '#111111'],
-  PUM: ['#04264C', '#C9A961'],
-  PAC: ['#0057A8', '#FFFFFF', '#F58220'],
+  LEO: ['#00693E', '#FFFFFF'],
+  SAN: ['#008000', '#FFFFFF'],
+  TIJ: ['#C8102E', '#111111'],
+  NEC: ['#D2232A', '#FFFFFF'],
+  QRO: ['#00305C', '#FFFFFF'],
+  PUM: ['#003087', '#FFD700'],
+  PAC: ['#0057A8', '#FFFFFF'],
   JUA: ['#00843D', '#111111'],
-  PUE: ['#FFFFFF', '#0B3D91'],
-  ASL: ['#C8102E', '#FFFFFF', '#0B3D91'],
-  ATE: ['#0B2D6B', '#7A1F3D', '#C9A227'],
+  PUE: ['#003087', '#FFFFFF'],
+  ASL: ['#E4002B', '#FFFFFF'],
+  ATE: ['#003087', '#7A1F3D', '#FFD700'],
 };
 
 const getKitColors = (shortName?: string): [string, string, ...string[]] =>
