@@ -1315,6 +1315,29 @@ async def close_all_jornadas(current_user: dict = Depends(get_current_user)):
             "modified": result.modified_count}
 
 
+@router.post("/admin/fix-negative-scores")
+async def fix_negative_scores(current_user: dict = Depends(get_admin_user)):
+    """
+    Corrige matches con marcador -1/-1 guardado por el scheduler viejo
+    (bug ya arreglado) — los deja en score=null y status="scheduled"
+    para que el scheduler corregido los vuelva a procesar desde cero.
+    """
+    query = {"$or": [{"home_score": -1}, {"away_score": -1}]}
+    affected = await db.matches.find(query).to_list(200)
+
+    result = await db.matches.update_many(
+        query,
+        {"$set": {"home_score": None, "away_score": None, "status": "scheduled"}},
+    )
+    logger.info(f"fix-negative-scores: {result.modified_count} partido(s) corregidos")
+    return {
+        "message": f"✅ {result.modified_count} partido(s) corregidos (score=null, status=scheduled)",
+        "matched": result.matched_count,
+        "modified": result.modified_count,
+        "match_ids": [str(m["_id"]) for m in affected],
+    }
+
+
 @router.patch("/admin/jornada/{jornada_id}/reminder")
 async def update_reminder_hours(
     jornada_id: str,
