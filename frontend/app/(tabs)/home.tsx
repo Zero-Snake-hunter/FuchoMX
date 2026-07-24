@@ -28,6 +28,15 @@ export default function HomeScreen() {
     has_live: boolean;
     live_matches: { home_name: string; away_name: string; home_score: number | null; away_score: number | null; game_time: string; status: string; start_time: string }[];
   }>({ has_live: false, live_matches: [] });
+  const [jornadaMatches, setJornadaMatches] = useState<{
+    id: string;
+    home_team: { name: string; short_name: string };
+    away_team: { name: string; short_name: string };
+    start_at: string;
+    status: string;
+    home_score: number | null;
+    away_score: number | null;
+  }[]>([]);
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -45,6 +54,18 @@ export default function HomeScreen() {
     };
     fetchLive();
     const interval = setInterval(fetchLive, 60_000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // ── HOY: partidos de la jornada activa programados para hoy ──────────
+  useEffect(() => {
+    const fetchJornada = () => {
+      api.get('/api/jornadas/current')
+        .then(res => setJornadaMatches(res.data?.jornada?.matches || []))
+        .catch(() => {});
+    };
+    fetchJornada();
+    const interval = setInterval(fetchJornada, 60_000);
     return () => clearInterval(interval);
   }, []);
 
@@ -175,6 +196,57 @@ export default function HomeScreen() {
               Ambos modos están disponibles. Puedes jugar uno o ambos simultáneamente.
             </Text>
           </View>
+
+          {/* ── HOY: partidos de la jornada activa programados para hoy, sin
+              importar su status (scheduled/live/finished) ── */}
+          {(() => {
+            const now = new Date();
+            const todayMatches = jornadaMatches.filter((m) => {
+              if (!m.start_at) return false;
+              const d = new Date(m.start_at);
+              return !isNaN(d.getTime())
+                && d.getFullYear() === now.getFullYear()
+                && d.getMonth() === now.getMonth()
+                && d.getDate() === now.getDate();
+            });
+            if (todayMatches.length === 0) return null;
+            return (
+              <View style={styles.todaySection}>
+                <View style={styles.todayHeader}>
+                  <Ionicons name="calendar" size={16} color="#0047AB" />
+                  <Text style={styles.todayLabel}>HOY</Text>
+                  <Text style={styles.todayCount}>
+                    {todayMatches.length} partido{todayMatches.length !== 1 ? 's' : ''}
+                  </Text>
+                </View>
+                {todayMatches.map((m) => {
+                  const isFinished = m.status === 'finished';
+                  const isLive = m.status === 'live';
+                  const value = (isFinished || isLive)
+                    ? `${m.home_score ?? '-'} - ${m.away_score ?? '-'}`
+                    : new Date(m.start_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+                  return (
+                    <View key={m.id} style={styles.todayMatch}>
+                      <Text style={styles.todayMatchHome} numberOfLines={1}>
+                        {m.home_team?.short_name || m.home_team?.name}
+                      </Text>
+                      <View style={styles.todayScore}>
+                        <Text style={styles.todayScoreText}>{value}</Text>
+                        {isLive ? (
+                          <Text style={styles.todayLiveTag}>EN VIVO</Text>
+                        ) : isFinished ? (
+                          <Text style={styles.todayFinishedTag}>FINAL</Text>
+                        ) : null}
+                      </View>
+                      <Text style={styles.todayMatchAway} numberOfLines={1}>
+                        {m.away_team?.short_name || m.away_team?.name}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+            );
+          })()}
 
           {/* ── EN VIVO section — solo cuando hay partidos realmente en curso ──
               El backend ya filtra por status, pero se vuelve a cruzar acá
@@ -429,6 +501,82 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#FFD700',
     fontWeight: '600',
+  },
+  // ── HOY section ─────────────────────────────────────────────────────────
+  todaySection: {
+    marginTop: 20,
+    backgroundColor: '#0D0D0D',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#0047AB50',
+    overflow: 'hidden',
+  },
+  todayHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: '#061420',
+    gap: 8,
+  },
+  todayLabel: {
+    color: '#0047AB',
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 1.5,
+    flex: 1,
+  },
+  todayCount: {
+    color: '#888',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  todayMatch: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#1A1A1A',
+  },
+  todayMatchHome: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '700',
+    flex: 1,
+    textAlign: 'left',
+  },
+  todayMatchAway: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '700',
+    flex: 1,
+    textAlign: 'right',
+  },
+  todayScore: {
+    alignItems: 'center',
+    paddingHorizontal: 10,
+  },
+  todayScoreText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+  todayLiveTag: {
+    color: '#E63946',
+    fontSize: 9,
+    fontWeight: '800',
+    marginTop: 2,
+    letterSpacing: 0.5,
+  },
+  todayFinishedTag: {
+    color: '#00A551',
+    fontSize: 9,
+    fontWeight: '800',
+    marginTop: 2,
+    letterSpacing: 0.5,
   },
   // ── EN VIVO section ────────────────────────────────────────────────────
   liveSection: {
