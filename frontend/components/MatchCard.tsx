@@ -33,6 +33,8 @@ interface MatchCardProps {
 export default function MatchCard({ match, selection, onSelect, disabled }: MatchCardProps) {
   const matchDate = new Date(match.start_at);
   const isFinished = match.status === 'finished';
+  const isLive = match.status === 'live';
+  const isLocked = isFinished || isLive;
 
   const renderOption = (option: string, label: string) => {
     const isSelected = selection === option;
@@ -117,8 +119,8 @@ export default function MatchCard({ match, selection, onSelect, disabled }: Matc
         </View>
       </View>
 
-      {/* Selection Options */}
-      {!isFinished && (
+      {/* Selection Options — solo partidos que aún no arrancan */}
+      {!isLocked && (
         <View style={styles.options}>
           {renderOption('HOME', `Gana ${match.home_team.name}`)}
           {renderOption('DRAW', 'Empate')}
@@ -126,10 +128,16 @@ export default function MatchCard({ match, selection, onSelect, disabled }: Matc
         </View>
       )}
 
-      {isFinished && (
-        <View style={styles.finishedBadge}>
-          <Ionicons name="checkmark-circle" size={16} color="#00A551" />
-          <Text style={styles.finishedText}>Finalizado</Text>
+      {isLocked && (
+        <View style={[styles.finishedBadge, isLive && styles.liveBadge]}>
+          <Ionicons
+            name={isLive ? 'radio-button-on' : 'checkmark-circle'}
+            size={16}
+            color={isLive ? '#DC143C' : '#00A551'}
+          />
+          <Text style={[styles.finishedText, isLive && styles.liveText]}>
+            {isLive ? 'En vivo — pick cerrado' : 'Finalizado'}
+          </Text>
         </View>
       )}
     </View>
@@ -260,5 +268,11 @@ const styles = StyleSheet.create({
     color: '#00A551',
     fontSize: 12,
     fontWeight: '600',
+  },
+  liveBadge: {
+    backgroundColor: '#2a0a0a',
+  },
+  liveText: {
+    color: '#DC143C',
   },
 });

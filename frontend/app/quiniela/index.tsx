@@ -63,8 +63,8 @@ export default function QuinielaScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selections, setSelections] = useState<{ [matchId: string]: string }>({});
+  const [savedSelections, setSavedSelections] = useState<{ [matchId: string]: string }>({});
   const [submitting, setSubmitting] = useState(false);
-  const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [shareData, setShareData] = useState<ShareResultData | null>(null);
 
@@ -84,13 +84,13 @@ export default function QuinielaScreen() {
           const picksResponse = await api.get(`/api/quiniela/my-picks/${jornadaData.id}`);
           
           if (picksResponse.data.submitted) {
-            setAlreadySubmitted(true);
-            // Load existing selections
+            // Cargar picks ya guardados como baseline (pueden ser parciales)
             const existingSelections: { [key: string]: string } = {};
             picksResponse.data.selections.forEach((sel: any) => {
               existingSelections[sel.match_id] = sel.selection;
             });
             setSelections(existingSelections);
+            setSavedSelections(existingSelections);
           }
         } catch (error: any) {
           // 404 significa que no hay picks previos (normal)
@@ -115,30 +115,26 @@ export default function QuinielaScreen() {
   };
 
   const handleSelection = (matchId: string, selection: string) => {
-    if (alreadySubmitted) return;
+    const match = jornada?.matches.find(m => m.id === matchId);
+    if (match && (match.status === 'live' || match.status === 'finished')) return;
     setSelections(prev => ({ ...prev, [matchId]: selection }));
   };
 
   const handleSubmit = async () => {
     if (!jornada) return;
 
-    // Validate all matches have selections
-    const allMatchesSelected = jornada.matches.every(match => selections[match.id]);
-    if (!allMatchesSelected) {
-      Alert.alert(
-        'Selección incompleta',
-        'Debes seleccionar un resultado para cada partido'
-      );
+    if (!hasNewPicks) {
+      Alert.alert('Nada por guardar', 'No hay picks nuevos o modificados para guardar.');
       return;
     }
 
     Alert.alert(
-      'Confirmar quiniela',
-      '¿Estás seguro? No podrás modificar tu selección después de enviarla.',
+      'Confirmar picks',
+      'Se guardarán tus picks de los partidos que aún no han comenzado. Podrás seguir ajustándolos hasta que arranquen.',
       [
         { text: 'Cancelar', style: 'cancel' },
         {
-          text: 'Enviar',
+          text: 'Guardar',
           style: 'default',
           onPress: submitQuiniela,
         },
@@ -149,19 +145,40 @@ export default function QuinielaScreen() {
   const submitQuiniela = async () => {
     if (!jornada || !token) return;
 
+    // Solo se mandan picks nuevos/modificados de partidos que aún no arrancan
+    const selectionsArray = jornada.matches
+      .filter(m => m.status === 'scheduled' && selections[m.id] && selections[m.id] !== savedSelections[m.id])
+      .map(m => ({ match_id: m.id, selection: selections[m.id] }));
+
+    if (selectionsArray.length === 0) return;
+
     setSubmitting(true);
     try {
-      const selectionsArray = Object.entries(selections).map(([matchId, selection]) => ({
-        match_id: matchId,
-        selection,
-      }));
-
-      await api.post('/api/quiniela/submit', {
+      const response = await api.post('/api/quiniela/submit', {
         jornada_id: jornada.id,
         selections: selectionsArray,
       });
 
-      setAlreadySubmitted(true);
+      const saved: { match_id: string; selection: string }[] = response.data.saved || [];
+      if (saved.length > 0) {
+        setSavedSelections(prev => {
+          const next = { ...prev };
+          saved.forEach(s => { next[s.match_id] = s.selection; });
+          return next;
+        });
+      }
+
+      const rejected: { match?: string; reason: string }[] = response.data.rejected || [];
+      if (rejected.length > 0) {
+        Alert.alert(
+          'Algunos picks no se guardaron',
+          rejected.map(r => r.reason).join('\n')
+        );
+      }
+
+      if (saved.length === 0) {
+        return;
+      }
 
       // Intentar obtener ranking/liga para la tarjeta de compartir
       let position: number | undefined;
@@ -194,7 +211,7 @@ export default function QuinielaScreen() {
         mode: 'result',
         userName: (user as any)?.display_name ?? 'Jugador',
         jornadaNumber: jornada.week_number,
-        points: selectionsArray.length,
+        points: saved.length,
         position,
         streak,
         leagueName,
@@ -230,7 +247,13 @@ export default function QuinielaScreen() {
   }
 
   const firstMatchDate = jornada.matches[0]?.start_at;
-  const allSelected = jornada.matches.every(match => selections[match.id]);
+  const openMatches = jornada.matches.filter(match => match.status === 'scheduled');
+  const hasOpenMatches = openMatches.length > 0;
+  const hasAnySaved = Object.keys(savedSelections).length > 0;
+  const hasNewPicks = openMatches.some(
+    match => selections[match.id] && selections[match.id] !== savedSelections[match.id]
+  );
+  const openMatchesPending = openMatches.filter(match => !selections[match.id]).length;
 
   return (
     <View style={styles.container}>
@@ -267,15 +290,17 @@ export default function QuinielaScreen() {
             </View>
           </View>
 
-          {firstMatchDate && !alreadySubmitted && (
+          {firstMatchDate && hasOpenMatches && (
             <CountdownTimer targetDate={firstMatchDate} />
           )}
 
-          {alreadySubmitted && (
+          {hasAnySaved && (
             <View style={styles.submittedBlock}>
               <View style={styles.submittedBadge}>
                 <Ionicons name="checkmark-circle" size={20} color="#00A551" />
-                <Text style={styles.submittedText}>Quiniela enviada</Text>
+                <Text style={styles.submittedText}>
+                  {hasOpenMatches ? 'Picks guardados' : 'Quiniela enviada'}
+                </Text>
               </View>
               {shareData && (
                 <TouchableOpacity
@@ -327,36 +352,38 @@ export default function QuinielaScreen() {
               match={match}
               selection={selections[match.id]}
               onSelect={(selection) => handleSelection(match.id, selection)}
-              disabled={alreadySubmitted}
+              disabled={submitting}
             />
           ))}
         </View>
       </ScrollView>
 
-      {/* Submit Button */}
-      {!alreadySubmitted && (
+      {/* Submit Button — habilitado si hay al menos 1 pick nuevo/modificado por guardar */}
+      {hasOpenMatches && (
         <View style={styles.footer}>
           <TouchableOpacity
             style={[
               styles.submitButton,
-              (!allSelected || submitting) && styles.submitButtonDisabled,
+              (!hasNewPicks || submitting) && styles.submitButtonDisabled,
             ]}
             onPress={handleSubmit}
-            disabled={!allSelected || submitting}
+            disabled={!hasNewPicks || submitting}
           >
             {submitting ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
               <>
                 <Ionicons name="send" size={20} color="#FFFFFF" />
-                <Text style={styles.submitButtonText}>ENVIAR QUINIELA</Text>
+                <Text style={styles.submitButtonText}>GUARDAR PICKS</Text>
               </>
             )}
           </TouchableOpacity>
           <Text style={styles.footerInfo}>
-            {allSelected
-              ? 'Todos los partidos seleccionados'
-              : `Faltan ${jornada.matches.length - Object.keys(selections).length} partidos`}
+            {hasNewPicks
+              ? 'Tienes picks nuevos sin guardar'
+              : openMatchesPending > 0
+                ? `Faltan ${openMatchesPending} partido${openMatchesPending !== 1 ? 's' : ''} por seleccionar`
+                : 'Todo guardado'}
           </Text>
         </View>
       )}
