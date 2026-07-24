@@ -14,10 +14,40 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import api from '../lib/api';
 
 
 const DEFAULT_TEAM_COLOR = '#666666';
+const DEFAULT_KIT_COLORS: [string, string] = ['#666666', '#444444'];
+
+// Colores reales del uniforme titular Apertura 2026, verificados contra
+// anuncios oficiales de cada club (jul 2026) — no son el "color" genérico
+// de marca que ya vive en db.teams.color, son los 2-3 colores del jersey
+// que se usan para el gradiente del círculo del jugador en el once.
+const TEAM_KIT_COLORS: { [shortName: string]: [string, string, ...string[]] } = {
+  AME: ['#F5D06F', '#14213D', '#C8102E'],
+  GDL: ['#D51F2A', '#FFFFFF', '#0F4C9C'],
+  CAZ: ['#0046AB', '#FFFFFF'],
+  TIG: ['#FFC72C', '#0C2340'],
+  MTY: ['#0F3D75', '#FFFFFF'],
+  ATL: ['#D2232A', '#111111'],
+  TOL: ['#B0182D', '#FFFFFF'],
+  LEO: ['#00693E', '#FFFFFF', '#111111'],
+  SAN: ['#00693C', '#FFFFFF'],
+  TIJ: ['#111111', '#C8102E'],
+  NEC: ['#E4002B', '#FFFFFF'],
+  QRO: ['#00305C', '#FFFFFF', '#111111'],
+  PUM: ['#04264C', '#C9A961'],
+  PAC: ['#0057A8', '#FFFFFF', '#F58220'],
+  JUA: ['#00843D', '#111111'],
+  PUE: ['#FFFFFF', '#0B3D91'],
+  ASL: ['#C8102E', '#FFFFFF', '#0B3D91'],
+  ATE: ['#0B2D6B', '#7A1F3D', '#C9A227'],
+};
+
+const getKitColors = (shortName?: string): [string, string, ...string[]] =>
+  (shortName && TEAM_KIT_COLORS[shortName]) || DEFAULT_KIT_COLORS;
 
 // Color de texto/borde legible (blanco o negro) según el brillo del color
 // primario del equipo — evita tener que mantener a mano un segundo color
@@ -268,7 +298,8 @@ export default function LineupScreen() {
 
   const renderPlayerSlot = (slot: string, position: string, label: string) => {
     const player = lineup[slot];
-    const teamColors = player?.team ? getTeamColors(player.team) : null;
+    const kitColors = player?.team ? getKitColors(player.team.short_name) : null;
+    const numberColor = kitColors ? getContrastColor(kitColors[0]) : '#FFFFFF';
 
     return (
       <TouchableOpacity
@@ -276,22 +307,22 @@ export default function LineupScreen() {
         style={styles.playerSlot}
         onPress={() => handleSlotPress(slot, position)}
       >
-        <View
-          style={[
-            styles.jersey,
-            player && teamColors
-              ? { backgroundColor: teamColors.primary, borderWidth: 2, borderColor: teamColors.secondary }
-              : { backgroundColor: '#FFFFFF', borderWidth: 2, borderColor: '#333' },
-          ]}
-        >
-          {player ? (
-            <Text style={[styles.jerseyNumber, { color: teamColors?.secondary || '#FFFFFF' }]}>
+        {player && kitColors ? (
+          <LinearGradient
+            colors={kitColors}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.jersey}
+          >
+            <Text style={[styles.jerseyNumber, { color: numberColor }]}>
               {player.number}
             </Text>
-          ) : (
+          </LinearGradient>
+        ) : (
+          <View style={[styles.jersey, { backgroundColor: '#FFFFFF', borderWidth: 2, borderColor: '#333' }]}>
             <Ionicons name="person-add" size={20} color="#666" />
-          )}
-        </View>
+          </View>
+        )}
         {/* Mostrar nombre del jugador o label de posición */}
         <Text style={styles.playerName} numberOfLines={1}>
           {player ? player.name.split(' ').slice(-1)[0] : label}
@@ -416,7 +447,9 @@ export default function LineupScreen() {
                 </View>
                 <View style={styles.dtInfo}>
                   <Text style={styles.dtTeamName}>DT de {dtTeam.name}</Text>
-                  <Text style={styles.dtSubtitle}>{dtTeam.short_name}</Text>
+                  <Text style={styles.dtSubtitle}>
+                    {dtTeam.dt_name ? `${dtTeam.short_name} / ${dtTeam.dt_name}` : dtTeam.short_name}
+                  </Text>
                 </View>
                 <Ionicons name="checkmark-circle" size={24} color="#00A551" />
               </View>
@@ -508,17 +541,23 @@ export default function LineupScreen() {
                 data={players}
                 keyExtractor={(item: any) => item.id}
                 renderItem={({ item }) => {
-                  const colors = getTeamColors(selectedTeamForPlayer);
+                  const kitColors = getKitColors(selectedTeamForPlayer?.short_name);
+                  const numberColor = getContrastColor(kitColors[0]);
                   return (
                     <TouchableOpacity
                       style={styles.playerItem}
                       onPress={() => handlePlayerSelect(item)}
                     >
-                      <View style={[styles.playerItemNumber, { backgroundColor: colors.primary }]}>
-                        <Text style={[styles.playerItemNumberText, { color: colors.secondary }]}>
+                      <LinearGradient
+                        colors={kitColors}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={styles.playerItemNumber}
+                      >
+                        <Text style={[styles.playerItemNumberText, { color: numberColor }]}>
                           {item.number}
                         </Text>
-                      </View>
+                      </LinearGradient>
                       <View style={styles.playerItemInfo}>
                         <Text style={styles.playerItemName}>{item.name}</Text>
                         <Text style={styles.playerItemPosition}>{selectedPosition}</Text>
@@ -565,7 +604,10 @@ export default function LineupScreen() {
                     onPress={() => handleDTSelect(item)}
                   >
                     <View style={[styles.teamColorDot, { backgroundColor: colors.primary }]} />
-                    <Text style={styles.teamItemName}>DT de {item.name}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.teamItemName}>DT de {item.name}</Text>
+                      {item.dt_name ? <Text style={styles.dtSubtitle}>{item.dt_name}</Text> : null}
+                    </View>
                     {isSelected && <Ionicons name="checkmark-circle" size={24} color="#00A551" />}
                   </TouchableOpacity>
                 );

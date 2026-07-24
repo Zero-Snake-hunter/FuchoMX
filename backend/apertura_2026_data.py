@@ -24,7 +24,7 @@ APERTURA_2026_TEAMS = [dict(_BY_SHORT_NAME[sn]) for sn in _REUSED_SHORT_NAMES] +
         "name": "Atlante",
         "short_name": "ATE",
         "color": "#002B7F",
-        "shield_url": "https://a.espncdn.com/i/teamlogos/soccer/500/1927.png",
+        "shield_url": "https://a.espncdn.com/i/teamlogos/soccer/500/226.png",
         "players": [
             {"name": "Portero Atlante 1",        "number": 1,  "position": "POR"},
             {"name": "Portero Atlante 2",         "number": 13, "position": "POR"},
@@ -268,6 +268,34 @@ for _team in APERTURA_2026_TEAMS:
         _team["players"] = [
             {"name": n, "position": pos, "number": num} for (n, pos, num) in _ESPN_ROSTERS[_sn]
         ]
+
+# ──────────────────────────────────────────────
+#  Directores técnicos — Apertura 2026 (verificado jul 2026: anuncios
+#  oficiales de cada club / TUDN / Récord / Milenio / Infobae).
+# ──────────────────────────────────────────────
+_DT_NAMES = {
+    "AME": "Guillermo Almada",
+    "GDL": "Gabriel Milito",
+    "CAZ": "Joel Huiqui",
+    "TIG": "Guido Pizarro",
+    "MTY": "Matías Almeyda",
+    "ATL": "Hernán Crespo",
+    "TOL": "Antonio Mohamed",
+    "LEO": "Javier Gandolfi",
+    "SAN": "Renato Paiva",
+    "TIJ": "Sebastián Abreu",
+    "NEC": "Martín Varini",
+    "QRO": "Esteban González",
+    "PUM": "Esteban Solari",
+    "PAC": "Benjamín Mora",
+    "JUA": "Pedro Caixinha",
+    "PUE": "Gerardo Espinoza",
+    "ASL": "Diego Mejía",
+    "ATE": "Miguel Herrera",
+}
+
+for _team in APERTURA_2026_TEAMS:
+    _team["dt_name"] = _DT_NAMES.get(_team["short_name"], "")
 
 # ──────────────────────────────────────────────
 #  JORNADA 1 — Resultados reales (16-18 jul 2026)

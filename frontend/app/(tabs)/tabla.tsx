@@ -6,12 +6,12 @@ import {
   SafeAreaView,
   StatusBar,
   ScrollView,
-  Image,
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../lib/api';
+import TeamShield from '../../components/TeamShield';
 
 interface StandingRow {
   id: string;
@@ -121,11 +121,7 @@ export default function TablaScreen() {
                   >
                     <Text style={[styles.cell, styles.posCell, styles.posText]}>{row.position}</Text>
                     <View style={[styles.cell, styles.shieldCell]}>
-                      {row.shield_url ? (
-                        <Image source={{ uri: row.shield_url }} style={styles.shield} />
-                      ) : (
-                        <View style={styles.shieldPlaceholder} />
-                      )}
+                      <TeamShield shortName={row.short_name} shieldUrl={row.shield_url} style={styles.shield} />
                     </View>
                     <Text style={[styles.cell, styles.teamCell, styles.teamText]} numberOfLines={1}>
                       {row.short_name || row.name}

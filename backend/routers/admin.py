@@ -870,6 +870,7 @@ async def migrate_apertura_2026(current_user: dict = Depends(get_admin_user)):
             "name": team_data["name"], "short_name": team_data["short_name"],
             "color": team_data.get("color", "#000000"),
             "shield_url": team_data["shield_url"],
+            "dt_name": team_data.get("dt_name", ""),
             "competition": "liga_mx", "created_at": now,
         })
         team_ids[team_data["short_name"]] = team_result.inserted_id
@@ -1158,6 +1159,35 @@ async def update_team_shield(
         "message": f"✅ shield_url actualizado para {short_name}",
         "matched": result.matched_count,
         "modified": result.modified_count,
+    }
+
+
+@router.post("/admin/sync-dt-names")
+async def sync_dt_names(current_user: dict = Depends(get_admin_user)):
+    """
+    Actualiza dt_name en los 18 equipos ya sembrados en Mongo (competition=
+    liga_mx) desde APERTURA_2026_TEAMS, sin re-migrar todo. Uso puntual —
+    los equipos se sembraron antes de que se agregara el campo dt_name.
+    """
+    updated = []
+    not_found = []
+    for team_data in APERTURA_2026_TEAMS:
+        sn = team_data["short_name"]
+        dt_name = team_data.get("dt_name", "")
+        result = await db.teams.update_one(
+            {"competition": "liga_mx", "short_name": sn},
+            {"$set": {"dt_name": dt_name}},
+        )
+        if result.matched_count:
+            updated.append(f"{sn}={dt_name}")
+        else:
+            not_found.append(sn)
+
+    logger.info(f"sync-dt-names: {len(updated)} actualizados, {len(not_found)} sin equipo")
+    return {
+        "message": f"✅ {len(updated)} equipo(s) actualizados con dt_name",
+        "updated": updated,
+        "not_found": not_found,
     }
 
 

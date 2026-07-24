@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  Image, StatusBar, ActivityIndicator, Alert, Platform,
+  StatusBar, ActivityIndicator, Alert, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -10,6 +10,7 @@ import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
 import api from '../lib/api';
 import { SPONSORS } from '../config/sponsors';
+import TeamShield from '../../components/TeamShield';
 
 type TeamInfo = {
   id: string;
@@ -56,7 +57,7 @@ const TeamSlot = ({
     >
       {team ? (
         <>
-          <Image source={{ uri: team.shield_url }} style={ts.shield} resizeMode="contain" />
+          <TeamShield shortName={team.short_name} shieldUrl={team.shield_url} style={ts.shield} />
           <Text style={[ts.name, isWinner && ts.nameWinner]} numberOfLines={1}>
             {team.short_name}
           </Text>
@@ -466,8 +467,8 @@ export default function BracketScreen() {
               <View key={pos} style={sc.cuartoRow}>
                 <Text style={sc.matchLabel}>{match}</Text>
                 <View style={[sc.pickRow, !!pick && sc.pickRowActive]}>
-                  {pick?.shield_url
-                    ? <Image source={{ uri: pick.shield_url }} style={sc.shield} />
+                  {pick
+                    ? <TeamShield shortName={pick.short_name} shieldUrl={pick.shield_url} style={sc.shield} />
                     : <View style={sc.shieldPlaceholder} />
                   }
                   <Text style={[sc.pickName, !!pick && sc.pickNameActive]}>
@@ -484,8 +485,8 @@ export default function BracketScreen() {
           <View style={sc.semisRow}>
             {[picks.sfL, picks.sfR].map((team, i) => (
               <View key={i} style={[sc.semiCard, !!team && sc.semiCardActive]}>
-                {team?.shield_url
-                  ? <Image source={{ uri: team.shield_url }} style={sc.semiShield} />
+                {team
+                  ? <TeamShield shortName={team.short_name} shieldUrl={team.shield_url} style={sc.semiShield} />
                   : <View style={sc.semiShieldPh} />
                 }
                 <Text style={[sc.semiName, !!team && sc.semiNameActive]}>
@@ -499,8 +500,8 @@ export default function BracketScreen() {
           <View style={sc.champSection}>
             <Text style={sc.champLabel}>🏆 MI CAMPEÓN</Text>
             <View style={sc.champCard}>
-              {picks.champion?.shield_url
-                ? <Image source={{ uri: picks.champion.shield_url }} style={sc.champShield} />
+              {picks.champion
+                ? <TeamShield shortName={picks.champion.short_name} shieldUrl={picks.champion.shield_url} style={sc.champShield} />
                 : null
               }
               <Text style={sc.champName}>{picks.champion?.name ?? '?'}</Text>

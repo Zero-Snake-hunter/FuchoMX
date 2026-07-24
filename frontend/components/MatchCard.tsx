@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import es from 'date-fns/locale/es';
+import TeamShield from './TeamShield';
 
 interface Match {
   id: string;
@@ -78,12 +79,10 @@ export default function MatchCard({ match, selection, onSelect, disabled }: Matc
       <View style={styles.teamsContainer}>
         {/* Home Team */}
         <View style={styles.team}>
-          <Image
-            source={{ uri: match.home_team.shield_url }}
-            defaultSource={require('../assets/images/FuchoMX.png')}
+          <TeamShield
+            shortName={match.home_team.short_name}
+            shieldUrl={match.home_team.shield_url}
             style={styles.shield}
-            resizeMode="contain"
-            onError={(e) => console.log('Shield error home:', e.nativeEvent.error)}
           />
           <Text style={styles.teamName} numberOfLines={2}>
             {match.home_team.name}
@@ -102,12 +101,10 @@ export default function MatchCard({ match, selection, onSelect, disabled }: Matc
 
         {/* Away Team */}
         <View style={styles.team}>
-          <Image
-            source={{ uri: match.away_team.shield_url }}
-            defaultSource={require('../assets/images/FuchoMX.png')}
+          <TeamShield
+            shortName={match.away_team.short_name}
+            shieldUrl={match.away_team.shield_url}
             style={styles.shield}
-            resizeMode="contain"
-            onError={(e) => console.log('Shield error away:', e.nativeEvent.error)}
           />
           <Text style={styles.teamName} numberOfLines={2}>
             {match.away_team.name}
