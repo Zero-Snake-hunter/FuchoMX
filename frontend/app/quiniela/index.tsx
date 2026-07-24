@@ -254,6 +254,9 @@ export default function QuinielaScreen() {
     match => selections[match.id] && selections[match.id] !== savedSelections[match.id]
   );
   const openMatchesPending = openMatches.filter(match => !selections[match.id]).length;
+  // Todos los partidos "scheduled" ya tienen pick guardado (los cerrados no cuentan)
+  const allPicksComplete =
+    hasAnySaved && jornada.matches.every(m => m.status !== 'scheduled' || !!savedSelections[m.id]);
 
   return (
     <View style={styles.container}>
@@ -290,18 +293,30 @@ export default function QuinielaScreen() {
             </View>
           </View>
 
+          {allPicksComplete && (
+            <View style={styles.completeBanner}>
+              <Ionicons name="checkmark-circle" size={22} color="#00A551" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.completeBannerText}>✅ Quiniela enviada</Text>
+                <Text style={styles.completeBannerSubtext}>
+                  Ya guardaste todos tus picks disponibles de esta jornada
+                </Text>
+              </View>
+            </View>
+          )}
+
           {firstMatchDate && hasOpenMatches && (
             <CountdownTimer targetDate={firstMatchDate} />
           )}
 
           {hasAnySaved && (
             <View style={styles.submittedBlock}>
-              <View style={styles.submittedBadge}>
-                <Ionicons name="checkmark-circle" size={20} color="#00A551" />
-                <Text style={styles.submittedText}>
-                  {hasOpenMatches ? 'Picks guardados' : 'Quiniela enviada'}
-                </Text>
-              </View>
+              {!allPicksComplete && (
+                <View style={styles.submittedBadge}>
+                  <Ionicons name="checkmark-circle" size={20} color="#00A551" />
+                  <Text style={styles.submittedText}>Picks guardados</Text>
+                </View>
+              )}
               {shareData && (
                 <TouchableOpacity
                   style={styles.shareBtn}
@@ -491,6 +506,28 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginLeft: 8,
+  },
+  completeBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#0A2E1A',
+    borderWidth: 1,
+    borderColor: '#00A551',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginTop: 12,
+  },
+  completeBannerText: {
+    color: '#00A551',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  completeBannerSubtext: {
+    color: '#7FC9A0',
+    fontSize: 12,
+    marginTop: 2,
   },
   quickActions: {
     flexDirection: 'row',
