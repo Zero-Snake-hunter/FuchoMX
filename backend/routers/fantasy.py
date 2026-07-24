@@ -157,7 +157,7 @@ async def get_players(
             formatted_players.append({
                 "id": str(player["_id"]),
                 "name": player.get("name", ""),
-                "number": player.get("number", 0),
+                "number": player.get("number") or 0,
                 "position": player.get("position", ""),
                 "team_name": player.get("team_name", ""),
                 "nationality": player.get("nationality", ""),
@@ -291,7 +291,7 @@ async def get_fantasy_lineup(
                     "player": {
                         "id": str(player["_id"]),
                         "name": player["name"],
-                        "number": player.get("number", 0),
+                        "number": player.get("number") or 0,
                         "position": player["position"],
                         "team": {
                             "id": str(player_team["_id"]),

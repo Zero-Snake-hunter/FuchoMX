@@ -1134,6 +1134,33 @@ async def create_remaining_jornadas(current_user: dict = Depends(get_admin_user)
     }
 
 
+@router.post("/admin/update-team-shield")
+async def update_team_shield(
+    short_name: str, shield_url: str, current_user: dict = Depends(get_admin_user)
+):
+    """
+    Corrige el shield_url de un equipo ya sembrado en Mongo (competition=
+    liga_mx) sin tener que volver a correr una migración completa. Uso
+    puntual — ej. Atlante se sembró con un placeholder (via.placeholder.com)
+    porque no había shield real disponible al momento de migrar.
+    """
+    result = await db.teams.update_one(
+        {"competition": "liga_mx", "short_name": short_name},
+        {"$set": {"shield_url": shield_url}},
+    )
+    if result.matched_count == 0:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Equipo con short_name={short_name} no encontrado (competition=liga_mx)",
+        )
+    logger.info(f"update-team-shield: {short_name} -> {shield_url}")
+    return {
+        "message": f"✅ shield_url actualizado para {short_name}",
+        "matched": result.matched_count,
+        "modified": result.modified_count,
+    }
+
+
 @router.post("/admin/load-remaining-fixtures")
 async def load_remaining_fixtures(current_user: dict = Depends(get_admin_user)):
     """

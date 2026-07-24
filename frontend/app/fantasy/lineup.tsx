@@ -17,57 +17,18 @@ import { Ionicons } from '@expo/vector-icons';
 import api from '../lib/api';
 
 
-// Colores de las 48 selecciones — Mundial 2026
-const TEAM_COLORS: { [key: string]: { primary: string; secondary: string } } = {
-  'México': { primary: '#006341', secondary: '#FFFFFF' },
-  'Sudáfrica': { primary: '#007A4D', secondary: '#FFB81C' },
-  'Corea del Sur': { primary: '#C60C30', secondary: '#FFFFFF' },
-  'Rep. Checa': { primary: '#D7141A', secondary: '#FFFFFF' },
-  'Canadá': { primary: '#FF0000', secondary: '#FFFFFF' },
-  'Bosnia': { primary: '#002395', secondary: '#FFCD00' },
-  'Qatar': { primary: '#8D1B3D', secondary: '#FFFFFF' },
-  'Suiza': { primary: '#FF0000', secondary: '#FFFFFF' },
-  'Brasil': { primary: '#009C3B', secondary: '#FFDF00' },
-  'Marruecos': { primary: '#C1272D', secondary: '#006233' },
-  'Haití': { primary: '#00209F', secondary: '#D21034' },
-  'Escocia': { primary: '#003078', secondary: '#FFFFFF' },
-  'USA': { primary: '#002868', secondary: '#BF0A30' },
-  'Australia': { primary: '#00008B', secondary: '#FFFF00' },
-  'Paraguay': { primary: '#D52B1E', secondary: '#FFFFFF' },
-  'Turquía': { primary: '#E30A17', secondary: '#FFFFFF' },
-  'Alemania': { primary: '#000000', secondary: '#DD0000' },
-  'Curaçao': { primary: '#002B7F', secondary: '#F9E814' },
-  'Costa de Marfil': { primary: '#F77F00', secondary: '#009A44' },
-  'Ecuador': { primary: '#FFD100', secondary: '#003DA5' },
-  'Países Bajos': { primary: '#FF6600', secondary: '#FFFFFF' },
-  'Japón': { primary: '#BC002D', secondary: '#FFFFFF' },
-  'Suecia': { primary: '#006AA7', secondary: '#FECC00' },
-  'Túnez': { primary: '#E70013', secondary: '#FFFFFF' },
-  'Bélgica': { primary: '#000000', secondary: '#EF3340' },
-  'Egipto': { primary: '#CE1126', secondary: '#FFFFFF' },
-  'Irán': { primary: '#239F40', secondary: '#FFFFFF' },
-  'Nueva Zelanda': { primary: '#000000', secondary: '#FFFFFF' },
-  'España': { primary: '#AA151B', secondary: '#F1BF00' },
-  'Cabo Verde': { primary: '#003893', secondary: '#CF2027' },
-  'Arabia Saudita': { primary: '#006C35', secondary: '#FFFFFF' },
-  'Uruguay': { primary: '#5EB6E4', secondary: '#FFFFFF' },
-  'Francia': { primary: '#002395', secondary: '#FFFFFF' },
-  'Senegal': { primary: '#00853F', secondary: '#FDEF42' },
-  'Irak': { primary: '#CE1126', secondary: '#FFFFFF' },
-  'Noruega': { primary: '#EF2B2D', secondary: '#002868' },
-  'Argentina': { primary: '#74ACDF', secondary: '#FFFFFF' },
-  'Argelia': { primary: '#006233', secondary: '#FFFFFF' },
-  'Austria': { primary: '#ED2939', secondary: '#FFFFFF' },
-  'Jordania': { primary: '#007A3D', secondary: '#FFFFFF' },
-  'Portugal': { primary: '#006600', secondary: '#FF0000' },
-  'DR Congo': { primary: '#007FFF', secondary: '#F7D618' },
-  'Uzbekistán': { primary: '#1EB53A', secondary: '#FFFFFF' },
-  'Colombia': { primary: '#FCD116', secondary: '#003087' },
-  'Inglaterra': { primary: '#FFFFFF', secondary: '#CF081F' },
-  'Croacia': { primary: '#FF0000', secondary: '#FFFFFF' },
-  'Ghana': { primary: '#006B3F', secondary: '#FCD116' },
-  'Panamá': { primary: '#DA121A', secondary: '#FFFFFF' },
-  'default': { primary: '#666666', secondary: '#FFFFFF' },
+const DEFAULT_TEAM_COLOR = '#666666';
+
+// Color de texto/borde legible (blanco o negro) según el brillo del color
+// primario del equipo — evita tener que mantener a mano un segundo color
+// "oficial" por equipo, que además puede desincronizarse del backend.
+const getContrastColor = (hex: string): string => {
+  const clean = (hex || '').replace('#', '');
+  const r = parseInt(clean.substring(0, 2), 16) || 0;
+  const g = parseInt(clean.substring(2, 4), 16) || 0;
+  const b = parseInt(clean.substring(4, 6), 16) || 0;
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.6 ? '#111111' : '#FFFFFF';
 };
 
 // Formación 4-3-3: 1 POR, 4 DEF, 3 MED, 3 DEL
@@ -91,15 +52,13 @@ const FORMATION = {
   ],
 };
 
-// Función para obtener colores del equipo
-const getTeamColors = (teamName: string) => {
-  // Buscar coincidencia parcial en el nombre del equipo
-  for (const [key, colors] of Object.entries(TEAM_COLORS)) {
-    if (teamName?.toLowerCase().includes(key.toLowerCase())) {
-      return colors;
-    }
-  }
-  return TEAM_COLORS['default'];
+// Colores del equipo — usa el "color" que ya viene de cada equipo desde el
+// backend (db.teams.color, seteado al migrar Apertura 2026), no un mapa
+// hardcodeado. Si un equipo no trae color (no debería pasar, siempre tiene
+// default), cae a gris neutro.
+const getTeamColors = (team: any) => {
+  const primary = team?.color || DEFAULT_TEAM_COLOR;
+  return { primary, secondary: getContrastColor(primary) };
 };
 
 export default function LineupScreen() {
@@ -309,7 +268,7 @@ export default function LineupScreen() {
 
   const renderPlayerSlot = (slot: string, position: string, label: string) => {
     const player = lineup[slot];
-    const teamColors = player?.team ? getTeamColors(player.team.name) : null;
+    const teamColors = player?.team ? getTeamColors(player.team) : null;
 
     return (
       <TouchableOpacity
@@ -452,8 +411,8 @@ export default function LineupScreen() {
           >
             {dtTeam ? (
               <View style={styles.dtSelected}>
-                <View style={[styles.dtIcon, { backgroundColor: getTeamColors(dtTeam.name).primary }]}>
-                  <Ionicons name="person" size={24} color={getTeamColors(dtTeam.name).secondary} />
+                <View style={[styles.dtIcon, { backgroundColor: getTeamColors(dtTeam).primary }]}>
+                  <Ionicons name="person" size={24} color={getTeamColors(dtTeam).secondary} />
                 </View>
                 <View style={styles.dtInfo}>
                   <Text style={styles.dtTeamName}>DT de {dtTeam.name}</Text>
@@ -508,7 +467,7 @@ export default function LineupScreen() {
               data={teams}
               keyExtractor={(item: any) => item.id}
               renderItem={({ item }) => {
-                const colors = getTeamColors(item.name);
+                const colors = getTeamColors(item);
                 return (
                   <TouchableOpacity
                     style={styles.teamItem}
@@ -549,7 +508,7 @@ export default function LineupScreen() {
                 data={players}
                 keyExtractor={(item: any) => item.id}
                 renderItem={({ item }) => {
-                  const colors = getTeamColors(selectedTeamForPlayer?.name);
+                  const colors = getTeamColors(selectedTeamForPlayer);
                   return (
                     <TouchableOpacity
                       style={styles.playerItem}
@@ -598,7 +557,7 @@ export default function LineupScreen() {
               data={teams}
               keyExtractor={(item: any) => item.id}
               renderItem={({ item }) => {
-                const colors = getTeamColors(item.name);
+                const colors = getTeamColors(item);
                 const isSelected = dtTeam?.id === item.id;
                 return (
                   <TouchableOpacity

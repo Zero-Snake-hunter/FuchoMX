@@ -24,8 +24,7 @@ APERTURA_2026_TEAMS = [dict(_BY_SHORT_NAME[sn]) for sn in _REUSED_SHORT_NAMES] +
         "name": "Atlante",
         "short_name": "ATE",
         "color": "#002B7F",
-        # Placeholder — no hay shield real en el repo, reemplazar antes de mostrar en UI final.
-        "shield_url": "https://via.placeholder.com/100/002B7F/FFFFFF?text=ATE",
+        "shield_url": "https://a.espncdn.com/i/teamlogos/soccer/500/1927.png",
         "players": [
             {"name": "Portero Atlante 1",        "number": 1,  "position": "POR"},
             {"name": "Portero Atlante 2",         "number": 13, "position": "POR"},
