@@ -39,6 +39,12 @@ async def submit_quiniela(
 
     matches = await db.matches.find({"jornada_id": jornada_id}).to_list(100)
 
+    if any(match.get("locked") for match in matches):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Esta jornada aún no se activa — todavía no puedes enviar tu quiniela"
+        )
+
     for match in matches:
         if match.get("status") in ["live", "finished"]:
             home_team = await db.teams.find_one({"_id": match.get("home_team_id")})

@@ -27,6 +27,7 @@ from apertura_2026_data import (
     APERTURA_2026_J1_RESULTS,
     APERTURA_2026_J2_FIXTURE,
     APERTURA_2026_REMAINING_JORNADAS,
+    APERTURA_2026_J3_J17_FIXTURES,
 )
 from services.api_football_service import (
     get_fixtures_by_date as _af_get_by_date,
@@ -1130,6 +1131,68 @@ async def create_remaining_jornadas(current_user: dict = Depends(get_admin_user)
         "message": f"✅ {len(created)} jornada(s) creada(s), {len(skipped)} ya existían",
         "created": created,
         "skipped": skipped,
+    }
+
+
+@router.post("/admin/load-remaining-fixtures")
+async def load_remaining_fixtures(current_user: dict = Depends(get_admin_user)):
+    """
+    Carga los partidos reales de J3-J17 (APERTURA_2026_J3_J17_FIXTURES,
+    obtenidos de 365Scores) en las jornadas ya creadas por
+    /admin/create-remaining-jornadas. Cada partido se inserta con
+    "locked": True — el usuario NO puede enviar quiniela para esa jornada
+    hasta que se active (el endpoint /jornadas/current pone locked=False
+    en todos sus partidos al activarla, igual que ya hace con is_active).
+
+    Idempotente por jornada: si una jornada (week_number=N, competition=
+    liga_mx) ya tiene partidos, se omite — no duplica ni reemplaza.
+    """
+    competition = "liga_mx"
+    teams = await db.teams.find({"competition": competition}).to_list(30)
+    team_ids = {t["short_name"]: t["_id"] for t in teams}
+    now = datetime.utcnow()
+
+    loaded = []
+    skipped = []
+    missing_jornada = []
+
+    for week_number, games in APERTURA_2026_J3_J17_FIXTURES.items():
+        jornada = await db.jornadas.find_one({
+            "competition": competition, "week_number": week_number,
+        })
+        if not jornada:
+            missing_jornada.append(week_number)
+            continue
+
+        existing_count = await db.matches.count_documents({"jornada_id": jornada["_id"]})
+        if existing_count > 0:
+            skipped.append(week_number)
+            continue
+
+        match_docs = [
+            {
+                "jornada_id": jornada["_id"],
+                "home_team_id": team_ids[home_sn], "away_team_id": team_ids[away_sn],
+                "home_score": None, "away_score": None,
+                "status": "scheduled", "start_at": start_at, "created_at": now,
+                "ext_id_365": game_id, "locked": True,
+            }
+            for (game_id, home_sn, away_sn, start_at) in games
+            if home_sn in team_ids and away_sn in team_ids
+        ]
+        if match_docs:
+            await db.matches.insert_many(match_docs)
+            loaded.append({"week_number": week_number, "matches": len(match_docs)})
+
+    logger.info(
+        f"load-remaining-fixtures: cargadas={[l['week_number'] for l in loaded]}, "
+        f"ya existían={skipped}, sin jornada={missing_jornada}"
+    )
+    return {
+        "message": f"✅ {len(loaded)} jornada(s) cargada(s) con partidos (locked=true)",
+        "loaded": loaded,
+        "skipped_ya_tenian_partidos": skipped,
+        "sin_jornada_creada": missing_jornada,
     }
 
 

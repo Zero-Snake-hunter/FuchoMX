@@ -24,14 +24,13 @@ async def get_teams():
     return {"teams": teams}
 
 
-@router.get("/standings")
-async def get_standings():
+async def compute_standings(competition: str) -> list[dict]:
     """
     Tabla general calculada desde partidos "finished" en nuestra propia DB
     (no depende de ESPN ni 365Scores en vivo) — PJ, PG, PE, PP, GF, GC, DG, PTS.
     Orden: puntos desc, luego diferencia de goles desc, luego goles a favor desc.
+    Compartida entre /standings y el bracket de liguilla (routers/liguilla.py).
     """
-    competition = await get_active_competition()
     teams = await db.teams.find({"competition": competition}).to_list(30)
 
     jornadas = await db.jornadas.find({
@@ -87,6 +86,13 @@ async def get_standings():
     for i, row in enumerate(standings):
         row["position"] = i + 1
 
+    return standings
+
+
+@router.get("/standings")
+async def get_standings():
+    competition = await get_active_competition()
+    standings = await compute_standings(competition)
     return {"competition": competition, "standings": standings}
 
 
@@ -126,6 +132,9 @@ async def get_current_jornada():
                 {"_id": next_jornada["_id"]},
                 {"$set": {"status": "upcoming", "is_active": True}}
             )
+            await db.matches.update_many(
+                {"jornada_id": next_jornada["_id"]}, {"$set": {"locked": False}}
+            )
             jornada = next_jornada
             jornada["status"] = "upcoming"
             jornada["is_active"] = True
@@ -143,6 +152,9 @@ async def get_current_jornada():
         if jornada:
             await db.jornadas.update_one(
                 {"_id": jornada["_id"]}, {"$set": {"is_active": True}}
+            )
+            await db.matches.update_many(
+                {"jornada_id": jornada["_id"]}, {"$set": {"locked": False}}
             )
             jornada["is_active"] = True
             logger.info(f"Jornada {jornada['week_number']} activada via fallback")
@@ -195,6 +207,9 @@ async def get_current_jornada():
                 await db.jornadas.update_one(
                     {"_id": next_j["_id"]},
                     {"$set": {"is_active": True, "status": "upcoming"}}
+                )
+                await db.matches.update_many(
+                    {"jornada_id": next_j["_id"]}, {"$set": {"locked": False}}
                 )
                 jornada = next_j
                 logger.info(
