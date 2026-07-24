@@ -27,17 +27,9 @@ async def submit_quiniela(
     if not jornada:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Jornada no encontrada")
 
-    existing = await db.quiniela_selections.find_one({
-        "user_id": current_user["_id"],
-        "jornada_id": jornada_id
-    })
-    if existing:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Ya enviaste tu quiniela para esta jornada"
-        )
-
     matches = await db.matches.find({"jornada_id": jornada_id}).to_list(100)
+    if not matches:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Esta jornada no tiene partidos")
 
     if any(match.get("locked") for match in matches):
         raise HTTPException(
@@ -45,50 +37,69 @@ async def submit_quiniela(
             detail="Esta jornada aún no se activa — todavía no puedes enviar tu quiniela"
         )
 
-    for match in matches:
+    matches_by_id = {str(m["_id"]): m for m in matches}
+    team_ids = {m["home_team_id"] for m in matches} | {m["away_team_id"] for m in matches}
+    teams = await db.teams.find({"_id": {"$in": list(team_ids)}}).to_list(100)
+    team_names = {t["_id"]: t.get("short_name", t.get("name", "?")) for t in teams}
+
+    valid_selection_values = {"HOME", "DRAW", "AWAY"}
+    saved = []
+    rejected = []
+
+    for s in quiniela.selections:
+        match_id_str = s.get("match_id")
+        selection_val = s.get("selection")
+        match = matches_by_id.get(match_id_str)
+
+        if not match:
+            rejected.append({"match_id": match_id_str, "reason": "El partido no pertenece a esta jornada"})
+            continue
+
+        home_name = team_names.get(match["home_team_id"], "Local")
+        away_name = team_names.get(match["away_team_id"], "Visitante")
+        label = f"{home_name} vs {away_name}"
+
         if match.get("status") in ["live", "finished"]:
-            home_team = await db.teams.find_one({"_id": match.get("home_team_id")})
-            away_team = await db.teams.find_one({"_id": match.get("away_team_id")})
-            home_name = home_team.get("short_name", "Local") if home_team else "Local"
-            away_name = away_team.get("short_name", "Visitante") if away_team else "Visitante"
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"El partido {home_name} vs {away_name} ya comenzó"
-            )
+            when = "ya está en vivo" if match["status"] == "live" else "ya finalizó"
+            rejected.append({
+                "match_id": match_id_str, "match": label,
+                "reason": f"{label} {when} — no se puede guardar/cambiar el pick"
+            })
+            continue
 
-    match_ids = {str(m["_id"]) for m in matches}
-    submitted_match_ids = {s["match_id"] for s in quiniela.selections}
-    if match_ids != submitted_match_ids:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Debes seleccionar un resultado para cada partido"
+        if selection_val not in valid_selection_values:
+            rejected.append({
+                "match_id": match_id_str, "match": label,
+                "reason": "Selección inválida (debe ser HOME, DRAW o AWAY)"
+            })
+            continue
+
+        await db.quiniela_selections.update_one(
+            {
+                "user_id": current_user["_id"],
+                "jornada_id": jornada_id,
+                "match_id": ObjectId(match_id_str),
+            },
+            {"$set": {"selection": selection_val, "submitted_at": datetime.utcnow()}},
+            upsert=True
         )
+        saved.append({"match_id": match_id_str, "match": label, "selection": selection_val})
 
-    valid_selections = {"HOME", "DRAW", "AWAY"}
-    for selection in quiniela.selections:
-        if selection["selection"] not in valid_selections:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Selección inválida. Debe ser HOME, DRAW o AWAY"
-            )
-
-    selections_to_insert = [
-        {
-            "user_id": current_user["_id"],
-            "jornada_id": jornada_id,
-            "match_id": ObjectId(s["match_id"]),
-            "selection": s["selection"],
-            "submitted_at": datetime.utcnow()
-        }
-        for s in quiniela.selections
-    ]
-    await db.quiniela_selections.insert_many(selections_to_insert)
-    logger.info(f"User {current_user['email']} submitted quiniela for jornada {quiniela.jornada_id}")
+    logger.info(
+        f"User {current_user['email']} submitted quiniela for jornada {quiniela.jornada_id}: "
+        f"{len(saved)} guardado(s), {len(rejected)} rechazado(s)"
+    )
 
     return {
-        "message": "Quiniela enviada exitosamente",
+        "message": (
+            f"✅ {len(saved)} pick(s) guardado(s)"
+            + (f" · ⚠️ {len(rejected)} rechazado(s) por partido ya cerrado" if rejected else "")
+        ),
         "jornada_id": quiniela.jornada_id,
-        "selections_count": len(selections_to_insert)
+        "saved": saved,
+        "rejected": rejected,
+        "saved_count": len(saved),
+        "rejected_count": len(rejected),
     }
 
 

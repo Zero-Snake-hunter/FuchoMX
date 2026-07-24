@@ -6,6 +6,7 @@ from bson import ObjectId
 from achievements import check_and_award_achievements_after_jornada
 from database import db
 from fantasy_scoring import calculate_fantasy_points
+from scoring_penalties import apply_jornada_close_adjustments
 from services.player_stats_service import get_player_stats as _svc_get_player_stats
 from services.scores_service import get_match_results as _svc_get_match_results
 
@@ -16,6 +17,7 @@ async def _process_jornada_core(jornada_id: str) -> dict:
     """
     Orquesta el procesamiento completo de una jornada:
     1. Resultados de partidos (365Scores → ESPN fallback)
+    1.5. Cierre de jornada: castigos por no seleccionar + bonus nuevos usuarios
     2. Puntos de Quiniela
     3. Stats de jugadores (ESPN Summary)
     4. Puntos de Fantasy
@@ -32,6 +34,15 @@ async def _process_jornada_core(jornada_id: str) -> dict:
     # Paso 1: Actualizar resultados de partidos
     scores_result = await _svc_get_match_results(jornada_id, db)
     logger.info(f"  ✅ Scores: {scores_result.get('matches_updated')}/{scores_result.get('matches_total')} actualizados")
+
+    # Paso 1.5: Cierre de jornada — castigos por no seleccionar + bonus de nuevos usuarios
+    # (no-op si aún quedan partidos sin terminar; idempotente si ya se aplicó)
+    close_result = {"applied": False}
+    try:
+        all_matches = await db.matches.find({"jornada_id": jornada_obj_id}).to_list(100)
+        close_result = await apply_jornada_close_adjustments(jornada, all_matches)
+    except Exception as exc:
+        logger.error(f"  ❌ Jornada close adjustments error: {exc}")
 
     # Paso 2: Calcular puntos de Quiniela
     quiniela_updated = 0
@@ -120,6 +131,7 @@ async def _process_jornada_core(jornada_id: str) -> dict:
         "player_stats_saved":   stats_result.get("players_saved", 0),
         "fantasy_updated":      fantasy_updated,
         "achievements_awarded": achievements_awarded,
+        "jornada_close":        close_result,
         "processed_at":         datetime.utcnow().isoformat(),
     }
     logger.info(f"✅ Jornada {jornada.get('week_number')} procesada: {summary}")
