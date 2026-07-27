@@ -4,13 +4,18 @@ from datetime import datetime
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from database import db
+from database import db, get_active_competition
 from dependencies import get_current_user
 from models import QuinielaSubmit
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/quiniela")
+
+# Fuentes de points_log que cuentan como "puntos de quiniela" de una jornada
+# — el acierto normal (3 pts c/u), la penalización por no seleccionar, y el
+# bonus de nuevo usuario. Ver scoring_penalties.py.
+QUINIELA_POINT_SOURCES = ["QUINIELA", "QUINIELA_PENALIZACION", "QUINIELA_BONUS_NUEVO"]
 
 
 @router.post("/submit")
@@ -135,6 +140,129 @@ async def get_my_picks(
         "submitted": True,
         "selections": formatted_selections,
         "submitted_at": selections[0]["submitted_at"] if selections else None
+    }
+
+
+@router.get("/jornadas")
+async def list_quiniela_jornadas():
+    """
+    Lista jornadas de temporada regular (competition activa, excluye
+    liguilla) para el selector de jornada de la pantalla de Quiniela —
+    ver picks/resultados de jornadas anteriores sin salir de esa pantalla.
+    """
+    competition = await get_active_competition()
+    jornadas = await db.jornadas.find(
+        {"competition": competition, "type": {"$ne": "liguilla"}}
+    ).sort("week_number", 1).to_list(100)
+
+    return {
+        "jornadas": [
+            {
+                "id": str(j["_id"]),
+                "week_number": j.get("week_number"),
+                "status": j.get("status"),
+                "is_active": j.get("is_active", False),
+            }
+            for j in jornadas
+        ]
+    }
+
+
+@router.get("/jornada/{jornada_id}/resultados")
+async def get_jornada_resultados(
+    jornada_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Partidos de una jornada + el pick del usuario en cada uno + si acertó,
+    para la vista de solo-lectura de jornadas pasadas en la pantalla de
+    Quiniela (selector de jornada junto al título).
+    """
+    try:
+        jornada_obj_id = ObjectId(jornada_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="ID de jornada inválido")
+
+    jornada = await db.jornadas.find_one({"_id": jornada_obj_id})
+    if not jornada:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Jornada no encontrada")
+
+    matches = await db.matches.find({"jornada_id": jornada_obj_id}).to_list(100)
+
+    selections = await db.quiniela_selections.find({
+        "user_id": current_user["_id"],
+        "jornada_id": jornada_obj_id,
+    }).to_list(100)
+    pick_by_match = {sel["match_id"]: sel["selection"] for sel in selections}
+
+    team_ids = {m["home_team_id"] for m in matches} | {m["away_team_id"] for m in matches}
+    teams = await db.teams.find({"_id": {"$in": list(team_ids)}}).to_list(100)
+    teams_by_id = {t["_id"]: t for t in teams}
+
+    def team_brief(team):
+        if not team:
+            return {"id": "unknown", "name": "?", "short_name": "?", "shield_url": ""}
+        return {
+            "id": str(team["_id"]), "name": team.get("name", "?"),
+            "short_name": team.get("short_name", "?"), "shield_url": team.get("shield_url", ""),
+        }
+
+    matches_out = []
+    aciertos = 0
+    jugados = 0
+    for m in sorted(matches, key=lambda x: x.get("start_at") or datetime.min):
+        home_score, away_score = m.get("home_score"), m.get("away_score")
+        actual_result = None
+        if m.get("status") == "finished" and home_score is not None and away_score is not None:
+            if home_score > away_score:
+                actual_result = "HOME"
+            elif away_score > home_score:
+                actual_result = "AWAY"
+            else:
+                actual_result = "DRAW"
+
+        user_pick = pick_by_match.get(m["_id"])
+        correct = None
+        if actual_result is not None:
+            jugados += 1
+            if user_pick is not None:
+                correct = user_pick == actual_result
+                if correct:
+                    aciertos += 1
+
+        matches_out.append({
+            "id": str(m["_id"]),
+            "home_team": team_brief(teams_by_id.get(m["home_team_id"])),
+            "away_team": team_brief(teams_by_id.get(m["away_team_id"])),
+            "home_score": home_score,
+            "away_score": away_score,
+            "status": m.get("status"),
+            "start_at": m.get("start_at").isoformat() if m.get("start_at") else None,
+            "user_pick": user_pick,
+            "actual_result": actual_result,
+            "correct": correct,
+        })
+
+    points_docs = await db.points_log.find({
+        "user_id": current_user["_id"], "jornada_id": jornada_obj_id,
+        "source": {"$in": QUINIELA_POINT_SOURCES},
+    }).to_list(10)
+    total_puntos = sum(p.get("points", 0) for p in points_docs)
+
+    return {
+        "jornada": {
+            "id": jornada_id,
+            "week_number": jornada.get("week_number"),
+            "status": jornada.get("status"),
+            "is_active": jornada.get("is_active", False),
+        },
+        "matches": matches_out,
+        "summary": {
+            "aciertos": aciertos,
+            "jugados": jugados,
+            "total": len(matches_out),
+            "puntos": total_puntos,
+        },
     }
 
 

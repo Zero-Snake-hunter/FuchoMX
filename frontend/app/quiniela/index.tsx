@@ -9,6 +9,7 @@ import {
   Alert,
   Platform,
   RefreshControl,
+  Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -18,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import api from '../lib/api';
 import MatchCard from '../../components/MatchCard';
 import CountdownTimer from '../../components/CountdownTimer';
+import TeamShield from '../../components/TeamShield';
 import ShareResultCard, { ShareResultData } from '../components/ShareResultCard';
 
 
@@ -59,6 +61,87 @@ const getJornadaLabel = (jornada: any): string => {
   return `Jornada ${jornada?.week_number}`;
 };
 
+interface JornadaListItem {
+  id: string;
+  week_number: number;
+  status: string;
+  is_active: boolean;
+}
+
+interface ResultadosMatch {
+  id: string;
+  home_team: { id: string; name: string; short_name: string; shield_url: string };
+  away_team: { id: string; name: string; short_name: string; shield_url: string };
+  home_score: number | null;
+  away_score: number | null;
+  status: string;
+  start_at: string | null;
+  user_pick: string | null;
+  actual_result: string | null;
+  correct: boolean | null;
+}
+
+interface ResultadosData {
+  jornada: { id: string; week_number: number; status: string; is_active: boolean };
+  matches: ResultadosMatch[];
+  summary: { aciertos: number; jugados: number; total: number; puntos: number };
+}
+
+const pickLabel = (pick: string | null, match: ResultadosMatch): string => {
+  if (!pick) return 'Sin selecci\u00f3n';
+  if (pick === 'HOME') return `Gana ${match.home_team.short_name}`;
+  if (pick === 'AWAY') return `Gana ${match.away_team.short_name}`;
+  return 'Empate';
+};
+
+// Fila de solo lectura para partidos de una jornada pasada \u2014 a diferencia de
+// MatchCard (interactivo, usado para la jornada activa), esto solo muestra
+// el pick ya hecho y si acert\u00f3 o no. No reutiliza MatchCard porque ese
+// componente est\u00e1 pensado para seleccionar, no para mostrar resultado.
+function HistoryMatchRow({ match }: { match: ResultadosMatch }) {
+  const icon = match.correct === true ? '\u2705' : match.correct === false ? '\u274c' : null;
+
+  return (
+    <View style={styles.historyRow}>
+      <View style={styles.historyTeams}>
+        <View style={styles.historyTeam}>
+          <TeamShield
+            shortName={match.home_team.short_name}
+            shieldUrl={match.home_team.shield_url}
+            style={styles.historyShield}
+          />
+          <Text style={styles.historyTeamName} numberOfLines={1}>{match.home_team.short_name}</Text>
+        </View>
+        <Text style={styles.historyScore}>
+          {match.home_score !== null && match.away_score !== null
+            ? `${match.home_score} - ${match.away_score}`
+            : 'vs'}
+        </Text>
+        <View style={styles.historyTeam}>
+          <TeamShield
+            shortName={match.away_team.short_name}
+            shieldUrl={match.away_team.shield_url}
+            style={styles.historyShield}
+          />
+          <Text style={styles.historyTeamName} numberOfLines={1}>{match.away_team.short_name}</Text>
+        </View>
+      </View>
+      <View
+        style={[
+          styles.historyPickBadge,
+          match.correct === true && styles.historyPickCorrect,
+          match.correct === false && styles.historyPickWrong,
+        ]}
+      >
+        {icon && <Text style={styles.historyPickIcon}>{icon}</Text>}
+        <Text style={[styles.historyPickText, match.correct === null && styles.historyPickTextMuted]}>
+          {pickLabel(match.user_pick, match)}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
 export default function QuinielaScreen() {
   const router = useRouter();
   const { token, user } = useAuth();
@@ -72,14 +155,58 @@ export default function QuinielaScreen() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [shareData, setShareData] = useState<ShareResultData | null>(null);
 
+  // Selector de jornada (reemplaza la pantalla de Historial) — null significa
+  // "viendo la jornada activa"; con un id de una jornada pasada se muestra
+  // esa jornada en modo solo-lectura con los picks ya hechos.
+  const [jornadasList, setJornadasList] = useState<JornadaListItem[]>([]);
+  const [selectedJornadaId, setSelectedJornadaId] = useState<string | null>(null);
+  const [showJornadaPicker, setShowJornadaPicker] = useState(false);
+  const [resultados, setResultados] = useState<ResultadosData | null>(null);
+  const [loadingResultados, setLoadingResultados] = useState(false);
+
+  const viewingCurrent = !selectedJornadaId || selectedJornadaId === jornada?.id;
+
   // Refresca al entrar a la pantalla (no solo al montar) para detectar si la
   // jornada activa cambió mientras el usuario estaba en otra pestaña — ej.
   // cuando un admin cierra la jornada actual y activa la siguiente.
   useFocusEffect(
     useCallback(() => {
       loadJornada();
+      loadJornadasList();
     }, [])
   );
+
+  const loadJornadasList = async () => {
+    try {
+      const res = await api.get('/api/quiniela/jornadas');
+      setJornadasList(res.data.jornadas || []);
+    } catch (error) {
+      console.log('[Quiniela] Error cargando lista de jornadas:', error);
+    }
+  };
+
+  const selectJornada = async (item: JornadaListItem) => {
+    console.log('[Quiniela] Jornada seleccionada del picker:', item.week_number);
+    setShowJornadaPicker(false);
+
+    if (jornada && item.id === jornada.id) {
+      setSelectedJornadaId(null);
+      setResultados(null);
+      return;
+    }
+
+    setSelectedJornadaId(item.id);
+    setLoadingResultados(true);
+    try {
+      const res = await api.get(`/api/quiniela/jornada/${item.id}/resultados`);
+      setResultados(res.data);
+    } catch (error: any) {
+      showToast('error', error.response?.data?.detail || 'No se pudieron cargar los resultados de esa jornada');
+      setSelectedJornadaId(null);
+    } finally {
+      setLoadingResultados(false);
+    }
+  };
 
   const loadJornada = async () => {
     try {
@@ -314,16 +441,27 @@ export default function QuinielaScreen() {
       >
         {/* Header Info */}
         <View style={styles.header}>
-          <View style={styles.jornadaInfo}>
-            <Text style={styles.jornadaTitle}>{getJornadaLabel(jornada)}</Text>
-            <View style={styles.statusBadge}>
+          <TouchableOpacity
+            style={styles.jornadaInfo}
+            onPress={() => setShowJornadaPicker(true)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.jornadaTitleRow}>
+              <Text style={styles.jornadaTitle}>
+                {viewingCurrent ? getJornadaLabel(jornada) : `Jornada ${resultados?.jornada.week_number ?? ''}`}
+              </Text>
+              <Ionicons name="chevron-down" size={20} color="#999" />
+            </View>
+            <View style={[styles.statusBadge, !viewingCurrent && styles.statusBadgeHistory]}>
               <Text style={styles.statusText}>
-                {jornada.status === 'upcoming' ? 'Próxima' : 'En curso'}
+                {viewingCurrent
+                  ? (jornada.status === 'upcoming' ? 'Próxima' : 'En curso')
+                  : 'Jornada anterior'}
               </Text>
             </View>
-          </View>
+          </TouchableOpacity>
 
-          {allPicksComplete && (
+          {viewingCurrent && allPicksComplete && (
             <View style={styles.completeBanner}>
               <Ionicons name="checkmark-circle" size={22} color="#00A551" />
               <View style={{ flex: 1 }}>
@@ -335,11 +473,11 @@ export default function QuinielaScreen() {
             </View>
           )}
 
-          {firstMatchDate && hasOpenMatches && (
+          {viewingCurrent && firstMatchDate && hasOpenMatches && (
             <CountdownTimer targetDate={firstMatchDate} />
           )}
 
-          {hasAnySaved && (
+          {viewingCurrent && hasAnySaved && (
             <View style={styles.submittedBlock}>
               {!allPicksComplete && (
                 <View style={styles.submittedBadge}>
@@ -359,6 +497,14 @@ export default function QuinielaScreen() {
               )}
             </View>
           )}
+
+          {!viewingCurrent && resultados && (
+            <View style={styles.summaryBanner}>
+              <Text style={styles.summaryText}>
+                Aciertos: {resultados.summary.aciertos}/{resultados.summary.total} · Puntos: {resultados.summary.puntos}
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Quick Actions */}
@@ -373,14 +519,6 @@ export default function QuinielaScreen() {
 
           <TouchableOpacity
             style={styles.actionButton}
-            onPress={() => router.push('/quiniela/history')}
-          >
-            <Ionicons name="time-outline" size={20} color="#0047AB" />
-            <Text style={styles.actionText}>Historial</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.actionButton}
             onPress={() => router.push('/quiniela/rankings')}
           >
             <Ionicons name="trophy-outline" size={20} color="#FFD700" />
@@ -391,20 +529,29 @@ export default function QuinielaScreen() {
         {/* Matches */}
         <View style={styles.matchesContainer}>
           <Text style={styles.sectionTitle}>PARTIDOS</Text>
-          {jornada.matches.map((match) => (
-            <MatchCard
-              key={match.id}
-              match={match}
-              selection={selections[match.id]}
-              onSelect={(selection) => handleSelection(match.id, selection)}
-              disabled={submitting}
-            />
-          ))}
+          {viewingCurrent ? (
+            jornada.matches.map((match) => (
+              <MatchCard
+                key={match.id}
+                match={match}
+                selection={selections[match.id]}
+                onSelect={(selection) => handleSelection(match.id, selection)}
+                disabled={submitting}
+              />
+            ))
+          ) : loadingResultados ? (
+            <ActivityIndicator size="large" color="#DC143C" style={{ marginTop: 24 }} />
+          ) : (
+            resultados?.matches.map((match) => (
+              <HistoryMatchRow key={match.id} match={match} />
+            ))
+          )}
         </View>
       </ScrollView>
 
-      {/* Submit Button — habilitado si hay al menos 1 pick nuevo/modificado por guardar */}
-      {hasOpenMatches && (
+      {/* Submit Button — solo aplica viendo la jornada activa; jornadas
+          pasadas son de solo lectura */}
+      {viewingCurrent && hasOpenMatches && (
         <View style={styles.footer}>
           <TouchableOpacity
             style={[
@@ -432,6 +579,48 @@ export default function QuinielaScreen() {
           </Text>
         </View>
       )}
+
+      {/* Selector de jornada — reemplaza la pantalla de Historial */}
+      <Modal
+        visible={showJornadaPicker}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowJornadaPicker(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Elegir jornada</Text>
+              <TouchableOpacity onPress={() => setShowJornadaPicker(false)}>
+                <Ionicons name="close" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.pickerList}>
+              {jornadasList.map((item) => {
+                const isCurrentJornada = jornada?.id === item.id;
+                const isSelected = viewingCurrent ? isCurrentJornada : item.id === selectedJornadaId;
+                return (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={[styles.pickerRow, isSelected && styles.pickerRowSelected]}
+                    onPress={() => selectJornada(item)}
+                  >
+                    <Text style={styles.pickerRowText}>Jornada {item.week_number}</Text>
+                    <View style={styles.pickerRowRight}>
+                      {isCurrentJornada && (
+                        <View style={styles.pickerCurrentBadge}>
+                          <Text style={styles.pickerCurrentBadgeText}>Actual</Text>
+                        </View>
+                      )}
+                      {isSelected && <Ionicons name="checkmark" size={18} color="#DC143C" />}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -486,6 +675,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 12,
   },
+  jornadaTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
   jornadaTitle: {
     fontSize: 24,
     fontWeight: 'bold',
@@ -497,10 +691,28 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 12,
   },
+  statusBadgeHistory: {
+    backgroundColor: '#333',
+  },
   statusText: {
     color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '600',
+  },
+  summaryBanner: {
+    backgroundColor: '#1a1a1a',
+    borderWidth: 1,
+    borderColor: '#333',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginTop: 12,
+  },
+  summaryText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+    textAlign: 'center',
   },
   submittedBadge: {
     flexDirection: 'row',
@@ -624,5 +836,128 @@ const styles = StyleSheet.create({
     color: '#999',
     fontSize: 12,
     textAlign: 'center',
+  },
+  // ── Fila de resultado (jornada pasada) ──────────────────────
+  historyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#1a1a1a',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#333',
+    padding: 12,
+    gap: 12,
+  },
+  historyTeams: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  historyTeam: {
+    alignItems: 'center',
+    width: 56,
+  },
+  historyShield: {
+    width: 32,
+    height: 32,
+    marginBottom: 4,
+  },
+  historyTeamName: {
+    fontSize: 11,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  historyScore: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#999',
+  },
+  historyPickBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#0a0a0a',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  historyPickCorrect: {
+    backgroundColor: '#0A2E1A',
+  },
+  historyPickWrong: {
+    backgroundColor: '#2A0A0A',
+  },
+  historyPickIcon: {
+    fontSize: 14,
+  },
+  historyPickText: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  historyPickTextMuted: {
+    color: '#666',
+  },
+  // ── Modal selector de jornada ────────────────────────────────
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#1a1a1a',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 24,
+    maxHeight: '70%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  pickerList: {
+    maxHeight: 400,
+  },
+  pickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    marginBottom: 6,
+  },
+  pickerRowSelected: {
+    backgroundColor: '#2a0a0a',
+  },
+  pickerRowText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  pickerRowRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  pickerCurrentBadge: {
+    backgroundColor: '#0047AB',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  pickerCurrentBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
   },
 });
