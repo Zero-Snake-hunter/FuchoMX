@@ -232,17 +232,17 @@ export default function LeaguesScreen() {
           <Text style={styles.code}>{item.code}</Text>
         </View>
         <View style={styles.codeActions}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.codeButton}
             onPress={() => copyCode(item.code)}
           >
-            <Ionicons name="copy-outline" size={18} color="#0047AB" />
+            <Text style={styles.codeButtonEmoji}>📋</Text>
           </TouchableOpacity>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.codeButton}
             onPress={() => shareCode(item)}
           >
-            <Ionicons name="share-outline" size={18} color="#0047AB" />
+            <Text style={styles.codeButtonEmoji}>📤</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -780,6 +780,10 @@ const styles = StyleSheet.create({
     padding: 8,
     backgroundColor: '#1a1a1a',
     borderRadius: 8,
+  },
+  codeButtonEmoji: {
+    fontSize: 16,
+    lineHeight: 18,
   },
   inviteHint: {
     fontSize: 12,
