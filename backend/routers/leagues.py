@@ -39,39 +39,32 @@ async def _compute_quiniela_ranking_points(user_ids: list) -> dict:
       inmediatamente anterior a la activa (current_week - 1) — se calcula
       aparte del corte de temporada, por eso puede incluir una jornada
       anterior a LIGA_MX_SEASON_START_WEEK si estamos justo al inicio.
+
+    El filtro es SIEMPRE por el week_number de la jornada real a la que
+    pertenece cada punto (resuelto vía jornada_id) — nunca por created_at
+    del documento en points_log. Una penalización aplicada tarde (ej. el
+    cierre de J2 corrido varios días después) sigue siendo de J2 y se
+    excluye del total igual que si se hubiera aplicado a tiempo.
     """
     competition = await get_active_competition()
     jornadas = await db.jornadas.find(
         {"competition": competition, "type": {"$ne": "liguilla"}}
     ).sort("week_number", 1).to_list(100)
 
-    season_jornada_ids = {
-        j["_id"] for j in jornadas if (j.get("week_number") or 0) >= LIGA_MX_SEASON_START_WEEK
-    }
+    week_by_jornada_id = {j["_id"]: j.get("week_number") for j in jornadas}
 
     current = next((j for j in jornadas if j.get("is_active")), None)
     if not current and jornadas:
         current = jornadas[-1]
-    previous_jornada_id = None
-    if current:
-        prev = next(
-            (j for j in jornadas if j.get("week_number") == current.get("week_number", 0) - 1),
-            None,
-        )
-        if prev:
-            previous_jornada_id = prev["_id"]
+    previous_week = (current.get("week_number") - 1) if current else None
 
     result = {uid: {"total_points": 0, "jornada_anterior_points": 0} for uid in user_ids}
-
-    relevant_ids = set(season_jornada_ids)
-    if previous_jornada_id:
-        relevant_ids.add(previous_jornada_id)
-    if not relevant_ids:
+    if not week_by_jornada_id:
         return result
 
     points = await db.points_log.find({
         "user_id": {"$in": user_ids},
-        "jornada_id": {"$in": list(relevant_ids)},
+        "jornada_id": {"$in": list(week_by_jornada_id.keys())},
         "source": {"$in": QUINIELA_POINT_SOURCES},
     }).to_list(10000)
 
@@ -79,9 +72,19 @@ async def _compute_quiniela_ranking_points(user_ids: list) -> dict:
         uid = p["user_id"]
         if uid not in result:
             continue
-        if p["jornada_id"] in season_jornada_ids:
+
+        week = week_by_jornada_id.get(p["jornada_id"])
+        if week is None:
+            logger.warning(
+                f"points_log {p.get('_id')} (user={uid}, source={p.get('source')}) referencia "
+                f"jornada_id={p.get('jornada_id')} que no está en competition={competition} — se ignora"
+            )
+            continue
+
+        # Filtro real: week_number de la jornada, no la fecha del log.
+        if week >= LIGA_MX_SEASON_START_WEEK:
             result[uid]["total_points"] += p.get("points", 0)
-        if previous_jornada_id and p["jornada_id"] == previous_jornada_id:
+        if previous_week is not None and week == previous_week:
             result[uid]["jornada_anterior_points"] += p.get("points", 0)
 
     return result
