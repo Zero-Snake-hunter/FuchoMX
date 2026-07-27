@@ -61,6 +61,31 @@ async def create_unified_league(
     }
 
 
+@router.get("/leagues/validate/{code}")
+async def validate_league_code(code: str):
+    """
+    Público (sin auth) — lo usa la pantalla /leagues/join/[code] antes de
+    saber si hay sesión, para mostrar el nombre de la liga y decidir si
+    manda al usuario a registro o lo une directo.
+    """
+    league = await db.private_leagues.find_one({"code": code.upper()})
+    if not league:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Código de liga inválido")
+
+    member_count = await db.league_members.count_documents({"league_id": league["_id"]})
+    max_members = league.get("max_members", MAX_MEMBERS_FREE)
+
+    return {
+        "valid": True,
+        "code": league["code"],
+        "name": league["name"],
+        "mode": league.get("mode", "quiniela"),
+        "member_count": member_count,
+        "max_members": max_members,
+        "is_full": member_count >= max_members,
+    }
+
+
 @router.post("/leagues/join")
 async def join_unified_league(
     join_data: JoinLeagueRequest,

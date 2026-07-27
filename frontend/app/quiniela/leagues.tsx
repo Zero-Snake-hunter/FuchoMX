@@ -147,10 +147,15 @@ export default function LeaguesScreen() {
   };
 
   const shareCode = async (league: League) => {
-    const modeText = league.mode === 'fantasy' ? 'FuchoOnce' : 'Quiniela';
+    const joinLink = `https://fucho.com.mx/leagues/join/${league.code}`;
     try {
       await Share.share({
-        message: `¡Únete a mi liga "${league.name}" de ${modeText}!\n\nCódigo: ${league.code}\n\nDescarga la app y usa este código para unirte.`,
+        message:
+          `🏆 Únete a mi liga de quiniela en FuchoMX\n` +
+          `${league.name}\n` +
+          `Predice partidos de Liga MX y compite con tus cuates\n\n` +
+          `Únete aquí: ${joinLink}`,
+        url: joinLink,
       });
     } catch (error) {
       console.error('Error sharing:', error);

@@ -12,13 +12,16 @@ import {
   ActivityIndicator,
   Image,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
+import api from '../lib/api';
 
 export default function RegisterScreen() {
   const router = useRouter();
   const { register } = useAuth();
+  const { joinCode, joinLeagueName } = useLocalSearchParams<{ joinCode?: string; joinLeagueName?: string }>();
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -53,6 +56,7 @@ export default function RegisterScreen() {
     setLoading(true);
     try {
       await register(email.toLowerCase().trim(), password, displayName.trim());
+      await joinPendingLeagueIfAny();
       router.replace({
         pathname: '/(auth)/welcome',
         params: { name: displayName.trim() },
@@ -61,6 +65,27 @@ export default function RegisterScreen() {
       setErrorMsg(error.message || 'No se pudo crear la cuenta. Intenta de nuevo.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Si el usuario llegó aquí desde un link de invitación (/leagues/join/[code]
+  // guardó el código antes de mandarlo a registrarse), lo une a esa liga en
+  // cuanto la cuenta nueva queda creada — sin que tenga que volver a pegar
+  // el código a mano.
+  const joinPendingLeagueIfAny = async () => {
+    const pendingCode = await AsyncStorage.getItem('pending_league_code');
+    if (!pendingCode) return;
+
+    try {
+      const res = await api.post('/api/leagues/join', { code: pendingCode });
+      Alert.alert('¡Te uniste a la liga!', `Ya eres parte de "${res.data.league_name}"`);
+    } catch (error: any) {
+      // No bloqueamos el flujo de registro por esto — el código pudo haberse
+      // llenado o vencido justo en este momento; el usuario ya puede unirse
+      // a mano desde Mis Ligas si hace falta.
+      console.log('No se pudo unir a la liga pendiente:', error.response?.data?.detail);
+    } finally {
+      await AsyncStorage.multiRemove(['pending_league_code', 'pending_league_name']);
     }
   };
 
@@ -91,6 +116,16 @@ export default function RegisterScreen() {
           <Text style={styles.title}>FUCHO MX</Text>
           <Text style={styles.subtitle}>Tu fut, con tus cuates</Text>
         </View>
+
+        {joinCode ? (
+          <View style={styles.joinBanner}>
+            <Ionicons name="trophy" size={18} color="#DC143C" />
+            <Text style={styles.joinBannerText}>
+              Al crear tu cuenta te unirás a{' '}
+              <Text style={styles.joinBannerBold}>{joinLeagueName || `la liga ${joinCode}`}</Text>
+            </Text>
+          </View>
+        ) : null}
 
         <View style={styles.form}>
           <View style={styles.inputContainer}>
@@ -219,6 +254,27 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#999',
     marginTop: 8,
+  },
+  joinBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1a1a1a',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#DC143C44',
+    padding: 12,
+    marginBottom: 20,
+    gap: 10,
+  },
+  joinBannerText: {
+    flex: 1,
+    color: '#CCCCCC',
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  joinBannerBold: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
   },
   form: {
     width: '100%',

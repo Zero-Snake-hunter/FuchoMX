@@ -5,6 +5,7 @@ const SITE_URL = 'https://fucho.com.mx';
 const TITLE = 'FuchoMX — Quiniela y Fantasy de Liga MX';
 const DESCRIPTION =
   'La quiniela y el fantasy de Liga MX con tus cuates. Predice resultados, arma tu once de 11 jugadores reales y compite en ligas privadas. 100% gratis, sin apuestas.';
+const OG_IMAGE = `${SITE_URL}/og-image.png`;
 
 const SCHEMA_WEB_APP = JSON.stringify({
   '@context': 'https://schema.org',
@@ -58,6 +59,9 @@ export default function Root({ children }: PropsWithChildren) {
         <meta property="og:url" content={`${SITE_URL}/`} />
         <meta property="og:title" content={TITLE} />
         <meta property="og:description" content={DESCRIPTION} />
+        <meta property="og:image" content={OG_IMAGE} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
         <meta property="og:locale" content="es_MX" />
         <meta property="og:site_name" content="FuchoMX" />
 
@@ -66,6 +70,7 @@ export default function Root({ children }: PropsWithChildren) {
         <meta name="twitter:site" content="@FuchoMX" />
         <meta name="twitter:title" content={TITLE} />
         <meta name="twitter:description" content={DESCRIPTION} />
+        <meta name="twitter:image" content={OG_IMAGE} />
 
         {/* Barlow Condensed (display) + Barlow (body) — stadium energy, not on reflex-reject list */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
