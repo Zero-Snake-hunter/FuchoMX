@@ -13,7 +13,7 @@ from config import ADMIN_EMAIL, API_FOOTBALL_KEY
 from database import db, get_active_competition
 from dependencies import get_admin_user, get_current_user
 from fantasy_scoring import calculate_fantasy_points
-from jornada_processor import _process_jornada_core
+from jornada_processor import _process_jornada_core, close_and_advance_jornada
 from models import UpdateScoreRequest, WCMatchStatsRequest, UpdateRostersRequest
 from services.world_cup_stats_service import get_wc_match_stats
 from services.liga_mx_stats_service import sync_match_stats_365, _normalize_player_name
@@ -375,30 +375,15 @@ async def close_jornada(jornada_id: str, reminder_hours: int = 2, current_user: 
         raise HTTPException(status_code=404, detail="Jornada no encontrada")
 
     current_week = jornada["week_number"]
-    await db.jornadas.update_one({"_id": jornada_oid}, {"$set": {"status": "finished", "is_active": False}})
+    # Lógica compartida con el auto-scheduler — ambos cierran/abren igual.
+    result = await close_and_advance_jornada(jornada_oid, reminder_hours=reminder_hours)
 
-    jornada_competition = jornada.get("competition", "liga_mx")
-    next_jornada = await db.jornadas.find_one(
-        {"week_number": current_week + 1, "competition": jornada_competition}
-    )
-
-    next_info = None
-    if next_jornada:
-        # status="in_progress" (no "upcoming") — se activa de inmediato aunque
-        # su start_date sea futura, para que los usuarios puedan hacer picks
-        # desde que se cierra la jornada anterior, sin hueco entre jornadas.
-        await db.jornadas.update_one({"_id": next_jornada["_id"]}, {"$set": {
-            "status": "in_progress", "is_active": True,
-            "reminder_hours": reminder_hours, "notified_reminder": False,
-        }})
-        await db.matches.update_many(
-            {"jornada_id": next_jornada["_id"]}, {"$set": {"locked": False}}
-        )
-        _task = asyncio.create_task(notify_jornada_open(next_jornada["week_number"]))
+    next_info = result.get("next_jornada")
+    if next_info:
+        _task = asyncio.create_task(notify_jornada_open(next_info["week_number"]))
         _bg_tasks.add(_task)
         _task.add_done_callback(_bg_tasks.discard)
-        next_info = {"id": str(next_jornada["_id"]), "week_number": next_jornada["week_number"]}
-        logger.info(f"Closed jornada {current_week}, activated jornada {current_week + 1}")
+        logger.info(f"Closed jornada {current_week}, activated jornada {next_info['week_number']}")
     else:
         logger.info(f"Closed jornada {current_week}. No next jornada (season ended)")
 

@@ -4,8 +4,8 @@ from datetime import datetime, timedelta
 
 from database import client, db, get_active_competition
 from fantasy_scoring import calculate_fantasy_points
-from jornada_processor import _process_jornada_core
-from services.push_service import notify_jornada_reminder
+from jornada_processor import _process_jornada_core, close_and_advance_jornada
+from services.push_service import notify_jornada_open, notify_jornada_reminder
 from services.scores_service import (
     _fetch_365scores,
     _STATUS_MAP,
@@ -117,6 +117,64 @@ async def _process_liguilla_phase(phase: str):
         logger.info("🎉 ¡Liguilla Clausura 2026 finalizada!")
 
 
+# ── Auto cierre/apertura de jornadas ───────────────────────────────────────────
+
+async def _auto_close_and_advance_jornada():
+    """
+    Revisa la jornada activa de temporada regular (excluye liguilla — esa
+    tiene su propio flujo en _process_liguilla_phase) y, si TODOS sus
+    partidos ya están "finished", la cierra y activa la siguiente de
+    inmediato (misma lógica que /admin/quiniela/cerrar-jornada, sin
+    importar el start_date de la siguiente). Si no hay ninguna jornada
+    activa pero sí una "upcoming" con partidos ya cargados, activa la de
+    week_number más bajo — nunca debe quedar un hueco sin jornada activa.
+
+    Se llama en cada iteración del loop principal, ANTES del fetch de
+    partidos "de hoy" — el cierre se decide con nuestros propios datos en
+    Mongo, no con ese feed externo, porque en días sin partidos programados
+    ese fetch viene vacío y el resto del loop se salta por completo.
+    """
+    competition = await get_active_competition()
+    jornada = await db.jornadas.find_one(
+        {"is_active": True, "competition": competition, "type": {"$ne": "liguilla"}}
+    )
+
+    if jornada:
+        matches = await db.matches.find({"jornada_id": jornada["_id"]}).to_list(100)
+        if matches and all(m.get("status") == "finished" for m in matches):
+            result = await close_and_advance_jornada(jornada["_id"])
+            next_info = result.get("next_jornada")
+            if next_info:
+                logger.info(
+                    f"🔁 Auto-scheduler: jornada {result['closed_week']} cerrada, "
+                    f"jornada {next_info['week_number']} activada automáticamente"
+                )
+                try:
+                    await notify_jornada_open(next_info["week_number"])
+                except Exception as exc:
+                    logger.error(f"❌ Error notificando apertura de jornada: {exc}")
+            else:
+                logger.info(f"🔁 Auto-scheduler: jornada {result['closed_week']} cerrada. Temporada terminada.")
+        return
+
+    upcoming = await db.jornadas.find(
+        {"status": "upcoming", "competition": competition, "type": {"$ne": "liguilla"}}
+    ).sort("week_number", 1).to_list(50)
+    for candidate in upcoming:
+        match_count = await db.matches.count_documents({"jornada_id": candidate["_id"]})
+        if match_count == 0:
+            continue
+        await db.jornadas.update_one(
+            {"_id": candidate["_id"]}, {"$set": {"status": "in_progress", "is_active": True}}
+        )
+        await db.matches.update_many({"jornada_id": candidate["_id"]}, {"$set": {"locked": False}})
+        logger.info(
+            f"🔁 Auto-scheduler: no había jornada activa — jornada "
+            f"{candidate['week_number']} activada automáticamente"
+        )
+        break
+
+
 # ── Main loop ─────────────────────────────────────────────────────────────────
 
 async def _auto_update_scores():
@@ -161,6 +219,14 @@ async def _auto_update_scores():
                             logger.info(f"✅ Recordatorio enviado para jornada {week}")
             except Exception as exc:
                 logger.error(f"❌ Error en check de recordatorio: {exc}")
+            # ──────────────────────────────────────────────────────────────────────
+
+            # ── Cierre/apertura automática de jornadas (se evalúa en cada ciclo,
+            # independiente de si hay partidos "hoy" según el feed externo) ───────
+            try:
+                await _auto_close_and_advance_jornada()
+            except Exception as exc:
+                logger.error(f"❌ Error en auto cierre/apertura de jornada: {exc}")
             # ──────────────────────────────────────────────────────────────────────
 
             games = await _fetch_365scores(today_start, today_end)
@@ -256,15 +322,25 @@ async def _auto_update_scores():
                             except Exception as e:
                                 logger.error(f"❌ Error procesando liguilla {phase}: {e}")
                     else:
-                        try:
-                            proc_result = await _process_jornada_core(str(jornada["_id"]))
-                            logger.info(
-                                f"🎉 Jornada {jornada.get('week_number')} procesada: "
-                                f"quiniela={proc_result.get('quiniela_updated')} usuarios, "
-                                f"fantasy={proc_result.get('fantasy_updated')} equipos"
-                            )
-                        except Exception as e:
-                            logger.error(f"❌ Scheduler process_jornada error: {e}")
+                        # Guard: la jornada activa en este punto pudo haber sido
+                        # activada recién en este mismo ciclo (por
+                        # _auto_close_and_advance_jornada, más arriba en el loop)
+                        # y todavía no tener ningún partido jugado — sin este
+                        # check se marcaría processed=True de más y ya nunca se
+                        # reprocesaría cuando sus partidos sí terminen.
+                        has_finished_matches = await db.matches.count_documents(
+                            {"jornada_id": jornada["_id"], "status": "finished"}
+                        ) > 0
+                        if has_finished_matches:
+                            try:
+                                proc_result = await _process_jornada_core(str(jornada["_id"]))
+                                logger.info(
+                                    f"🎉 Jornada {jornada.get('week_number')} procesada: "
+                                    f"quiniela={proc_result.get('quiniela_updated')} usuarios, "
+                                    f"fantasy={proc_result.get('fantasy_updated')} equipos"
+                                )
+                            except Exception as e:
+                                logger.error(f"❌ Scheduler process_jornada error: {e}")
 
             sleep_secs = 45 if live_games else (120 if scheduled_games else 300)
             logger.debug(f"⏱ Próxima actualización en {sleep_secs}s")

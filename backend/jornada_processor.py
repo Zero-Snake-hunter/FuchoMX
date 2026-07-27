@@ -136,3 +136,44 @@ async def _process_jornada_core(jornada_id: str) -> dict:
     }
     logger.info(f"✅ Jornada {jornada.get('week_number')} procesada: {summary}")
     return summary
+
+
+async def close_and_advance_jornada(jornada_oid: ObjectId, reminder_hours: int = 2) -> dict:
+    """
+    Cierra una jornada (status=finished, is_active=False) y activa de
+    inmediato la siguiente por week_number+1 en la misma competition —
+    status=in_progress, is_active=True, partidos desbloqueados — sin
+    importar su start_date. Si la jornada todavía no tiene processed=True,
+    corre _process_jornada_core antes de cerrarla para no dejar puntos de
+    quiniela/fantasy sin calcular.
+
+    Comparte esta lógica /admin/quiniela/cerrar-jornada (acción manual del
+    admin) y el auto-scheduler (cierre automático) — así ambos cierran y
+    abren jornadas exactamente igual.
+    """
+    jornada = await db.jornadas.find_one({"_id": jornada_oid})
+    if not jornada:
+        return {"error": "Jornada no encontrada"}
+
+    if not jornada.get("processed", False):
+        await _process_jornada_core(str(jornada_oid))
+
+    current_week = jornada["week_number"]
+    competition = jornada.get("competition", "liga_mx")
+    await db.jornadas.update_one({"_id": jornada_oid}, {"$set": {"status": "finished", "is_active": False}})
+
+    next_jornada = await db.jornadas.find_one(
+        {"week_number": current_week + 1, "competition": competition}
+    )
+    next_info = None
+    if next_jornada:
+        await db.jornadas.update_one({"_id": next_jornada["_id"]}, {"$set": {
+            "status": "in_progress", "is_active": True,
+            "reminder_hours": reminder_hours, "notified_reminder": False,
+        }})
+        await db.matches.update_many(
+            {"jornada_id": next_jornada["_id"]}, {"$set": {"locked": False}}
+        )
+        next_info = {"id": str(next_jornada["_id"]), "week_number": next_jornada["week_number"]}
+
+    return {"closed_week": current_week, "next_jornada": next_info}
