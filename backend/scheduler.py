@@ -134,11 +134,12 @@ async def _auto_update_scores():
             now = datetime.utcnow()
             today_start = now.replace(hour=0,  minute=0,  second=0,  microsecond=0)
             today_end   = now.replace(hour=23, minute=59, second=59, microsecond=0)
+            active_competition = await get_active_competition()
 
             # ── Recordatorio de picks (se evalúa en cada ciclo) ───────────────────
             try:
                 jornada_reminder = await db.jornadas.find_one(
-                    {"is_active": True, "notified_reminder": {"$ne": True}}
+                    {"is_active": True, "notified_reminder": {"$ne": True}, "competition": active_competition}
                 )
                 if jornada_reminder:
                     first_match = await db.matches.find_one(
@@ -179,7 +180,7 @@ async def _auto_update_scores():
             )
 
             if live_games or finished_games:
-                jornada = await db.jornadas.find_one({"is_active": True})
+                jornada = await db.jornadas.find_one({"is_active": True, "competition": active_competition})
                 if jornada:
                     try:
                         scores_result = await _svc_get_match_results(str(jornada["_id"]), db)
@@ -194,7 +195,6 @@ async def _auto_update_scores():
 
             # ── World Cup auto-processing ──────────────────────────────────────
             try:
-                active_competition = await get_active_competition()
                 if active_competition == "world_cup_2026":
                     wc_games = await _fetch_365scores(
                         today_start, today_end, competition_id=5930
@@ -243,7 +243,7 @@ async def _auto_update_scores():
 
             if finished_games and not live_games and not scheduled_games:
                 logger.info("🏁 Todos los partidos del día terminaron — verificando proceso")
-                jornada = await db.jornadas.find_one({"is_active": True})
+                jornada = await db.jornadas.find_one({"is_active": True, "competition": active_competition})
                 if jornada and not jornada.get("processed", False):
                     if jornada.get("type") == "liguilla":
                         phase = jornada.get("phase", "")

@@ -1410,6 +1410,69 @@ async def fix_active_jornada(current_user: dict = Depends(get_admin_user)):
     }
 
 
+@router.post("/admin/jornada/{jornada_id}/activate")
+async def activate_jornada(jornada_id: str, current_user: dict = Depends(get_admin_user)):
+    """
+    Activa una jornada específica por id: is_active=true, status="in_progress"
+    y desbloquea todos sus partidos. Además desactiva cualquier otra jornada
+    que haya quedado is_active=true en la MISMA competition (para no volver
+    a terminar con dos jornadas activas del mismo torneo compitiendo).
+
+    Útil cuando hay jornadas huérfanas de otro torneo con el mismo
+    week_number (ej. liga_mx y world_cup_2026 ambas con week_number=3) —
+    fix-active-jornada no puede decidir automáticamente en ese caso, así
+    que aquí se activa por id explícito sin ambigüedad.
+    """
+    try:
+        jornada_oid = ObjectId(jornada_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="ID de jornada inválido")
+
+    jornada = await db.jornadas.find_one({"_id": jornada_oid})
+    if not jornada:
+        raise HTTPException(status_code=404, detail="Jornada no encontrada")
+
+    competition = jornada.get("competition")
+    others = await db.jornadas.find(
+        {"is_active": True, "competition": competition, "_id": {"$ne": jornada_oid}}
+    ).to_list(50)
+    if others:
+        await db.jornadas.update_many(
+            {"_id": {"$in": [o["_id"] for o in others]}},
+            {"$set": {"is_active": False}},
+        )
+
+    await db.jornadas.update_one(
+        {"_id": jornada_oid},
+        {"$set": {"is_active": True, "status": "in_progress"}},
+    )
+    unlock_result = await db.matches.update_many(
+        {"jornada_id": jornada_oid}, {"$set": {"locked": False}}
+    )
+
+    logger.info(
+        f"activate-jornada: {jornada_id} (week_number={jornada.get('week_number')}, "
+        f"competition={competition}) activada, {unlock_result.modified_count} partido(s) "
+        f"desbloqueados, {len(others)} otra(s) jornada(s) de la misma competition desactivada(s)"
+    )
+    return {
+        "message": (
+            f"✅ Jornada {jornada.get('week_number')} ({competition}) activada, "
+            f"{unlock_result.modified_count} partido(s) desbloqueados"
+        ),
+        "activated": {
+            "id": jornada_id,
+            "week_number": jornada.get("week_number"),
+            "competition": competition,
+        },
+        "matches_unlocked": unlock_result.modified_count,
+        "other_active_deactivated": [
+            {"id": str(o["_id"]), "week_number": o.get("week_number"), "competition": o.get("competition")}
+            for o in others
+        ],
+    }
+
+
 @router.post("/admin/fix-negative-scores")
 async def fix_negative_scores(current_user: dict = Depends(get_admin_user)):
     """
