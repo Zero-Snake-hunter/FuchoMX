@@ -153,7 +153,6 @@ export default function LeaguesScreen() {
           `${league.name}\n` +
           `Predice partidos de Liga MX y compite con tus cuates\n\n` +
           `Únete aquí: ${joinLink}`,
-        url: joinLink,
       });
     } catch (error) {
       console.error('Error sharing:', error);
