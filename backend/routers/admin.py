@@ -1318,33 +1318,61 @@ async def close_all_jornadas(current_user: dict = Depends(get_current_user)):
             "modified": result.modified_count}
 
 
+def _jornada_brief(j: dict) -> dict:
+    return {
+        "id": str(j["_id"]),
+        "week_number": j.get("week_number"),
+        "competition": j.get("competition"),
+        "start_date": j["start_date"].isoformat() if j.get("start_date") else None,
+        "is_active": j.get("is_active", False),
+    }
+
+
 @router.post("/admin/fix-active-jornada")
 async def fix_active_jornada(current_user: dict = Depends(get_admin_user)):
     """
     Limpieza de jornadas huérfanas marcadas is_active=true (Clausura,
     Mundial 2026, etc.) que compiten con la jornada real del Apertura 2026.
-    Conserva la jornada con competition="liga_mx" y week_number=3, y
-    desactiva todas las demás. A las que desactiva y ya no tienen partidos
-    futuros pendientes, además les marca status="finished".
+
+    1. Lista todas las jornadas con is_active=true (diagnóstico, siempre
+       incluido en la respuesta / en el detail del error).
+    2. Busca la jornada correcta por week_number=3, SIN filtrar por
+       competition — el filtro competition="liga_mx" no encontraba nada,
+       así que asumimos que ese campo puede no estar seteado como se espera
+       en el documento real y lo dejamos fuera del criterio por ahora.
+    3. La marca is_active=true explícitamente y desactiva todas las demás
+       jornadas que estaban activas. A las que ya no tienen partidos
+       futuros pendientes, además les marca status="finished".
     """
-    KEEP_COMPETITION = "liga_mx"
-    KEEP_WEEK_NUMBER = 3
-
     active_jornadas = await db.jornadas.find({"is_active": True}).to_list(100)
+    active_list = [_jornada_brief(j) for j in active_jornadas]
 
-    candidates = [
-        j for j in active_jornadas
-        if j.get("competition") == KEEP_COMPETITION and j.get("week_number") == KEEP_WEEK_NUMBER
-    ]
-    if not candidates:
+    week3_candidates = await db.jornadas.find({"week_number": 3}).to_list(20)
+
+    if not week3_candidates:
         raise HTTPException(
             status_code=404,
-            detail=(
-                f"No hay ninguna jornada activa con competition={KEEP_COMPETITION!r} "
-                f"y week_number={KEEP_WEEK_NUMBER}. No se modificó nada."
-            ),
+            detail={
+                "error": "No existe ninguna jornada con week_number=3 en la base de datos.",
+                "active_jornadas": active_list,
+            },
         )
-    keep = candidates[0]
+
+    if len(week3_candidates) > 1:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": (
+                    "Hay más de una jornada con week_number=3 — no se puede "
+                    "decidir automáticamente cuál conservar."
+                ),
+                "week3_candidates": [_jornada_brief(j) for j in week3_candidates],
+                "active_jornadas": active_list,
+            },
+        )
+
+    keep = week3_candidates[0]
+    await db.jornadas.update_one({"_id": keep["_id"]}, {"$set": {"is_active": True}})
 
     now = datetime.utcnow()
     deactivated = []
@@ -1370,16 +1398,13 @@ async def fix_active_jornada(current_user: dict = Depends(get_admin_user)):
         })
 
     logger.info(
-        f"fix-active-jornada: conservada week_number={keep.get('week_number')} "
-        f"({keep['_id']}), desactivadas {len(deactivated)}: {deactivated}"
+        f"fix-active-jornada: conservada week_number=3 ({keep['_id']}), "
+        f"desactivadas {len(deactivated)}: {deactivated}"
     )
     return {
-        "message": f"✅ {len(deactivated)} jornada(s) desactivada(s), quedó activa week_number={keep.get('week_number')}",
-        "kept_active": {
-            "id": str(keep["_id"]),
-            "week_number": keep.get("week_number"),
-            "competition": keep.get("competition"),
-        },
+        "message": f"✅ {len(deactivated)} jornada(s) desactivada(s), quedó activa week_number=3",
+        "active_jornadas_found": active_list,
+        "kept_active": _jornada_brief({**keep, "is_active": True}),
         "deactivated_count": len(deactivated),
         "deactivated": deactivated,
     }
