@@ -9,7 +9,6 @@ import {
   RefreshControl,
   Modal,
   TextInput,
-  Alert,
   Share,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -53,18 +52,31 @@ export default function LeaguesScreen() {
   const [joinCode, setJoinCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  // Alert.alert no muestra nada en web (react-native-web no lo implementa) —
+  // mismo bug ya conocido en lib/api.ts para el 401. En vez de repetir el
+  // guard de Platform en cada handler, un toast inline propio funciona en
+  // todas las plataformas sin depender de un modal nativo.
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  const showToast = (type: 'success' | 'error', message: string) => {
+    setToast({ type, message });
+    setTimeout(() => setToast(null), 2500);
+  };
+
   useEffect(() => {
     loadLeagues();
   }, []);
 
   const loadLeagues = async () => {
+    console.log('📋 [Leagues] loadLeagues: cargando...');
     try {
       const response = await api.get('/api/leagues/my-leagues');
+      console.log('📋 [Leagues] loadLeagues: OK,', response.data.leagues.length, 'liga(s)');
       setLeagues(response.data.leagues);
     } catch (error: any) {
-      console.error('Error loading leagues:', error);
+      console.error('❌ [Leagues] loadLeagues error:', error.response?.data || error.message);
       if (error.response?.status !== 401) {
-        Alert.alert('Error', 'No se pudieron cargar las ligas');
+        showToast('error', 'No se pudieron cargar las ligas');
       }
     } finally {
       setLoading(false);
@@ -80,62 +92,57 @@ export default function LeaguesScreen() {
   const filteredLeagues = leagues.filter(l => l.mode === activeTab);
 
   const handleCreateLeague = async () => {
+    console.log('🏆 [Leagues] handleCreateLeague:', { name: newLeagueName, mode: newLeagueMode });
     if (!newLeagueName.trim()) {
-      Alert.alert('Error', 'Ingresa un nombre para la liga');
+      showToast('error', 'Ingresa un nombre para la liga');
       return;
     }
 
     setSubmitting(true);
     try {
-      const response = await api.post('/api/leagues', { 
-        name: newLeagueName.trim(), 
-        mode: newLeagueMode 
+      const response = await api.post('/api/leagues', {
+        name: newLeagueName.trim(),
+        mode: newLeagueMode
       });
+      console.log('✅ [Leagues] Liga creada:', response.data);
 
-      Alert.alert(
-        '¡Liga Creada!',
-        `Código: ${response.data.code}\n\nComparte este código con tus amigos para que se unan.`,
-        [
-          {
-            text: 'Copiar Código',
-            onPress: () => copyCode(response.data.code),
-          },
-          { text: 'OK' },
-        ]
-      );
-
+      showToast('success', `¡Liga creada! Código: ${response.data.code}`);
       setShowCreateModal(false);
       setNewLeagueName('');
       setActiveTab(newLeagueMode);
       loadLeagues();
     } catch (error: any) {
       const message = error.response?.data?.detail || 'Error al crear la liga';
-      Alert.alert('Error', message);
+      console.error('❌ [Leagues] Error creando liga:', message);
+      showToast('error', message);
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleJoinLeague = async () => {
+    console.log('🔑 [Leagues] handleJoinLeague:', { code: joinCode });
     if (!joinCode.trim() || joinCode.trim().length !== 6) {
-      Alert.alert('Error', 'Ingresa un código válido de 6 caracteres');
+      showToast('error', 'Ingresa un código válido de 6 caracteres');
       return;
     }
 
     setSubmitting(true);
     try {
-      const response = await api.post('/api/leagues/join', { 
-        code: joinCode.trim().toUpperCase() 
+      const response = await api.post('/api/leagues/join', {
+        code: joinCode.trim().toUpperCase()
       });
+      console.log('✅ [Leagues] Unido a liga:', response.data);
 
-      Alert.alert('¡Éxito!', `Te has unido a "${response.data.league_name}"`);
+      showToast('success', `Te uniste a "${response.data.league_name}"`);
       setShowJoinModal(false);
       setJoinCode('');
       setActiveTab(response.data.mode);
       loadLeagues();
     } catch (error: any) {
       const message = error.response?.data?.detail || 'Error al unirse a la liga';
-      Alert.alert('Error', message);
+      console.error('❌ [Leagues] Error uniéndose a liga:', message);
+      showToast('error', message);
     } finally {
       setSubmitting(false);
     }
@@ -143,7 +150,7 @@ export default function LeaguesScreen() {
 
   const copyCode = async (code: string) => {
     await Clipboard.setStringAsync(code);
-    Alert.alert('¡Copiado!', 'Código copiado al portapapeles');
+    showToast('success', 'Código copiado al portapapeles');
   };
 
   const shareCode = async (league: League) => {
@@ -274,11 +281,25 @@ export default function LeaguesScreen() {
         <View style={{ width: 40 }} />
       </View>
 
+      {toast && (
+        <View style={[styles.toast, toast.type === 'error' ? styles.toastError : styles.toastSuccess]}>
+          <Ionicons
+            name={toast.type === 'error' ? 'alert-circle' : 'checkmark-circle'}
+            size={18}
+            color="#FFFFFF"
+          />
+          <Text style={styles.toastText}>{toast.message}</Text>
+        </View>
+      )}
+
       {/* Tabs */}
       <View style={styles.tabs}>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'quiniela' && styles.tabActive]}
-          onPress={() => setActiveTab('quiniela')}
+          onPress={() => {
+            console.log('🔀 [Leagues] Tab: quiniela');
+            setActiveTab('quiniela');
+          }}
         >
           <Ionicons 
             name="trophy" 
@@ -299,7 +320,10 @@ export default function LeaguesScreen() {
 
         <TouchableOpacity
           style={[styles.tab, activeTab === 'fantasy' && styles.tabActiveFantasy]}
-          onPress={() => setActiveTab('fantasy')}
+          onPress={() => {
+            console.log('🔀 [Leagues] Tab: fantasy');
+            setActiveTab('fantasy');
+          }}
         >
           <Ionicons 
             name="football" 
@@ -324,6 +348,7 @@ export default function LeaguesScreen() {
         <TouchableOpacity
           style={[styles.actionButton, { backgroundColor: activeTab === 'fantasy' ? '#0047AB' : '#DC143C' }]}
           onPress={() => {
+            console.log('➕ [Leagues] Abrir modal Crear Liga, mode=', activeTab);
             setNewLeagueMode(activeTab);
             setShowCreateModal(true);
           }}
@@ -334,7 +359,10 @@ export default function LeaguesScreen() {
 
         <TouchableOpacity
           style={styles.actionButtonSecondary}
-          onPress={() => setShowJoinModal(true)}
+          onPress={() => {
+            console.log('🔑 [Leagues] Abrir modal Unirse con Código');
+            setShowJoinModal(true);
+          }}
         >
           <Ionicons name="enter-outline" size={20} color="#FFFFFF" />
           <Text style={styles.actionText}>Unirse con Código</Text>
@@ -568,6 +596,27 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#FFFFFF',
+  },
+  toast: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 16,
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 10,
+    gap: 8,
+  },
+  toastSuccess: {
+    backgroundColor: '#00A551',
+  },
+  toastError: {
+    backgroundColor: '#DC143C',
+  },
+  toastText: {
+    flex: 1,
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
   },
   tabs: {
     flexDirection: 'row',

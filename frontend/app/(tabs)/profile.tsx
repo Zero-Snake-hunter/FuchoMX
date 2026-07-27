@@ -73,6 +73,17 @@ export default function ProfileScreen() {
     );
   };
 
+  // Alert.alert no muestra nada en web (react-native-web no lo implementa,
+  // igual que ya maneja handleLogout arriba) — usamos window.alert como
+  // fallback ahí en vez de repetir el guard de Platform en cada botón.
+  const showInfo = (title: string, message: string) => {
+    if (Platform.OS === 'web') {
+      window.alert(`${title}\n\n${message}`);
+    } else {
+      Alert.alert(title, message);
+    }
+  };
+
   const StatCard = ({ label, value, icon }: { label: string; value: string; icon: string }) => (
     <View style={styles.statCard}>
       <Text style={styles.statCardIcon}>{icon}</Text>
@@ -186,19 +197,37 @@ export default function ProfileScreen() {
         <View style={styles.menuSection}>
           <Text style={styles.sectionTitle}>AJUSTES</Text>
           
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => {
+              console.log('🔔 [Profile] Notificaciones tapped');
+              showInfo('Notificaciones', 'Próximamente vas a poder configurar tus recordatorios de jornada desde aquí.');
+            }}
+          >
             <Ionicons name="notifications-outline" size={24} color="#FFFFFF" />
             <Text style={styles.menuText}>Notificaciones</Text>
             <Ionicons name="chevron-forward" size={24} color="#666" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => {
+              console.log('❓ [Profile] Ayuda tapped');
+              showInfo('Ayuda', 'Escríbenos a contacto@distrito.digital y te ayudamos.');
+            }}
+          >
             <Ionicons name="help-circle-outline" size={24} color="#FFFFFF" />
             <Text style={styles.menuText}>Ayuda</Text>
             <Ionicons name="chevron-forward" size={24} color="#666" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => {
+              console.log('ℹ️ [Profile] Acerca de tapped');
+              showInfo('Acerca de FuchoMX', 'La quiniela y el fantasy de Liga MX con tus cuates. 100% gratis, sin apuestas.');
+            }}
+          >
             <Ionicons name="information-circle-outline" size={24} color="#FFFFFF" />
             <Text style={styles.menuText}>Acerca de</Text>
             <Ionicons name="chevron-forward" size={24} color="#666" />
