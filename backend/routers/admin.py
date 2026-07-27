@@ -1318,6 +1318,73 @@ async def close_all_jornadas(current_user: dict = Depends(get_current_user)):
             "modified": result.modified_count}
 
 
+@router.post("/admin/fix-active-jornada")
+async def fix_active_jornada(current_user: dict = Depends(get_admin_user)):
+    """
+    Limpieza de jornadas huérfanas marcadas is_active=true (Clausura,
+    Mundial 2026, etc.) que compiten con la jornada real del Apertura 2026.
+    Conserva la jornada con competition="liga_mx" y week_number=3, y
+    desactiva todas las demás. A las que desactiva y ya no tienen partidos
+    futuros pendientes, además les marca status="finished".
+    """
+    KEEP_COMPETITION = "liga_mx"
+    KEEP_WEEK_NUMBER = 3
+
+    active_jornadas = await db.jornadas.find({"is_active": True}).to_list(100)
+
+    candidates = [
+        j for j in active_jornadas
+        if j.get("competition") == KEEP_COMPETITION and j.get("week_number") == KEEP_WEEK_NUMBER
+    ]
+    if not candidates:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                f"No hay ninguna jornada activa con competition={KEEP_COMPETITION!r} "
+                f"y week_number={KEEP_WEEK_NUMBER}. No se modificó nada."
+            ),
+        )
+    keep = candidates[0]
+
+    now = datetime.utcnow()
+    deactivated = []
+    for j in active_jornadas:
+        if j["_id"] == keep["_id"]:
+            continue
+
+        future_matches = await db.matches.count_documents({
+            "jornada_id": j["_id"],
+            "start_at": {"$gt": now},
+            "status": {"$ne": "finished"},
+        })
+        update_fields = {"is_active": False}
+        if future_matches == 0:
+            update_fields["status"] = "finished"
+        await db.jornadas.update_one({"_id": j["_id"]}, {"$set": update_fields})
+
+        deactivated.append({
+            "id": str(j["_id"]),
+            "week_number": j.get("week_number"),
+            "competition": j.get("competition"),
+            "status_set": update_fields.get("status", j.get("status")),
+        })
+
+    logger.info(
+        f"fix-active-jornada: conservada week_number={keep.get('week_number')} "
+        f"({keep['_id']}), desactivadas {len(deactivated)}: {deactivated}"
+    )
+    return {
+        "message": f"✅ {len(deactivated)} jornada(s) desactivada(s), quedó activa week_number={keep.get('week_number')}",
+        "kept_active": {
+            "id": str(keep["_id"]),
+            "week_number": keep.get("week_number"),
+            "competition": keep.get("competition"),
+        },
+        "deactivated_count": len(deactivated),
+        "deactivated": deactivated,
+    }
+
+
 @router.post("/admin/fix-negative-scores")
 async def fix_negative_scores(current_user: dict = Depends(get_admin_user)):
     """

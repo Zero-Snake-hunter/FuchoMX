@@ -106,10 +106,14 @@ async def get_current_jornada():
     # datos legacy (seed-real-data/seed-season sin campo "competition",
     # luego retagueados por la migración de Mundial) pueden dejar una
     # jornada vieja marcada is_active=true junto con la actual. Si eso pasa,
-    # nos quedamos con la más reciente (created_at) y auto-corregimos el resto.
+    # nos quedamos con el week_number más alto (la jornada más avanzada de
+    # la temporada en curso) y auto-corregimos el resto. NOTA: created_at no
+    # sirve como criterio — documentos huérfanos de torneos viejos pueden
+    # tener created_at más reciente que la jornada real (ej. retagueados por
+    # una migración posterior), lo cual seleccionaba la jornada equivocada.
     active_jornadas = await db.jornadas.find(
         {"is_active": True, "competition": competition}
-    ).sort("created_at", -1).to_list(20)
+    ).sort("week_number", -1).to_list(20)
     jornada = active_jornadas[0] if active_jornadas else None
     if len(active_jornadas) > 1:
         stray_ids = [j["_id"] for j in active_jornadas[1:]]
@@ -117,7 +121,7 @@ async def get_current_jornada():
         logger.warning(
             f"Múltiples jornadas activas para competition={competition}: "
             f"week_numbers={[j.get('week_number') for j in active_jornadas]}. "
-            f"Se mantuvo week_number={jornada.get('week_number')} (más reciente), resto desactivado."
+            f"Se mantuvo week_number={jornada.get('week_number')} (más alto), resto desactivado."
         )
 
     # Step 2: If expired, auto-process and transition to next
