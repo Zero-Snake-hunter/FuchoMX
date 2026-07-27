@@ -6,10 +6,10 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFantasy } from '../context/FantasyContext';
+import { useToast } from '../context/ToastContext';
 import JerseyView from '../../components/JerseyView';
 import api from '../lib/api';
 
@@ -18,6 +18,7 @@ export default function SelectPlayerScreen() {
   const router = useRouter();
   const { position, posType, teamId, teamName } = useLocalSearchParams();
   const { setPlayer, hasPlayer } = useFantasy();
+  const { showToast } = useToast();
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -35,7 +36,7 @@ export default function SelectPlayerScreen() {
       console.log('✅ [SelectPlayer] Jugadores cargados:', response.data.players?.length);
     } catch (error) {
       console.error('❌ [SelectPlayer] Error:', error);
-      Alert.alert('Error', 'Error al cargar jugadores');
+      showToast('error', 'Error al cargar jugadores');
     } finally {
       setLoading(false);
     }
@@ -43,7 +44,7 @@ export default function SelectPlayerScreen() {
 
   const handlePlayerSelect = (player: any) => {
     if (hasPlayer(player.id)) {
-      Alert.alert('Jugador duplicado', 'Este jugador ya está en tu alineación');
+      showToast('error', 'Este jugador ya está en tu alineación');
       return;
     }
 

@@ -5,13 +5,13 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   SafeAreaView,
   ScrollView,
   Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../lib/api';
 
@@ -19,6 +19,7 @@ import api from '../lib/api';
 export default function FantasyDashboardScreen() {
   const router = useRouter();
   const { user, token } = useAuth();
+  const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [team, setTeam] = useState<any>(null);
   const [jornada, setJornada] = useState<any>(null);
@@ -51,7 +52,7 @@ export default function FantasyDashboardScreen() {
         } else if (error.message === 'Network Error') {
           errorMessage = 'Error de conexión. Verifica tu internet.';
         }
-        Alert.alert('Error', errorMessage);
+        showToast('error', errorMessage);
       }
     } finally {
       setLoading(false);

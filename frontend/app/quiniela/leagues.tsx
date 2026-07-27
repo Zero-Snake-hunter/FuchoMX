@@ -14,6 +14,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import api from '../lib/api';
@@ -51,17 +52,7 @@ export default function LeaguesScreen() {
   const [newLeagueMode, setNewLeagueMode] = useState<LeagueMode>('quiniela');
   const [joinCode, setJoinCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
-
-  // Alert.alert no muestra nada en web (react-native-web no lo implementa) —
-  // mismo bug ya conocido en lib/api.ts para el 401. En vez de repetir el
-  // guard de Platform en cada handler, un toast inline propio funciona en
-  // todas las plataformas sin depender de un modal nativo.
-  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-
-  const showToast = (type: 'success' | 'error', message: string) => {
-    setToast({ type, message });
-    setTimeout(() => setToast(null), 2500);
-  };
+  const { showToast } = useToast();
 
   useEffect(() => {
     loadLeagues();
@@ -280,17 +271,6 @@ export default function LeaguesScreen() {
         <Text style={styles.title}>MIS LIGAS</Text>
         <View style={{ width: 40 }} />
       </View>
-
-      {toast && (
-        <View style={[styles.toast, toast.type === 'error' ? styles.toastError : styles.toastSuccess]}>
-          <Ionicons
-            name={toast.type === 'error' ? 'alert-circle' : 'checkmark-circle'}
-            size={18}
-            color="#FFFFFF"
-          />
-          <Text style={styles.toastText}>{toast.message}</Text>
-        </View>
-      )}
 
       {/* Tabs */}
       <View style={styles.tabs}>
@@ -596,27 +576,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#FFFFFF',
-  },
-  toast: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: 16,
-    marginTop: 12,
-    padding: 12,
-    borderRadius: 10,
-    gap: 8,
-  },
-  toastSuccess: {
-    backgroundColor: '#00A551',
-  },
-  toastError: {
-    backgroundColor: '#DC143C',
-  },
-  toastText: {
-    flex: 1,
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '600',
   },
   tabs: {
     flexDirection: 'row',

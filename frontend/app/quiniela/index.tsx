@@ -13,6 +13,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../lib/api';
 import MatchCard from '../../components/MatchCard';
@@ -61,6 +62,7 @@ const getJornadaLabel = (jornada: any): string => {
 export default function QuinielaScreen() {
   const router = useRouter();
   const { token, user } = useAuth();
+  const { showToast } = useToast();
   const [jornada, setJornada] = useState<Jornada | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -108,7 +110,7 @@ export default function QuinielaScreen() {
       }
     } catch (error: any) {
       if (error.response?.status !== 401) {
-        Alert.alert('Error', error.response?.data?.detail || 'Error al cargar la jornada');
+        showToast('error', error.response?.data?.detail || 'Error al cargar la jornada');
       }
     } finally {
       setLoading(false);
@@ -133,7 +135,7 @@ export default function QuinielaScreen() {
     if (!jornada) return;
 
     if (!hasNewPicks) {
-      Alert.alert('Nada por guardar', 'No hay picks nuevos o modificados para guardar.');
+      showToast('info', 'No hay picks nuevos o modificados para guardar.');
       return;
     }
 
@@ -195,10 +197,7 @@ export default function QuinielaScreen() {
 
       const rejected: { match?: string; reason: string }[] = response.data.rejected || [];
       if (rejected.length > 0) {
-        Alert.alert(
-          'Algunos picks no se guardaron',
-          rejected.map(r => r.reason).join('\n')
-        );
+        showToast('error', 'Algunos picks no se guardaron: ' + rejected.map(r => r.reason).join('; '));
       }
 
       if (saved.length === 0) {
@@ -251,7 +250,7 @@ export default function QuinielaScreen() {
           || (error.message === 'Network Error'
             ? 'Sin conexión — revisa tu internet e intenta de nuevo'
             : 'No se pudieron guardar tus picks. Intenta de nuevo.');
-        Alert.alert('Error al guardar', message);
+        showToast('error', message);
       }
     } finally {
       setSubmitting(false);

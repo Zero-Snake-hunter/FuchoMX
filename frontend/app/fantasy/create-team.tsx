@@ -7,17 +7,18 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../lib/api';
 
 export default function CreateTeamScreen() {
   const router = useRouter();
   const { user, token } = useAuth();
+  const { showToast } = useToast();
   const [teamName, setTeamName] = useState('');
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -47,7 +48,7 @@ export default function CreateTeamScreen() {
     } catch (error: any) {
       console.error('❌ Error loading team:', error.response?.status, error.message);
       if (error.response?.status !== 401) {
-        Alert.alert('Error', 'No se pudo cargar la información del equipo');
+        showToast('error', 'No se pudo cargar la información del equipo');
       }
     }
   };

@@ -8,19 +8,20 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert,
   ActivityIndicator,
   Image,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../lib/api';
 
 export default function RegisterScreen() {
   const router = useRouter();
   const { register } = useAuth();
+  const { showToast } = useToast();
   const { joinCode, joinLeagueName } = useLocalSearchParams<{ joinCode?: string; joinLeagueName?: string }>();
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
@@ -78,7 +79,7 @@ export default function RegisterScreen() {
 
     try {
       const res = await api.post('/api/leagues/join', { code: pendingCode });
-      Alert.alert('¡Te uniste a la liga!', `Ya eres parte de "${res.data.league_name}"`);
+      showToast('success', `¡Te uniste a la liga! Ya eres parte de "${res.data.league_name}"`);
     } catch (error: any) {
       // No bloqueamos el flujo de registro por esto — el código pudo haberse
       // llenado o vencido justo en este momento; el usuario ya puede unirse

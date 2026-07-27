@@ -6,11 +6,13 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Platform,
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
 import { useFantasy } from '../context/FantasyContext';
+import { useToast } from '../context/ToastContext';
 import { Ionicons } from '@expo/vector-icons';
 import FootballPitch from '../../components/FootballPitch';
 import PositionSlot from '../../components/PositionSlot';
@@ -28,6 +30,7 @@ const POSITIONS = {
 export default function FieldScreen() {
   const router = useRouter();
   const { token } = useAuth();
+  const { showToast } = useToast();
   const { lineup, dtTeam, isLineupComplete, submitLineup, setDTTeam } = useFantasy();
   const [submitting, setSubmitting] = useState(false);
   const [jornada, setJornada] = useState<any>(null);
@@ -42,7 +45,7 @@ export default function FieldScreen() {
       const response = await api.get(`/api/jornadas/current`);
       setJornada(response.data.jornada);
     } catch (error) {
-      Alert.alert('Error', 'No hay jornada activa');
+      showToast('error', 'No hay jornada activa');
     } finally {
       setLoading(false);
     }
@@ -60,12 +63,17 @@ export default function FieldScreen() {
     router.push('/fantasy/select-dt');
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!isLineupComplete()) {
-      Alert.alert(
-        'Alineación incompleta',
-        'Debes seleccionar 11 jugadores y un Director Técnico'
-      );
+      showToast('error', 'Debes seleccionar 11 jugadores y un Director Técnico');
+      return;
+    }
+
+    // Alert.alert con array de botones no dispara sus onPress de forma
+    // confiable en web (mismo caso ya resuelto en handleLogout de
+    // profile.tsx) — en web se saltaba la confirmación.
+    if (Platform.OS === 'web') {
+      await handleConfirmSubmit();
       return;
     }
 
@@ -85,11 +93,10 @@ export default function FieldScreen() {
     setSubmitting(true);
     try {
       await submitLineup(jornada.id, token);
-      Alert.alert('¡Éxito!', 'Alineación guardada correctamente', [
-        { text: 'OK', onPress: () => router.back() },
-      ]);
+      showToast('success', 'Alineación guardada correctamente');
+      router.back();
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.detail || 'Error al guardar');
+      showToast('error', error.response?.data?.detail || 'Error al guardar');
     } finally {
       setSubmitting(false);
     }

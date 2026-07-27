@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, RefreshControl, Alert, Image,
+  ActivityIndicator, RefreshControl, Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import api from '../lib/api';
 
 const ADMIN_EMAIL = 'contacto@distrito.digital';
@@ -51,6 +52,7 @@ type Tab = 'resumen' | 'usuarios' | 'ligas';
 
 export default function AdminDashboard() {
   const { user, logout, isReady } = useAuth();
+  const { showToast } = useToast();
   const router = useRouter();
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -61,10 +63,10 @@ export default function AdminDashboard() {
   const closeJornada = async () => {
     try {
       const response = await api.post('/api/admin/close-all-jornadas');
-      Alert.alert('✅ Éxito', response.data.message || 'Jornadas cerradas');
+      showToast('success', response.data.message || 'Jornadas cerradas');
       fetchStats();
     } catch (error: any) {
-      Alert.alert('Error', error.message);
+      showToast('error', error.message);
     }
   };
 
@@ -76,10 +78,10 @@ export default function AdminDashboard() {
     setActionLoading(prev => ({ ...prev, [key]: true }));
     try {
       const response = await action();
-      Alert.alert('✅ Éxito', formatSuccess(response.data));
+      showToast('success', formatSuccess(response.data), 4000);
       fetchStats();
     } catch (error: any) {
-      Alert.alert('❌ Error', error.response?.data?.detail || error.message || 'Ocurrió un error inesperado');
+      showToast('error', error.response?.data?.detail || error.message || 'Ocurrió un error inesperado', 4000);
     } finally {
       setActionLoading(prev => ({ ...prev, [key]: false }));
     }
@@ -112,7 +114,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (user && user.email !== ADMIN_EMAIL) {
-      Alert.alert('Sin acceso', 'Esta sección es solo para administradores.');
+      showToast('error', 'Sin acceso: esta sección es solo para administradores.');
       router.replace('/(tabs)/home');
     }
   }, [user]);
@@ -122,7 +124,7 @@ export default function AdminDashboard() {
       const response = await api.get('/api/admin/stats');
       setStats(response.data);
     } catch (error: any) {
-      Alert.alert('Error', 'No se pudieron cargar las estadísticas');
+      showToast('error', 'No se pudieron cargar las estadísticas');
     } finally {
       setLoading(false);
       setRefreshing(false);

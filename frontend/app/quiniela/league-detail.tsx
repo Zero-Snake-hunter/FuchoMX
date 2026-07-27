@@ -6,13 +6,13 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   RefreshControl,
   Share,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../lib/api';
 import * as Clipboard from 'expo-clipboard';
@@ -41,6 +41,7 @@ export default function LeagueDetailScreen() {
   const insets = useSafeAreaInsets();
   const { leagueId, mode: paramMode } = useLocalSearchParams();
   const { token, user } = useAuth();
+  const { showToast } = useToast();
   
   const [league, setLeague] = useState<any>(null);
   const [members, setMembers] = useState<Member[]>([]);
@@ -90,7 +91,7 @@ export default function LeagueDetailScreen() {
       setMembers(response.data.members);
     } catch (error: any) {
       if (error.response?.status !== 401) {
-        Alert.alert('Error', error.response?.data?.detail || 'Error al cargar la liga');
+        showToast('error', error.response?.data?.detail || 'Error al cargar la liga');
         router.back();
       }
     } finally {
@@ -118,7 +119,7 @@ export default function LeagueDetailScreen() {
   const copyCode = async () => {
     if (league?.code) {
       await Clipboard.setStringAsync(league.code);
-      Alert.alert('¡Copiado!', 'Código copiado al portapapeles');
+      showToast('success', 'Código copiado al portapapeles');
     }
   };
 

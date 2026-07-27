@@ -6,10 +6,11 @@
 import React, { useRef, forwardRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  Share, Alert, Platform,
+  Share, Platform,
 } from 'react-native';
 import ViewShot from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
+import { useToast } from '../context/ToastContext';
 
 // ─── Tipos ────────────────────────────────────────────────
 export interface ShareResultData {
@@ -114,6 +115,7 @@ const VisualCard = forwardRef<ViewShot, { data: ShareResultData }>(({ data }, re
 // ─── Componente principal ─────────────────────────────────
 export default function ShareResultCard({ data, onClose }: Props) {
   const shotRef = useRef<any>(null);
+  const { showToast } = useToast();
 
   const buildShareText = (): string => {
     if (data.mode === 'achievement') {
@@ -155,7 +157,7 @@ export default function ShareResultCard({ data, onClose }: Props) {
       try {
         await Share.share({ message: buildShareText() });
       } catch (e2) {
-        Alert.alert('Error', 'No se pudo compartir. Intenta de nuevo.');
+        showToast('error', 'No se pudo compartir. Intenta de nuevo.');
       }
     }
   };

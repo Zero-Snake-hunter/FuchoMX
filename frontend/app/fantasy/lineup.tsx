@@ -7,12 +7,14 @@ import {
   TouchableOpacity,
   Modal,
   Alert,
+  Platform,
   ActivityIndicator,
   FlatList,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import api from '../lib/api';
@@ -98,6 +100,7 @@ export default function LineupScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { token } = useAuth();
+  const { showToast } = useToast();
   const [lineup, setLineup] = useState<any>({});
   const [dtTeam, setDtTeam] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -151,7 +154,7 @@ export default function LineupScreen() {
     } catch (error: any) {
       console.error('Error initializing lineup screen:', error);
       if (error.response?.status !== 401) {
-        Alert.alert('Error', 'No se pudo cargar la pantalla. Intenta de nuevo.');
+        showToast('error', 'No se pudo cargar la pantalla. Intenta de nuevo.');
       }
     } finally {
       setLoading(false);
@@ -186,7 +189,7 @@ export default function LineupScreen() {
       setPlayers(response.data.players);
       setShowPlayerSelector(true);
     } catch (error) {
-      Alert.alert('Error', 'Error al cargar jugadores');
+      showToast('error', 'Error al cargar jugadores');
     } finally {
       setLoadingPlayers(false);
     }
@@ -198,7 +201,7 @@ export default function LineupScreen() {
       ([slot, p]: [string, any]) => p.id === player.id && slot !== selectedSlot
     );
     if (existingSlot) {
-      Alert.alert('Jugador duplicado', `${player.name} ya está en tu alineación`);
+      showToast('error', `${player.name} ya está en tu alineación`);
       return;
     }
 
@@ -231,15 +234,21 @@ export default function LineupScreen() {
 
     const missingSlots = allSlots.filter(slot => !lineup[slot]);
     if (missingSlots.length > 0) {
-      Alert.alert(
-        'Alineación incompleta',
-        `Debes seleccionar los 11 jugadores (faltan ${missingSlots.length})`
-      );
+      showToast('error', `Debes seleccionar los 11 jugadores (faltan ${missingSlots.length})`);
       return;
     }
 
     if (!dtTeam) {
-      Alert.alert('Director Técnico', 'Debes seleccionar un Director Técnico');
+      showToast('error', 'Debes seleccionar un Director Técnico');
+      return;
+    }
+
+    // Alert.alert con array de botones no dispara sus onPress de forma
+    // confiable en web (mismo caso ya resuelto en handleLogout de profile.tsx
+    // y handleSubmit de quiniela/index.tsx) — en web se saltaba la
+    // confirmación y submitLineup nunca llegaba a correr.
+    if (Platform.OS === 'web') {
+      await submitLineup();
       return;
     }
 
@@ -258,7 +267,7 @@ export default function LineupScreen() {
     try {
       // Use already-loaded jornada (avoid re-fetching which may advance jornada again)
       if (!currentJornada) {
-        Alert.alert('Error', 'No hay jornada activa. Por favor regresa e intenta de nuevo.');
+        showToast('error', 'No hay jornada activa. Por favor regresa e intenta de nuevo.');
         return;
       }
       const jornadaId = currentJornada.id;
@@ -293,7 +302,7 @@ export default function LineupScreen() {
     } catch (error: any) {
       console.error('Error saving lineup:', error);
       const errorMessage = error.response?.data?.detail || error.message || 'Error al guardar alineación. Intenta de nuevo.';
-      Alert.alert('Error', errorMessage);
+      showToast('error', errorMessage);
     } finally {
       setSubmitting(false);
     }

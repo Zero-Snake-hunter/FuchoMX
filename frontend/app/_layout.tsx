@@ -2,6 +2,7 @@ import { Stack } from 'expo-router';
 import React from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { FantasyProvider } from './context/FantasyContext';
+import { ToastProvider } from './context/ToastContext';
 import * as SplashScreen from 'expo-splash-screen';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 
@@ -27,13 +28,15 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <FantasyProvider>
-        <PushNotificationRegistrar />
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="index" />
-          <Stack.Screen name="onboarding" />
-          <Stack.Screen name="(auth)" />
-          <Stack.Screen name="(tabs)" />
-        </Stack>
+        <ToastProvider>
+          <PushNotificationRegistrar />
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="index" />
+            <Stack.Screen name="onboarding" />
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="(tabs)" />
+          </Stack>
+        </ToastProvider>
       </FantasyProvider>
     </AuthProvider>
   );

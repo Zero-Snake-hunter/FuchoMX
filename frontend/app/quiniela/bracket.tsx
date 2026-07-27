@@ -1,16 +1,18 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  StatusBar, ActivityIndicator, Alert, Platform,
+  StatusBar, ActivityIndicator, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
+import * as Clipboard from 'expo-clipboard';
 import api from '../lib/api';
 import { SPONSORS } from '../config/sponsors';
 import TeamShield from '../../components/TeamShield';
+import { useToast } from '../context/ToastContext';
 
 type TeamInfo = {
   id: string;
@@ -106,6 +108,7 @@ const MatchCard = ({
 // ── Main Screen ─────────────────────────────────────────
 export default function BracketScreen() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [sharing, setSharing] = useState(false);
@@ -140,7 +143,7 @@ export default function BracketScreen() {
         setSaved(true); // Ya tenía predicción guardada
       }
     }).catch(() => {
-      Alert.alert('Error', 'No se pudo cargar el bracket');
+      showToast('error', 'No se pudo cargar el bracket');
     }).finally(() => setLoading(false));
   }, []);
 
@@ -217,15 +220,14 @@ export default function BracketScreen() {
           UTI: 'public.png',
         });
       } else {
-        // Web fallback: show the text to copy
-        Alert.alert(
-          '📤 Tu bracket',
-          shareText,
-          [{ text: 'OK' }]
-        );
+        // expo-sharing no está disponible casi siempre en web — Alert.alert
+        // tampoco muestra nada ahí, así que en vez de "mostrar el texto para
+        // copiar" (que nadie vería), lo copiamos directo al portapapeles.
+        await Clipboard.setStringAsync(shareText);
+        showToast('success', 'Texto de tu bracket copiado — pégalo donde quieras compartirlo');
       }
     } catch (e) {
-      Alert.alert('Error', 'No se pudo generar la imagen del bracket. Intenta de nuevo.');
+      showToast('error', 'No se pudo generar la imagen del bracket. Intenta de nuevo.');
     } finally {
       setSharing(false);
     }
