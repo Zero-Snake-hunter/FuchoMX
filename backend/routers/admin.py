@@ -1734,6 +1734,148 @@ async def fix_jornada_dates(current_user: dict = Depends(get_admin_user)):
     }
 
 
+@router.post("/admin/deep-clean-jornadas")
+async def deep_clean_jornadas(current_user: dict = Depends(get_admin_user)):
+    """
+    Diagnostica y limpia matches vinculados por error a una jornada de otra
+    temporada — causa real encontrada: /admin/seed-world-cup hace
+    `update_many({"competition": {"$exists": False}}, ...)` sobre jornadas
+    Y matches para retaguear docs viejos sin ese campo (ver liguilla.py) —
+    eso incluyó las jornadas/matches del Clausura 2026 anterior, que se
+    quedaron con competition="liga_mx" pero sus fechas y equipos viejos.
+    Como create-remaining-jornadas y load-remaining-fixtures son
+    idempotentes ("si ya existe/ya tiene partidos, no tocar"), esas
+    jornadas Clausura retageadas con el mismo week_number que una jornada
+    real del Apertura pasaron el check de "ya existe" y absorbieron el rol
+    de "J3", "J4", etc. sin que nunca se les cargara el fixture correcto.
+
+    1. Recorre TODAS las jornadas competition="liga_mx" (excluye liguilla),
+       por week_number, y sus matches.
+    2. Marca como huérfano (orphaned_at seteado, se le quita jornada_id —
+       no se borra el documento) cualquier match cuyo start_at caiga fuera
+       de la ventana [start_date - 2 días, end_date + 2 días] de su propia
+       jornada — ahí es donde aparecen partidos de otra temporada (ej. un
+       match de "31 de enero" colgado de una jornada de agosto).
+    3. Si una jornada se queda en 0 partidos tras la limpieza, recarga su
+       fixture real de APERTURA_2026_J3_J17_FIXTURES (mismo dataset que
+       /admin/load-remaining-fixtures) — si la jornada está in_progress,
+       los nuevos matches quedan locked=false para que se pueda picksear
+       de inmediato.
+    4. Para los matches que sobreviven, verifica que home_team_id/
+       away_team_id resuelvan a un equipo real con shield_url válido —
+       reporta huecos y repara shields rotos con el mismo fallback de
+       audit-and-fix-jornadas.
+    """
+    jornadas = await db.jornadas.find(
+        {"competition": "liga_mx", "type": {"$ne": "liguilla"}}
+    ).sort("week_number", 1).to_list(100)
+
+    teams_by_sn = None  # se resuelve una sola vez, solo si hace falta recargar fixtures
+    report = []
+    weeks_refixtured = []
+    total_orphaned = 0
+
+    for j in jornadas:
+        jid = j["_id"]
+        start, end = j.get("start_date"), j.get("end_date")
+        matches = await db.matches.find({"jornada_id": jid}).to_list(100)
+
+        orphaned, kept = [], []
+        if start and end:
+            window_start = start - timedelta(days=2)
+            window_end = end + timedelta(days=2)
+            for m in matches:
+                m_start = m.get("start_at")
+                if m_start and (m_start < window_start or m_start > window_end):
+                    orphaned.append(m)
+                else:
+                    kept.append(m)
+        else:
+            kept = matches  # sin fechas propias no hay ventana contra la que comparar
+
+        for m in orphaned:
+            await db.matches.update_one(
+                {"_id": m["_id"]},
+                {
+                    "$set": {"orphaned_at": datetime.utcnow(), "orphaned_from_jornada_id": jid},
+                    "$unset": {"jornada_id": ""},
+                },
+            )
+        total_orphaned += len(orphaned)
+
+        fixture_reloaded = None
+        if orphaned and not kept:
+            week_fixtures = APERTURA_2026_J3_J17_FIXTURES.get(j.get("week_number"))
+            if week_fixtures:
+                if teams_by_sn is None:
+                    teams_by_sn = {
+                        t["short_name"]: t["_id"]
+                        for t in await db.teams.find({"competition": "liga_mx"}).to_list(30)
+                    }
+                new_matches = [
+                    {
+                        "jornada_id": jid,
+                        "home_team_id": teams_by_sn[home_sn], "away_team_id": teams_by_sn[away_sn],
+                        "home_score": None, "away_score": None,
+                        "status": "scheduled", "start_at": start_at, "created_at": datetime.utcnow(),
+                        "ext_id_365": game_id, "locked": j.get("status") != "in_progress",
+                    }
+                    for (game_id, home_sn, away_sn, start_at) in week_fixtures
+                    if home_sn in teams_by_sn and away_sn in teams_by_sn
+                ]
+                if new_matches:
+                    await db.matches.insert_many(new_matches)
+                    kept = new_matches
+                    fixture_reloaded = len(new_matches)
+                    weeks_refixtured.append(j.get("week_number"))
+
+        shield_issues = []
+        for m in kept:
+            for label, team_id in (("home", m.get("home_team_id")), ("away", m.get("away_team_id"))):
+                team = await db.teams.find_one({"_id": team_id}) if team_id else None
+                if not team:
+                    shield_issues.append({
+                        "match_id": str(m.get("_id", "")), "side": label,
+                        "issue": "equipo no encontrado (referencia huérfana)",
+                    })
+                    continue
+                if _shield_is_broken(team.get("shield_url")):
+                    fallback_url = _LIGA_MX_SHIELD_FALLBACK.get(team.get("short_name"))
+                    if fallback_url:
+                        await db.teams.update_one({"_id": team["_id"]}, {"$set": {"shield_url": fallback_url}})
+                        shield_issues.append({
+                            "match_id": str(m.get("_id", "")), "side": label, "team": team.get("name"),
+                            "issue": "shield_url vacío/roto", "fixed": True, "after": fallback_url,
+                        })
+                    else:
+                        shield_issues.append({
+                            "match_id": str(m.get("_id", "")), "side": label, "team": team.get("name"),
+                            "issue": "shield_url vacío/roto", "fixed": False,
+                        })
+
+        report.append({
+            "week_number": j.get("week_number"), "jornada_id": str(jid),
+            "matches_total": len(matches), "matches_orphaned": len(orphaned),
+            "matches_kept": len(kept),
+            "orphaned_match_ids": [str(m["_id"]) for m in orphaned],
+            "fixture_reloaded": fixture_reloaded,
+            "shield_issues": shield_issues,
+        })
+
+    logger.info(
+        f"deep-clean-jornadas: {total_orphaned} match(es) huérfano(s) desvinculados, "
+        f"semanas recargadas={weeks_refixtured}"
+    )
+    return {
+        "message": (
+            f"✅ Limpieza completada — {total_orphaned} match(es) huérfano(s) desvinculados, "
+            f"{len(weeks_refixtured)} jornada(s) recargadas con su fixture real"
+        ),
+        "weeks_refixtured": weeks_refixtured,
+        "jornadas": report,
+    }
+
+
 @router.post("/admin/fix-negative-scores")
 async def fix_negative_scores(current_user: dict = Depends(get_admin_user)):
     """
