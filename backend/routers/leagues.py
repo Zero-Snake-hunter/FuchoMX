@@ -7,7 +7,7 @@ from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from achievements import award_achievement
-from database import db
+from database import db, get_active_competition
 from dependencies import get_current_user
 from models import CreateLeagueRequest, JoinLeagueRequest, MAX_MEMBERS_FREE
 
@@ -15,6 +15,76 @@ logger = logging.getLogger(__name__)
 
 # No prefix: este router maneja /leagues/* y los legacy /quiniela/league*
 router = APIRouter()
+
+# Fuentes de points_log que cuentan como "puntos de quiniela" — el acierto
+# normal (3 pts c/u), la penalización por no seleccionar, y el bonus de
+# nuevo usuario. Ver scoring_penalties.py.
+QUINIELA_POINT_SOURCES = ["QUINIELA", "QUINIELA_PENALIZACION", "QUINIELA_BONUS_NUEVO"]
+
+# El Apertura 2026 empieza a contar para el ranking desde J3 — J1/J2 y
+# cualquier dato de World Cup 2026 no cuentan. Cuando arranque el próximo
+# torneo (Clausura 2027), cambiar este número al week_number de su primera
+# jornada — el ranking reinicia en 0 sin tocar nada más de esta función.
+LIGA_MX_SEASON_START_WEEK = 3
+
+
+async def _compute_quiniela_ranking_points(user_ids: list) -> dict:
+    """
+    Para cada user_id en user_ids, calcula:
+    - total_points: suma de puntos de quiniela desde LIGA_MX_SEASON_START_WEEK
+      en adelante (competition activa, excluye liguilla) — reemplaza leer
+      user.total_points directo, que mezcla temporadas/torneos viejos
+      (por eso el ranking general mostraba 0 o valores sin sentido).
+    - jornada_anterior_points: puntos de quiniela solo de la jornada
+      inmediatamente anterior a la activa (current_week - 1) — se calcula
+      aparte del corte de temporada, por eso puede incluir una jornada
+      anterior a LIGA_MX_SEASON_START_WEEK si estamos justo al inicio.
+    """
+    competition = await get_active_competition()
+    jornadas = await db.jornadas.find(
+        {"competition": competition, "type": {"$ne": "liguilla"}}
+    ).sort("week_number", 1).to_list(100)
+
+    season_jornada_ids = {
+        j["_id"] for j in jornadas if (j.get("week_number") or 0) >= LIGA_MX_SEASON_START_WEEK
+    }
+
+    current = next((j for j in jornadas if j.get("is_active")), None)
+    if not current and jornadas:
+        current = jornadas[-1]
+    previous_jornada_id = None
+    if current:
+        prev = next(
+            (j for j in jornadas if j.get("week_number") == current.get("week_number", 0) - 1),
+            None,
+        )
+        if prev:
+            previous_jornada_id = prev["_id"]
+
+    result = {uid: {"total_points": 0, "jornada_anterior_points": 0} for uid in user_ids}
+
+    relevant_ids = set(season_jornada_ids)
+    if previous_jornada_id:
+        relevant_ids.add(previous_jornada_id)
+    if not relevant_ids:
+        return result
+
+    points = await db.points_log.find({
+        "user_id": {"$in": user_ids},
+        "jornada_id": {"$in": list(relevant_ids)},
+        "source": {"$in": QUINIELA_POINT_SOURCES},
+    }).to_list(10000)
+
+    for p in points:
+        uid = p["user_id"]
+        if uid not in result:
+            continue
+        if p["jornada_id"] in season_jornada_ids:
+            result[uid]["total_points"] += p.get("points", 0)
+        if previous_jornada_id and p["jornada_id"] == previous_jornada_id:
+            result[uid]["jornada_anterior_points"] += p.get("points", 0)
+
+    return result
 
 
 # ── Ligas unificadas ──────────────────────────────────────────────────────────
@@ -278,6 +348,14 @@ async def get_unified_league_details(
     mode = league.get("mode", "quiniela")
     members = []
 
+    # Para quiniela, los puntos se calculan una sola vez para todos los
+    # miembros (no user.total_points, que mezcla temporadas/torneos viejos).
+    quiniela_points_by_user = {}
+    if mode != "fantasy":
+        quiniela_points_by_user = await _compute_quiniela_ranking_points(
+            [m["user_id"] for m in memberships]
+        )
+
     for membership in memberships:
         user = await db.users.find_one({"_id": membership["user_id"]})
         if user:
@@ -300,7 +378,11 @@ async def get_unified_league_details(
                     member_data["team_name"] = "Sin equipo"
                     member_data["total_points"] = 0
             else:
-                member_data["total_points"] = user.get("total_points", 0)
+                pts = quiniela_points_by_user.get(
+                    user["_id"], {"total_points": 0, "jornada_anterior_points": 0}
+                )
+                member_data["total_points"] = pts["total_points"]
+                member_data["jornada_anterior_points"] = pts["jornada_anterior_points"]
             members.append(member_data)
 
     members.sort(key=lambda x: x["total_points"], reverse=True)

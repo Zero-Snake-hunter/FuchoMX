@@ -23,6 +23,7 @@ interface Member {
   display_name: string;
   team_name?: string;
   total_points: number;
+  jornada_anterior_points?: number;
   rank: number;
   joined_at: string;
 }
@@ -155,6 +156,37 @@ export default function LeagueDetailScreen() {
       default: return `${rank}`;
     }
   };
+
+  // Tabla de ranking general de quiniela — reemplaza el toggle Jornada/General:
+  // esta es la única vista de ranking de liga para quiniela ahora. La vista
+  // por jornada individual (picks propios de una jornada pasada) vive en
+  // quiniela/index.tsx, no aquí.
+  const renderQuinielaTable = () => (
+    <View style={styles.table}>
+      <View style={styles.tableHeaderRow}>
+        <Text style={[styles.tableHeaderCell, styles.colPos]}>#</Text>
+        <Text style={[styles.tableHeaderCell, styles.colPlayer]}>Jugador</Text>
+        <Text style={[styles.tableHeaderCell, styles.colPts]}>J. ant.</Text>
+        <Text style={[styles.tableHeaderCell, styles.colPts]}>Total</Text>
+      </View>
+      {members.map((member) => {
+        const isCurrentUser = member.user_id === user?.id;
+        return (
+          <View
+            key={member.user_id}
+            style={[styles.tableRow, isCurrentUser && styles.tableRowHighlight]}
+          >
+            <Text style={[styles.tableCell, styles.colPos]}>{getRankIcon(member.rank)}</Text>
+            <Text style={[styles.tableCell, styles.colPlayer]} numberOfLines={1}>
+              {member.display_name}{isCurrentUser ? ' (Tú)' : ''}
+            </Text>
+            <Text style={[styles.tableCell, styles.colPts]}>{member.jornada_anterior_points ?? 0}</Text>
+            <Text style={[styles.tableCell, styles.colPts, styles.tableCellTotal]}>{member.total_points}</Text>
+          </View>
+        );
+      })}
+    </View>
+  );
 
   const renderGeneralRankingItem = (member: Member) => {
     const isCurrentUser = member.user_id === user?.id;
@@ -327,56 +359,67 @@ export default function LeagueDetailScreen() {
           </View>
         )}
 
-        {/* Tabs */}
-        <View style={styles.tabs}>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'jornada' && styles.tabActive]}
-            onPress={() => setActiveTab('jornada')}
-          >
-            <Ionicons 
-              name="calendar" 
-              size={18} 
-              color={activeTab === 'jornada' ? '#FFFFFF' : '#666'} 
-            />
-            <Text style={[styles.tabText, activeTab === 'jornada' && styles.tabTextActive]}>
-              Jornada
-            </Text>
-          </TouchableOpacity>
+        {/* Tabs — solo Fantasy conserva Jornada/General; quiniela ahora
+            muestra directo la tabla de ranking, sin toggle */}
+        {isFantasy && (
+          <View style={styles.tabs}>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'jornada' && styles.tabActive]}
+              onPress={() => setActiveTab('jornada')}
+            >
+              <Ionicons
+                name="calendar"
+                size={18}
+                color={activeTab === 'jornada' ? '#FFFFFF' : '#666'}
+              />
+              <Text style={[styles.tabText, activeTab === 'jornada' && styles.tabTextActive]}>
+                Jornada
+              </Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'general' && styles.tabActive]}
-            onPress={() => setActiveTab('general')}
-          >
-            <Ionicons 
-              name="trophy" 
-              size={18} 
-              color={activeTab === 'general' ? '#FFFFFF' : '#666'} 
-            />
-            <Text style={[styles.tabText, activeTab === 'general' && styles.tabTextActive]}>
-              General
-            </Text>
-          </TouchableOpacity>
-        </View>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'general' && styles.tabActive]}
+              onPress={() => setActiveTab('general')}
+            >
+              <Ionicons
+                name="trophy"
+                size={18}
+                color={activeTab === 'general' ? '#FFFFFF' : '#666'}
+              />
+              <Text style={[styles.tabText, activeTab === 'general' && styles.tabTextActive]}>
+                General
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Rankings */}
         <View style={styles.rankingContainer}>
-          <Text style={styles.rankingTitle}>
-            {activeTab === 'jornada' ? '📊 Ranking Jornada' : '🏆 Ranking General'}
-          </Text>
-
-          {activeTab === 'jornada' ? (
-            jornadaRankings.length > 0 ? (
-              jornadaRankings.map(renderJornadaRankingItem)
-            ) : (
-              <View style={styles.emptyRanking}>
-                <Ionicons name="hourglass-outline" size={48} color="#333" />
-                <Text style={styles.emptyText}>
-                  Los puntos se calcularán al finalizar la jornada
-                </Text>
-              </View>
-            )
+          {!isFantasy ? (
+            <>
+              <Text style={styles.rankingTitle}>🏆 Ranking General</Text>
+              {renderQuinielaTable()}
+            </>
           ) : (
-            members.map(renderGeneralRankingItem)
+            <>
+              <Text style={styles.rankingTitle}>
+                {activeTab === 'jornada' ? '📊 Ranking Jornada' : '🏆 Ranking General'}
+              </Text>
+              {activeTab === 'jornada' ? (
+                jornadaRankings.length > 0 ? (
+                  jornadaRankings.map(renderJornadaRankingItem)
+                ) : (
+                  <View style={styles.emptyRanking}>
+                    <Ionicons name="hourglass-outline" size={48} color="#333" />
+                    <Text style={styles.emptyText}>
+                      Los puntos se calcularán al finalizar la jornada
+                    </Text>
+                  </View>
+                )
+              ) : (
+                members.map(renderGeneralRankingItem)
+              )}
+            </>
           )}
         </View>
 
@@ -579,6 +622,58 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#FFFFFF',
     marginBottom: 12,
+  },
+  table: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#333',
+    overflow: 'hidden',
+  },
+  tableHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0a0a0a',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+  },
+  tableHeaderCell: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#999',
+    textTransform: 'uppercase',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#262626',
+  },
+  tableRowHighlight: {
+    backgroundColor: '#1a0a0a',
+  },
+  tableCell: {
+    fontSize: 14,
+    color: '#FFFFFF',
+  },
+  tableCellTotal: {
+    fontWeight: 'bold',
+    color: '#DC143C',
+  },
+  colPos: {
+    width: 36,
+  },
+  colPlayer: {
+    flex: 1,
+    paddingRight: 8,
+  },
+  colPts: {
+    width: 56,
+    textAlign: 'right',
   },
   rankingItem: {
     flexDirection: 'row',
