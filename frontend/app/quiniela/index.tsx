@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../lib/api';
@@ -69,9 +70,14 @@ export default function QuinielaScreen() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [shareData, setShareData] = useState<ShareResultData | null>(null);
 
-  useEffect(() => {
-    loadJornada();
-  }, []);
+  // Refresca al entrar a la pantalla (no solo al montar) para detectar si la
+  // jornada activa cambió mientras el usuario estaba en otra pestaña — ej.
+  // cuando un admin cierra la jornada actual y activa la siguiente.
+  useFocusEffect(
+    useCallback(() => {
+      loadJornada();
+    }, [])
+  );
 
   const loadJornada = async () => {
     try {

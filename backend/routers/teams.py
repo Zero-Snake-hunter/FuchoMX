@@ -102,7 +102,23 @@ async def get_current_jornada():
     competition = await get_active_competition()
 
     # Step 1: Find jornada with is_active = true
-    jornada = await db.jornadas.find_one({"is_active": True, "competition": competition})
+    # Nunca debería haber más de una jornada activa por competición, pero
+    # datos legacy (seed-real-data/seed-season sin campo "competition",
+    # luego retagueados por la migración de Mundial) pueden dejar una
+    # jornada vieja marcada is_active=true junto con la actual. Si eso pasa,
+    # nos quedamos con la más reciente (created_at) y auto-corregimos el resto.
+    active_jornadas = await db.jornadas.find(
+        {"is_active": True, "competition": competition}
+    ).sort("created_at", -1).to_list(20)
+    jornada = active_jornadas[0] if active_jornadas else None
+    if len(active_jornadas) > 1:
+        stray_ids = [j["_id"] for j in active_jornadas[1:]]
+        await db.jornadas.update_many({"_id": {"$in": stray_ids}}, {"$set": {"is_active": False}})
+        logger.warning(
+            f"Múltiples jornadas activas para competition={competition}: "
+            f"week_numbers={[j.get('week_number') for j in active_jornadas]}. "
+            f"Se mantuvo week_number={jornada.get('week_number')} (más reciente), resto desactivado."
+        )
 
     # Step 2: If expired, auto-process and transition to next
     if jornada and jornada.get("end_date") and jornada["end_date"] < now:
