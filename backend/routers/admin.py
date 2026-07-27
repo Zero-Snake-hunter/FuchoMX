@@ -1643,6 +1643,81 @@ async def audit_and_fix_jornadas(current_user: dict = Depends(get_admin_user)):
     }
 
 
+# (week_number, start_date, end_date) — calendario real del Apertura 2026
+# para J3-J17. end_date se guarda a las 23:59:59 del día indicado (no a
+# medianoche) para que la jornada no aparezca "finished" durante el propio
+# día del último partido — mismo criterio que ya usan liguilla.py y
+# apertura_2026_data.py en otras jornadas.
+_JORNADA_DATE_FIXES = {
+    3:  (datetime(2026, 7, 31), datetime(2026, 8, 2, 23, 59, 59)),
+    4:  (datetime(2026, 8, 15), datetime(2026, 8, 17, 23, 59, 59)),
+    5:  (datetime(2026, 8, 21), datetime(2026, 8, 23, 23, 59, 59)),
+    6:  (datetime(2026, 8, 28), datetime(2026, 8, 30, 23, 59, 59)),
+    7:  (datetime(2026, 9, 4),  datetime(2026, 9, 6, 23, 59, 59)),
+    8:  (datetime(2026, 9, 11), datetime(2026, 9, 13, 23, 59, 59)),
+    9:  (datetime(2026, 9, 18), datetime(2026, 9, 20, 23, 59, 59)),
+    10: (datetime(2026, 9, 25), datetime(2026, 9, 27, 23, 59, 59)),
+    11: (datetime(2026, 10, 9), datetime(2026, 10, 11, 23, 59, 59)),
+    12: (datetime(2026, 10, 16), datetime(2026, 10, 18, 23, 59, 59)),
+    13: (datetime(2026, 10, 20), datetime(2026, 10, 21, 23, 59, 59)),
+    14: (datetime(2026, 10, 23), datetime(2026, 10, 25, 23, 59, 59)),
+    15: (datetime(2026, 10, 30), datetime(2026, 11, 1, 23, 59, 59)),
+    16: (datetime(2026, 11, 6), datetime(2026, 11, 8, 23, 59, 59)),
+    17: (datetime(2026, 11, 20), datetime(2026, 11, 22, 23, 59, 59)),
+}
+
+
+@router.post("/admin/fix-jornada-dates")
+async def fix_jornada_dates(current_user: dict = Depends(get_admin_user)):
+    """
+    Corrige start_date/end_date de J3-J17 (competition="liga_mx") con el
+    calendario real del Apertura 2026 — las que tenía cada jornada en Mongo
+    no correspondían (fechas viejas/formato incorrecto), lo cual hacía que
+    audit-and-fix-jornadas las marcara "finished" de más.
+
+    Busca cada jornada por (competition="liga_mx", week_number) en vez de
+    por _id literal — no depende de copiar bien un ObjectId a mano. Al
+    final corre audit_and_fix_jornadas para recalcular status/is_active
+    con las fechas ya corregidas.
+    """
+    dates_report = []
+    for week, (start, end) in _JORNADA_DATE_FIXES.items():
+        jornada = await db.jornadas.find_one({
+            "competition": "liga_mx", "week_number": week, "type": {"$ne": "liguilla"},
+        })
+        if not jornada:
+            dates_report.append({"week_number": week, "found": False})
+            continue
+
+        before_start = jornada.get("start_date")
+        before_end = jornada.get("end_date")
+        await db.jornadas.update_one(
+            {"_id": jornada["_id"]},
+            {"$set": {"start_date": start, "end_date": end}},
+        )
+        dates_report.append({
+            "week_number": week, "id": str(jornada["_id"]), "found": True,
+            "before": {
+                "start_date": before_start.isoformat() if before_start else None,
+                "end_date": before_end.isoformat() if before_end else None,
+            },
+            "after": {"start_date": start.isoformat(), "end_date": end.isoformat()},
+        })
+
+    fixed_count = sum(1 for r in dates_report if r["found"])
+    not_found = [r["week_number"] for r in dates_report if not r["found"]]
+    logger.info(f"fix-jornada-dates: {fixed_count} jornada(s) actualizadas, no encontradas={not_found}")
+
+    audit_result = await audit_and_fix_jornadas(current_user=current_user)
+
+    return {
+        "message": f"✅ Fechas corregidas para {fixed_count} jornada(s) — auditoría re-ejecutada",
+        "dates_fixed": dates_report,
+        "not_found": not_found,
+        "audit_result": audit_result,
+    }
+
+
 @router.post("/admin/fix-negative-scores")
 async def fix_negative_scores(current_user: dict = Depends(get_admin_user)):
     """
