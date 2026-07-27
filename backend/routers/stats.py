@@ -88,8 +88,8 @@ async def get_admin_stats(current_user: dict = Depends(get_current_user)):
 
     competencia_activa = await get_active_competition()
 
-    total_jornadas = await db.jornadas.count_documents({})
-    jornada_activa = await db.jornadas.find_one({"is_active": True})
+    total_jornadas = await db.jornadas.count_documents({"competition": competencia_activa})
+    jornada_activa = await db.jornadas.find_one({"is_active": True, "competition": competencia_activa})
 
     jornada_activa_info = None
     picks_guardados_jornada = 0

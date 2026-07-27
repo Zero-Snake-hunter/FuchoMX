@@ -2,7 +2,7 @@ import logging
 from datetime import datetime, timedelta
 
 from bson import ObjectId
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 
 from database import db, get_active_competition
 from dependencies import get_current_user
@@ -180,10 +180,12 @@ async def get_current_jornada():
             logger.info(f"Jornada {jornada['week_number']} activada via fallback")
 
     if not jornada:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No hay jornada activa. Usa /api/admin/seed-jornada para crear una."
-        )
+        logger.info(f"Sin jornada activa/próxima para competition={competition}. Entre jornadas.")
+        return {
+            "jornada": None,
+            "status": "between_jornadas",
+            "message": "No hay jornada activa en este momento. Vuelve pronto.",
+        }
 
     # Step 4: Update status based on dates
     if jornada.get("start_date") and jornada["start_date"] <= now and jornada.get("status") == "upcoming":

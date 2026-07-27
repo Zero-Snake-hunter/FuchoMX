@@ -81,7 +81,9 @@ async def seed_current_jornada(current_user: dict = Depends(get_admin_user)):
                             detail="Primero debes crear los equipos usando /api/admin/seed-teams")
 
     competition = await get_active_competition()
-    last_jornada = await db.jornadas.find_one(sort=[("week_number", -1)])
+    last_jornada = await db.jornadas.find_one(
+        {"competition": competition}, sort=[("week_number", -1)]
+    )
     next_week = (last_jornada["week_number"] + 1) if last_jornada else 1
 
     await db.jornadas.update_many(
