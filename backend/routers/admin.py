@@ -1475,6 +1475,174 @@ async def activate_jornada(jornada_id: str, current_user: dict = Depends(get_adm
     }
 
 
+_LIGA_MX_SHIELD_FALLBACK = {
+    "AME": "https://a.espncdn.com/i/teamlogos/soccer/500/227.png",
+    "GDL": "https://a.espncdn.com/i/teamlogos/soccer/500/228.png",
+    "CAZ": "https://a.espncdn.com/i/teamlogos/soccer/500/232.png",
+    "TIG": "https://a.espncdn.com/i/teamlogos/soccer/500/233.png",
+    "MTY": "https://a.espncdn.com/i/teamlogos/soccer/500/238.png",
+    "PUM": "https://a.espncdn.com/i/teamlogos/soccer/500/241.png",
+    "SAN": "https://a.espncdn.com/i/teamlogos/soccer/500/242.png",
+    "TOL": "https://a.espncdn.com/i/teamlogos/soccer/500/236.png",
+    "LEO": "https://a.espncdn.com/i/teamlogos/soccer/500/235.png",
+    "ATL": "https://a.espncdn.com/i/teamlogos/soccer/500/244.png",
+    "PAC": "https://a.espncdn.com/i/teamlogos/soccer/500/239.png",
+    "TIJ": "https://a.espncdn.com/i/teamlogos/soccer/500/2020.png",
+    "NEC": "https://a.espncdn.com/i/teamlogos/soccer/500/243.png",
+    "QRO": "https://a.espncdn.com/i/teamlogos/soccer/500/6678.png",
+    "PUE": "https://a.espncdn.com/i/teamlogos/soccer/500/240.png",
+    "JUA": "https://a.espncdn.com/i/teamlogos/soccer/500/5942.png",
+    "ASL": "https://a.espncdn.com/i/teamlogos/soccer/500/5930.png",
+    "ATE": "https://a.espncdn.com/i/teamlogos/soccer/500/226.png",
+}
+
+
+def _shield_is_broken(url) -> bool:
+    return not isinstance(url, str) or not url.strip() or not url.strip().lower().startswith("http")
+
+
+@router.post("/admin/audit-and-fix-jornadas")
+async def audit_and_fix_jornadas(current_user: dict = Depends(get_admin_user)):
+    """
+    Recalcula status/is_active de TODAS las jornadas de temporada regular
+    (competition="liga_mx", excluye liguilla) a partir de la fecha real
+    (datetime.utcnow(), no una fecha fija) comparada contra start_date/
+    end_date de cada una, desbloquea los partidos de la que quede
+    in_progress y bloquea los de las upcoming. Los matches solo se
+    vinculan por jornada_id — los documentos de match no tienen un campo
+    week_number propio — así que ese es el único criterio usado para no
+    perder ninguno.
+
+    Además revisa shield_url de los 18 equipos liga_mx: si está vacío,
+    null o no es una URL http(s), lo repara con el fallback de ESPN. Los
+    que ya tienen una URL válida (aunque no sea de ESPN, ej. TheSportsDB)
+    NO se tocan — sobreescribir una URL que ya funciona por asumir que
+    "debería" ser la de ESPN es exactamente el tipo de error de IDs
+    cruzados que ya se dio una vez con estos escudos (ver comentario en
+    apertura_2026_data.py).
+    """
+    now = datetime.utcnow()
+
+    # ── Jornadas ────────────────────────────────────────────────────────────
+    jornadas = await db.jornadas.find(
+        {"competition": "liga_mx", "type": {"$ne": "liguilla"}}
+    ).sort("week_number", 1).to_list(100)
+
+    if not jornadas:
+        raise HTTPException(status_code=404, detail="No hay jornadas con competition='liga_mx'")
+
+    computed = []
+    for j in jornadas:
+        start, end = j.get("start_date"), j.get("end_date")
+        if not start or not end:
+            computed.append({"jornada": j, "new_status": None, "new_is_active": None,
+                              "reason": "sin start_date/end_date, no se pudo evaluar"})
+        elif end < now:
+            computed.append({"jornada": j, "new_status": "finished", "new_is_active": False, "reason": None})
+        elif start <= now <= end:
+            computed.append({"jornada": j, "new_status": "in_progress", "new_is_active": True, "reason": None})
+        else:
+            computed.append({"jornada": j, "new_status": "upcoming", "new_is_active": False, "reason": None})
+
+    # Fechas superpuestas entre jornadas podrían calificar a más de una como
+    # in_progress — solo puede haber una activa, se conserva la de
+    # week_number más alto (la más avanzada) y el resto baja a upcoming.
+    in_progress_items = [c for c in computed if c["new_status"] == "in_progress"]
+    overlap_warning = None
+    if len(in_progress_items) > 1:
+        keep = max(in_progress_items, key=lambda c: c["jornada"]["week_number"])
+        for c in in_progress_items:
+            if c is not keep:
+                c["new_status"] = "upcoming"
+                c["new_is_active"] = False
+        overlap_warning = (
+            f"{len(in_progress_items)} jornadas calificaban como in_progress por fechas "
+            f"superpuestas — se conservó week_number={keep['jornada']['week_number']} como activa."
+        )
+
+    jornadas_report = []
+    active_week = None
+    for c in computed:
+        j = c["jornada"]
+        jid = j["_id"]
+        old_status = j.get("status")
+        old_is_active = bool(j.get("is_active", False))
+
+        if c["new_status"] is None:
+            jornadas_report.append({
+                "week_number": j.get("week_number"), "id": str(jid), "changed": False,
+                "skipped_reason": c["reason"], "status": old_status, "is_active": old_is_active,
+            })
+            continue
+
+        changed = old_status != c["new_status"] or old_is_active != c["new_is_active"]
+        if changed:
+            await db.jornadas.update_one(
+                {"_id": jid},
+                {"$set": {"status": c["new_status"], "is_active": c["new_is_active"]}},
+            )
+
+        matches_unlocked = matches_locked = 0
+        if c["new_status"] == "in_progress":
+            active_week = j.get("week_number")
+            result = await db.matches.update_many({"jornada_id": jid}, {"$set": {"locked": False}})
+            matches_unlocked = result.modified_count
+        elif c["new_status"] == "upcoming":
+            result = await db.matches.update_many({"jornada_id": jid}, {"$set": {"locked": True}})
+            matches_locked = result.modified_count
+
+        jornadas_report.append({
+            "week_number": j.get("week_number"), "id": str(jid), "changed": changed,
+            "status": {"before": old_status, "after": c["new_status"]},
+            "is_active": {"before": old_is_active, "after": c["new_is_active"]},
+            "matches_unlocked": matches_unlocked, "matches_locked": matches_locked,
+        })
+
+    # ── Escudos ─────────────────────────────────────────────────────────────
+    teams = await db.teams.find({"competition": "liga_mx"}).to_list(30)
+    shields_report = []
+    for t in teams:
+        short_name = t.get("short_name")
+        current_url = t.get("shield_url")
+        if not _shield_is_broken(current_url):
+            shields_report.append({
+                "short_name": short_name, "name": t.get("name"), "fixed": False, "already_ok": True,
+            })
+            continue
+
+        fallback_url = _LIGA_MX_SHIELD_FALLBACK.get(short_name)
+        if not fallback_url:
+            shields_report.append({
+                "short_name": short_name, "name": t.get("name"), "fixed": False,
+                "before": current_url, "reason": "sin URL de respaldo para este short_name",
+            })
+            continue
+
+        await db.teams.update_one({"_id": t["_id"]}, {"$set": {"shield_url": fallback_url}})
+        shields_report.append({
+            "short_name": short_name, "name": t.get("name"), "fixed": True,
+            "before": current_url, "after": fallback_url,
+        })
+
+    jornadas_changed = sum(1 for r in jornadas_report if r.get("changed"))
+    shields_fixed = sum(1 for r in shields_report if r.get("fixed"))
+
+    logger.info(
+        f"audit-and-fix-jornadas: {jornadas_changed} jornada(s) corregidas, "
+        f"active_week={active_week}, {shields_fixed} escudo(s) reparados"
+    )
+    return {
+        "message": (
+            f"✅ Auditoría completada — {jornadas_changed} jornada(s) corregidas, "
+            f"jornada activa=semana {active_week}, {shields_fixed} escudo(s) reparados"
+        ),
+        "active_week": active_week,
+        "overlap_warning": overlap_warning,
+        "jornadas": jornadas_report,
+        "shields": shields_report,
+    }
+
+
 @router.post("/admin/fix-negative-scores")
 async def fix_negative_scores(current_user: dict = Depends(get_admin_user)):
     """
