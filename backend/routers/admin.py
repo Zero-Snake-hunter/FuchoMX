@@ -384,8 +384,11 @@ async def close_jornada(jornada_id: str, reminder_hours: int = 2, current_user: 
 
     next_info = None
     if next_jornada:
+        # status="in_progress" (no "upcoming") — se activa de inmediato aunque
+        # su start_date sea futura, para que los usuarios puedan hacer picks
+        # desde que se cierra la jornada anterior, sin hueco entre jornadas.
         await db.jornadas.update_one({"_id": next_jornada["_id"]}, {"$set": {
-            "status": "upcoming", "is_active": True,
+            "status": "in_progress", "is_active": True,
             "reminder_hours": reminder_hours, "notified_reminder": False,
         }})
         await db.matches.update_many(
@@ -1513,6 +1516,13 @@ async def audit_and_fix_jornadas(current_user: dict = Depends(get_admin_user)):
     week_number propio — así que ese es el único criterio usado para no
     perder ninguno.
 
+    Si ninguna jornada califica como in_progress por fecha (la anterior ya
+    cerró pero la siguiente todavía no arranca según su start_date),
+    promueve a in_progress la "upcoming" de week_number más bajo que ya
+    tenga partidos cargados — nunca debe quedar un hueco sin jornada
+    activa entre jornadas, mismo criterio que ya aplica
+    /admin/quiniela/cerrar-jornada al activar la siguiente de inmediato.
+
     Además revisa shield_url de los 18 equipos liga_mx: si está vacío,
     null o no es una URL http(s), lo repara con el fallback de ESPN. Los
     que ya tienen una URL válida (aunque no sea de ESPN, ej. TheSportsDB)
@@ -1559,6 +1569,25 @@ async def audit_and_fix_jornadas(current_user: dict = Depends(get_admin_user)):
             f"{len(in_progress_items)} jornadas calificaban como in_progress por fechas "
             f"superpuestas — se conservó week_number={keep['jornada']['week_number']} como activa."
         )
+
+    # Si ninguna jornada calificó como in_progress por fecha (ej. la anterior
+    # ya cerró pero la siguiente todavía no arranca según su start_date),
+    # activamos la "upcoming" de week_number más bajo que ya tenga partidos
+    # cargados — evita el hueco "sin jornada activa" entre jornadas, mismo
+    # criterio que ya usa /admin/quiniela/cerrar-jornada.
+    promoted_week = None
+    if not any(c["new_status"] == "in_progress" for c in computed):
+        upcoming_sorted = sorted(
+            (c for c in computed if c["new_status"] == "upcoming"),
+            key=lambda c: c["jornada"]["week_number"],
+        )
+        for c in upcoming_sorted:
+            match_count = await db.matches.count_documents({"jornada_id": c["jornada"]["_id"]})
+            if match_count > 0:
+                c["new_status"] = "in_progress"
+                c["new_is_active"] = True
+                promoted_week = c["jornada"]["week_number"]
+                break
 
     jornadas_report = []
     active_week = None
@@ -1629,7 +1658,8 @@ async def audit_and_fix_jornadas(current_user: dict = Depends(get_admin_user)):
 
     logger.info(
         f"audit-and-fix-jornadas: {jornadas_changed} jornada(s) corregidas, "
-        f"active_week={active_week}, {shields_fixed} escudo(s) reparados"
+        f"active_week={active_week}, promoted_week_no_date_match={promoted_week}, "
+        f"{shields_fixed} escudo(s) reparados"
     )
     return {
         "message": (
@@ -1638,6 +1668,7 @@ async def audit_and_fix_jornadas(current_user: dict = Depends(get_admin_user)):
         ),
         "active_week": active_week,
         "overlap_warning": overlap_warning,
+        "promoted_week_no_date_match": promoted_week,
         "jornadas": jornadas_report,
         "shields": shields_report,
     }
