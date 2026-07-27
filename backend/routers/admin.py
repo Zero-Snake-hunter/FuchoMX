@@ -386,6 +386,9 @@ async def close_jornada(jornada_id: str, reminder_hours: int = 2, current_user: 
             "status": "upcoming", "is_active": True,
             "reminder_hours": reminder_hours, "notified_reminder": False,
         }})
+        await db.matches.update_many(
+            {"jornada_id": next_jornada["_id"]}, {"$set": {"locked": False}}
+        )
         _task = asyncio.create_task(notify_jornada_open(next_jornada["week_number"]))
         _bg_tasks.add(_task)
         _task.add_done_callback(_bg_tasks.discard)
