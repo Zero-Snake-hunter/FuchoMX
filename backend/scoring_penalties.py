@@ -154,6 +154,23 @@ async def apply_jornada_close_adjustments(jornada: dict, matches: list) -> dict:
     if not matches or any(m.get("status") != "finished" for m in matches):
         return {"applied": False, "reason": "jornada aún no cierra — hay partidos pendientes"}
 
+    # Guard real de la causa raíz de J3-J12 penalizadas por error: una
+    # jornada "upcoming" cuyo start_date todavía no llega NO puede tener
+    # partidos "finished" de verdad — si los tiene, son datos huérfanos de
+    # otra temporada (matches viejos del Clausura, ver deep-clean-jornadas)
+    # y "penalizar por no seleccionar" no tiene sentido porque el usuario ni
+    # siquiera podía seleccionar todavía. Sin este check, el auto-cierre del
+    # scheduler los trataba como jornadas legítimamente terminadas.
+    start_date = jornada.get("start_date")
+    if not start_date or start_date > datetime.utcnow():
+        return {
+            "applied": False,
+            "reason": (
+                "start_date de la jornada todavía no llega — los partidos 'finished' "
+                "son datos huérfanos, no se penaliza una jornada que no ha empezado"
+            ),
+        }
+
     jornada_obj_id = jornada["_id"]
     total_matches = len(matches)
     all_users = await db.users.find().to_list(100000)

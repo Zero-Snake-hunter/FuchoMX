@@ -141,7 +141,15 @@ async def _auto_close_and_advance_jornada():
 
     if jornada:
         matches = await db.matches.find({"jornada_id": jornada["_id"]}).to_list(100)
-        if matches and all(m.get("status") == "finished" for m in matches):
+        # Guard adicional a apply_jornada_close_adjustments (que ya bloquea
+        # esto): si el start_date de la jornada ni siquiera llegó, "todos
+        # finished" son matches huérfanos de otra temporada — no una
+        # jornada real ya jugada. Causa raíz de J3-J12 penalizadas por
+        # error cuando el auto-cierre las cerró en cascada antes de que
+        # deep-clean-jornadas les quitara esos matches viejos.
+        start_date = jornada.get("start_date")
+        started = bool(start_date) and start_date <= datetime.utcnow()
+        if matches and started and all(m.get("status") == "finished" for m in matches):
             result = await close_and_advance_jornada(jornada["_id"])
             next_info = result.get("next_jornada")
             if next_info:

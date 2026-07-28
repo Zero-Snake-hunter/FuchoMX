@@ -1979,3 +1979,106 @@ async def debug_points_log(user_id: str, current_user: dict = Depends(get_admin_
         "points_log_sum_all_sources": total_all_sources,
         "entries": entries,
     }
+
+
+# Fuentes que solo tienen sentido si la jornada realmente cerró (nunca para
+# una "upcoming" — no se puede penalizar por no seleccionar en una jornada
+# donde el usuario ni siquiera podía seleccionar todavía).
+_INVALID_ON_UPCOMING_SOURCES = [
+    "QUINIELA_PENALIZACION", "ONCE_PENALIZACION",
+    "QUINIELA_BONUS_NUEVO", "ONCE_BONUS_NUEVO",
+]
+# source -> campo de users.* que se le sumó cuando se insertó el points_log
+# (ver scoring_penalties.py) — hay que revertirlo antes de borrar el log.
+_SOURCE_USER_FIELD = {
+    "QUINIELA_PENALIZACION": "total_points",
+    "QUINIELA_BONUS_NUEVO": "total_points",
+    "ONCE_PENALIZACION": "fantasy_total_points",
+    "ONCE_BONUS_NUEVO": "fantasy_total_points",
+}
+
+
+@router.post("/admin/purge-invalid-penalties")
+async def purge_invalid_penalties(current_user: dict = Depends(get_admin_user)):
+    """
+    Causa raíz (ver scheduler.py/scoring_penalties.py, ya bloqueada con un
+    guard de start_date): jornadas "upcoming" con matches viejos huérfanos
+    del Clausura marcados "finished" hicieron que _auto_close_and_advance_jornada
+    las cerrara en cascada y les aplicara castigos/bonus por "no
+    seleccionar" — J3 hasta J12 quedaron con QUINIELA_PENALIZACION/
+    ONCE_PENALIZACION/*_BONUS_NUEVO que nunca debieron existir.
+
+    Este endpoint limpia el daño ya hecho:
+    1. Busca points_log con esas 4 fuentes cuyo jornada_id apunte a una
+       jornada con status="upcoming".
+    2. Revierte el efecto en users.total_points/fantasy_total_points
+       (con el mismo signo invertido de lo que se sumó al insertarlos).
+    3. Borra esos points_log.
+    4. Resetea processed=False en las jornadas afectadas — si no, cuando
+       esa jornada sí termine de verdad, _process_jornada_core la saltaría
+       pensando que ya se procesó.
+    """
+    upcoming_jornadas = await db.jornadas.find({"status": "upcoming"}).to_list(200)
+    upcoming_ids = {j["_id"] for j in upcoming_jornadas}
+    if not upcoming_ids:
+        return {"message": "No hay jornadas 'upcoming' — nada que revisar", "deleted": 0, "by_jornada": []}
+
+    bad_entries = await db.points_log.find({
+        "source": {"$in": _INVALID_ON_UPCOMING_SOURCES},
+        "jornada_id": {"$in": list(upcoming_ids)},
+    }).to_list(10000)
+
+    if not bad_entries:
+        return {"message": "No se encontraron penalizaciones inválidas", "deleted": 0, "by_jornada": []}
+
+    by_jornada: dict = {}
+    reversals: dict = {}
+    for e in bad_entries:
+        jid = e["jornada_id"]
+        bucket = by_jornada.setdefault(jid, {"count": 0, "points_sum": 0})
+        bucket["count"] += 1
+        bucket["points_sum"] += e.get("points", 0)
+
+        uid = e["user_id"]
+        field = _SOURCE_USER_FIELD.get(e.get("source"), "total_points")
+        reversals.setdefault(uid, {}).setdefault(field, 0)
+        reversals[uid][field] -= e.get("points", 0)
+
+    for uid, fields in reversals.items():
+        inc = {f: v for f, v in fields.items() if v != 0}
+        if inc:
+            await db.users.update_one({"_id": uid}, {"$inc": inc})
+
+    entry_ids = [e["_id"] for e in bad_entries]
+    delete_result = await db.points_log.delete_many({"_id": {"$in": entry_ids}})
+
+    await db.jornadas.update_many(
+        {"_id": {"$in": list(by_jornada.keys())}},
+        {"$set": {"processed": False}, "$unset": {"processed_at": ""}},
+    )
+
+    jornadas_by_id = {j["_id"]: j for j in upcoming_jornadas}
+    report = [
+        {
+            "jornada_id": str(jid),
+            "week_number": jornadas_by_id.get(jid, {}).get("week_number"),
+            "entries_deleted": data["count"],
+            "points_reverted": data["points_sum"],
+        }
+        for jid, data in by_jornada.items()
+    ]
+    report.sort(key=lambda r: r["week_number"] or 0)
+
+    logger.info(
+        f"purge-invalid-penalties: {delete_result.deleted_count} registro(s) eliminados en "
+        f"{len(report)} jornada(s) upcoming, {len(reversals)} usuario(s) afectados"
+    )
+    return {
+        "message": (
+            f"✅ {delete_result.deleted_count} registro(s) inválido(s) eliminados de "
+            f"{len(report)} jornada(s) upcoming"
+        ),
+        "deleted": delete_result.deleted_count,
+        "users_affected": len(reversals),
+        "by_jornada": report,
+    }
