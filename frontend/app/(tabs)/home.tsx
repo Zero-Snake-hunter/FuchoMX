@@ -15,6 +15,8 @@ import { useAuth } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { StreakWidget } from '../../components/StreakWidget';
 import { AchievementToast } from '../../components/AchievementToast';
+import { RulesModal } from '../../components/RulesModal';
+import { InstagramFooter } from '../../components/InstagramFooter';
 import api from '../lib/api';
 import { SPONSORS, getNombreTorneo } from '../config/sponsors';
 
@@ -24,6 +26,7 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const [streaks, setStreaks] = useState({ quiniela_current: 0, win_current: 0, correct_current: 0 });
   const [toast, setToast] = useState({ visible: false, emoji: '', title: '', description: '' });
+  const [showRules, setShowRules] = useState(false);
   const [liveScores, setLiveScores] = useState<{
     has_live: boolean;
     live_matches: { home_name: string; away_name: string; home_score: number | null; away_score: number | null; game_time: string; status: string; start_time: string }[];
@@ -100,7 +103,7 @@ export default function HomeScreen() {
         style={styles.scrollView}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: insets.bottom + 100 }
+          { paddingBottom: insets.bottom + 140 }
         ]}
         showsVerticalScrollIndicator={false}
       >
@@ -189,6 +192,14 @@ export default function HomeScreen() {
               </View>
             </TouchableOpacity>
           </View>
+
+          <TouchableOpacity
+            style={styles.rulesButton}
+            activeOpacity={0.8}
+            onPress={() => setShowRules(true)}
+          >
+            <Text style={styles.rulesButtonText}>📖 Reglas</Text>
+          </TouchableOpacity>
 
           <View style={styles.infoBox}>
             <Ionicons name="information-circle" size={20} color="#0047AB" />
@@ -315,6 +326,10 @@ export default function HomeScreen() {
         description={toast.description}
         onHide={() => setToast(t => ({ ...t, visible: false }))}
       />
+
+      <RulesModal visible={showRules} onClose={() => setShowRules(false)} />
+
+      <InstagramFooter />
     </View>
   );
 }
@@ -416,6 +431,21 @@ const styles = StyleSheet.create({
   },
   cardFooter: {
     alignItems: 'flex-end',
+  },
+  rulesButton: {
+    alignSelf: 'center',
+    backgroundColor: '#1a1a1a',
+    borderWidth: 1,
+    borderColor: '#E6394650',
+    borderRadius: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    marginBottom: 20,
+  },
+  rulesButtonText: {
+    color: '#E63946',
+    fontSize: 14,
+    fontWeight: '700',
   },
   infoBox: {
     flexDirection: 'row',
