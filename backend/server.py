@@ -3,6 +3,7 @@ import logging
 from fastapi import FastAPI, APIRouter
 from starlette.middleware.cors import CORSMiddleware
 
+from config import ENABLE_MIGRATIONS
 from database import db
 from scheduler import shutdown_app, start_scheduler
 
@@ -35,6 +36,17 @@ api_router.include_router(liguilla_router.router)
 api_router.include_router(achievements_router.router)
 api_router.include_router(stats_router.router)
 api_router.include_router(admin_router.router)
+
+# Endpoints de migración/seed de un solo uso — solo se registran (existen)
+# si ENABLE_MIGRATIONS=true está en las variables de entorno. Por default
+# no están montados: ni siquiera responden 403, directamente 404, así que
+# no pueden dispararse por accidente en producción normal.
+if ENABLE_MIGRATIONS:
+    from routers import admin_migrations as admin_migrations_router
+    api_router.include_router(admin_migrations_router.router)
+    logging.getLogger(__name__).warning(
+        "⚠️ ENABLE_MIGRATIONS=true — endpoints de migración de un solo uso están activos"
+    )
 
 
 @app.get("/")

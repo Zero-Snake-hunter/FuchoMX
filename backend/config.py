@@ -18,6 +18,11 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 30  # 30 días
 
 ADMIN_EMAIL = "contacto@distrito.digital"
 
+# Habilita los endpoints de migración/seed de un solo uso (routers/
+# admin_migrations.py) — apagado por default para que no puedan dispararse
+# por accidente en producción normal. Ver ese archivo para el detalle.
+ENABLE_MIGRATIONS = os.environ.get('ENABLE_MIGRATIONS', 'false').lower() == 'true'
+
 # Email (Resend)
 RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://fucho.com.mx')
