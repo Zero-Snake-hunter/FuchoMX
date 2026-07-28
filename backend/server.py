@@ -87,7 +87,8 @@ app.include_router(api_router)
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=["*"],
+    allow_origins=["https://fucho.com.mx", "https://www.fucho.com.mx"],
+    allow_origin_regex=r"https://.*\.pages\.dev",
     allow_methods=["*"],
     allow_headers=["*"],
 )
