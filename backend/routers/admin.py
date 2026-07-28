@@ -1920,3 +1920,62 @@ async def update_reminder_hours(
 
     logger.info(f"Admin: reminder_hours de jornada {jornada_id} → {reminder_hours}h")
     return {"message": f"✅ Recordatorio ajustado a {reminder_hours}h antes del partido"}
+
+
+@router.get("/admin/debug/points-log/{user_id}")
+async def debug_points_log(user_id: str, current_user: dict = Depends(get_admin_user)):
+    """
+    Diagnóstico: TODOS los points_log de un usuario, con jornada_id,
+    week_number/competition resueltos (para ver si el punto realmente
+    pertenece a la jornada que debería), source, points y created_at.
+    user_id acepta un ObjectId válido o un email — así no hace falta
+    buscar el _id primero en /admin/stats (que solo trae los 5 usuarios
+    más recientes, no sirve para encontrar cuentas viejas como la del
+    admin).
+    """
+    try:
+        user_oid = ObjectId(user_id)
+        user = await db.users.find_one({"_id": user_oid})
+    except Exception:
+        user = await db.users.find_one({"email": user_id})
+
+    if not user:
+        raise HTTPException(status_code=404, detail=f"Usuario no encontrado: {user_id}")
+
+    user_oid = user["_id"]
+    points = await db.points_log.find({"user_id": user_oid}).sort("created_at", 1).to_list(1000)
+
+    jornada_ids = [p["jornada_id"] for p in points if p.get("jornada_id")]
+    jornadas = await db.jornadas.find({"_id": {"$in": jornada_ids}}).to_list(len(jornada_ids) or 1)
+    jornada_by_id = {j["_id"]: j for j in jornadas}
+
+    entries = []
+    total_all_sources = 0
+    for p in points:
+        jornada_id = p.get("jornada_id")
+        jornada = jornada_by_id.get(jornada_id) if jornada_id else None
+        pts = p.get("points", 0)
+        total_all_sources += pts
+        entries.append({
+            "id": str(p["_id"]),
+            "jornada_id": str(jornada_id) if jornada_id else None,
+            "jornada_found": jornada is not None,
+            "week_number": jornada.get("week_number") if jornada else None,
+            "competition": jornada.get("competition") if jornada else None,
+            "source": p.get("source"),
+            "points": pts,
+            "matches_sin_pick": p.get("matches_sin_pick"),
+            "created_at": p.get("created_at").isoformat() if p.get("created_at") else None,
+        })
+
+    return {
+        "user": {
+            "id": str(user_oid),
+            "email": user.get("email"),
+            "display_name": user.get("display_name"),
+            "total_points_field": user.get("total_points", 0),
+        },
+        "points_log_count": len(entries),
+        "points_log_sum_all_sources": total_all_sources,
+        "entries": entries,
+    }
