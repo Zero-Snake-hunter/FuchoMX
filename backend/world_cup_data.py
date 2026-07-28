@@ -4,6 +4,14 @@ world_cup_data.py
 Datos temporales del Mundial 2026.
 Al terminar el torneo, reemplazar este archivo con los datos de Liga MX.
 Estructura diseñada para fácil reemplazo — no modifica lógica esencial del backend.
+
+ARCHIVADO (julio 2026): el torneo terminó y la app migró a Liga MX Apertura
+2026 (ver routers/admin_migrations.py::migrate_apertura_2026). Este archivo
+ya no se importa desde ningún lado del backend — WORLD_CUP_TEAMS nunca llegó
+a usarse en producción (seed-world-cup terminó usando su propia lista TEAMS_WC
+inline). Se conserva sin borrar por si se necesita referenciar el Mundial
+pasado más adelante — no se carga en el arranque del servidor salvo que algo
+vuelva a importarlo explícitamente.
 """
 
 WORLD_CUP_TEAMS = {

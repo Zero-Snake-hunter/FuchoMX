@@ -3,6 +3,14 @@ world_cup_players_data.py
 -------------------------
 Plantillas oficiales Mundial 2026 — 48 selecciones.
 Datos temporales. Al terminar el torneo se reemplaza por plantillas de Liga MX.
+
+ARCHIVADO (julio 2026): el torneo terminó y la app migró a Liga MX Apertura
+2026. Este archivo (83KB) ya NO se importa a nivel de módulo en ningún lado
+del backend — el único punto que lo usa es un import local (lazy, dentro de
+la función) en routers/admin_migrations.py::seed_world_cup_players, que solo
+existe si ENABLE_MIGRATIONS=true. En arranque normal del servidor este
+archivo nunca se carga. Se conserva sin borrar por si se necesita
+referenciar el Mundial pasado más adelante.
 """
 
 WC_SQUADS = {
