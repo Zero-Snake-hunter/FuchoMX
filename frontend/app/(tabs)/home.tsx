@@ -45,7 +45,9 @@ export default function HomeScreen() {
   useEffect(() => {
     api.get('/api/achievements/my').then(res => {
       setStreaks(res.data.streaks);
-    }).catch(() => {});
+    }).catch((error) => {
+      console.warn('[Home] No se pudieron cargar las rachas:', error);
+    });
   }, []);
 
   // ── EN VIVO polling every 60s ──────────────────────────────────────────
@@ -53,7 +55,9 @@ export default function HomeScreen() {
     const fetchLive = () => {
       api.get('/api/jornadas/current/live-scores')
         .then(res => setLiveScores(res.data))
-        .catch(() => {});
+        .catch((error) => {
+          console.warn('[Home] No se pudo actualizar el marcador en vivo:', error);
+        });
     };
     fetchLive();
     const interval = setInterval(fetchLive, 60_000);
@@ -65,7 +69,9 @@ export default function HomeScreen() {
     const fetchJornada = () => {
       api.get('/api/jornadas/current')
         .then(res => setJornadaMatches(res.data?.jornada?.matches || []))
-        .catch(() => {});
+        .catch((error) => {
+          console.warn('[Home] No se pudo actualizar la jornada:', error);
+        });
     };
     fetchJornada();
     const interval = setInterval(fetchJornada, 60_000);

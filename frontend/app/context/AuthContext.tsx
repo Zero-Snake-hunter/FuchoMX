@@ -16,6 +16,8 @@ interface AuthContextType {
   token: string | null;
   loading: boolean;
   isReady: boolean;
+  authError: string | null;
+  clearAuthError: () => void;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, displayName: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -29,6 +31,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isReady, setIsReady] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const clearAuthError = () => setAuthError(null);
 
   useEffect(() => {
     loadStoredAuth();
@@ -168,6 +172,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('✅ [AuthContext] RefreshUser: Datos actualizados');
     } catch (error) {
       console.error('❌ [AuthContext] RefreshUser error:', error);
+      setAuthError('No se pudo actualizar tu sesión. Vuelve a iniciar sesión.');
       await logout();
     }
   };
@@ -179,6 +184,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         token,
         loading,
         isReady,
+        authError,
+        clearAuthError,
         login,
         register,
         logout,

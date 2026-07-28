@@ -365,13 +365,13 @@ export default function AdminDashboard() {
             style={s.logoutBtn}
             onPress={async () => { await logout(); router.replace('/(auth)/login'); }}
           >
-            <Ionicons name="log-out-outline" size={18} color="#999" />
+            <Text style={s.logoutEmoji}>🚪</Text>
             <Text style={s.logoutText}>Cerrar sesión</Text>
           </TouchableOpacity>
         </ScrollView>
       ) : (
         <View style={s.center}>
-          <Ionicons name="alert-circle-outline" size={48} color="#666" />
+          <Text style={s.alertEmoji}>⚠️</Text>
           <Text style={s.loadingText}>No se pudieron cargar los datos</Text>
           <TouchableOpacity style={s.retryBtn} onPress={fetchStats}>
             <Text style={s.retryText}>Reintentar</Text>
@@ -435,6 +435,7 @@ const s = StyleSheet.create({
   emptyText:         { color: '#666', textAlign: 'center', padding: 16 },
   center:            { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16 },
   loadingText:       { color: '#AAAAAA', fontSize: 15 },
+  alertEmoji:        { fontSize: 44, lineHeight: 52 },
   retryBtn:          { backgroundColor: '#E63946', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 },
   retryText:         { color: '#FFF', fontWeight: 'bold' },
   totalBox:          { backgroundColor: '#E63946', borderRadius: 16, padding: 24, alignItems: 'center', marginBottom: 16 },
@@ -451,4 +452,5 @@ const s = StyleSheet.create({
   summaryValue:      { color: '#FFF', fontSize: 13, fontWeight: '700', textAlign: 'right', marginLeft: 12 },
   logoutBtn:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 16, marginTop: 8 },
   logoutText:        { color: '#999', fontSize: 14 },
+  logoutEmoji:       { fontSize: 15, lineHeight: 18 },
 });

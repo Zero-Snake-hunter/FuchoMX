@@ -16,6 +16,7 @@ import { useAuth } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../lib/api';
 import { SPONSORS } from '../config/sponsors';
+import { useToast } from '../context/ToastContext';
 
 interface MyStats {
   total_puntos: number;
@@ -34,6 +35,7 @@ export default function ProfileScreen() {
   const { user, logout, isReady } = useAuth();
   const [stats, setStats] = useState<MyStats | null>(null);
   const [loadingStats, setLoadingStats] = useState(true);
+  const { showToast } = useToast();
 
   useEffect(() => {
     if (isReady) loadStats();
@@ -43,8 +45,11 @@ export default function ProfileScreen() {
     try {
       const res = await api.get('/api/stats/my', { timeout: 3000 });
       setStats(res.data);
-    } catch (err) {
+    } catch (err: any) {
       console.log('Stats not available:', err);
+      if (err.response?.status !== 401) {
+        showToast('error', 'No se pudieron cargar tus estadísticas');
+      }
     } finally {
       setLoadingStats(false);
     }
@@ -204,7 +209,7 @@ export default function ProfileScreen() {
               showInfo('Notificaciones', 'Próximamente vas a poder configurar tus recordatorios de jornada desde aquí.');
             }}
           >
-            <Ionicons name="notifications-outline" size={24} color="#FFFFFF" />
+            <Text style={styles.menuEmoji}>🔔</Text>
             <Text style={styles.menuText}>Notificaciones</Text>
             <Ionicons name="chevron-forward" size={24} color="#666" />
           </TouchableOpacity>
@@ -216,7 +221,7 @@ export default function ProfileScreen() {
               showInfo('Ayuda', 'Escríbenos a contacto@distrito.digital y te ayudamos.');
             }}
           >
-            <Ionicons name="help-circle-outline" size={24} color="#FFFFFF" />
+            <Text style={styles.menuEmoji}>❓</Text>
             <Text style={styles.menuText}>Ayuda</Text>
             <Ionicons name="chevron-forward" size={24} color="#666" />
           </TouchableOpacity>
@@ -228,14 +233,14 @@ export default function ProfileScreen() {
               showInfo('Acerca de FuchoMX', 'La quiniela y el fantasy de Liga MX con tus cuates. 100% gratis, sin apuestas.');
             }}
           >
-            <Ionicons name="information-circle-outline" size={24} color="#FFFFFF" />
+            <Text style={styles.menuEmoji}>ℹ️</Text>
             <Text style={styles.menuText}>Acerca de</Text>
             <Ionicons name="chevron-forward" size={24} color="#666" />
           </TouchableOpacity>
         </View>
 
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={24} color="#DC143C" />
+          <Text style={styles.logoutEmoji}>🚪</Text>
           <Text style={styles.logoutText}>Cerrar sesión</Text>
         </TouchableOpacity>
 
@@ -360,6 +365,10 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     marginLeft: 16,
   },
+  menuEmoji: {
+    fontSize: 21,
+    lineHeight: 26,
+  },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -376,6 +385,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#DC143C',
     marginLeft: 12,
+  },
+  logoutEmoji: {
+    fontSize: 21,
+    lineHeight: 26,
   },
   version: {
     fontSize: 12,

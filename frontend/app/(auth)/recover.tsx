@@ -85,7 +85,7 @@ export default function RecoverPasswordScreen() {
         </TouchableOpacity>
 
         <View style={styles.header}>
-          <Ionicons name="key-outline" size={60} color="#DC143C" />
+          <Text style={styles.headerEmoji}>🔑</Text>
           <Text style={styles.title}>RECUPERAR CONTRASEÑA</Text>
           <Text style={styles.subtitle}>
             Ingresa tu correo electrónico y te enviaremos instrucciones
@@ -94,7 +94,7 @@ export default function RecoverPasswordScreen() {
 
         <View style={styles.form}>
           <View style={styles.inputContainer}>
-            <Ionicons name="mail-outline" size={20} color="#666" style={styles.inputIcon} />
+            <Text style={[styles.inputIcon, styles.inputIconEmoji]}>✉️</Text>
             <TextInput
               style={styles.input}
               placeholder="Correo electrónico"
@@ -154,6 +154,10 @@ const styles = StyleSheet.create({
     marginBottom: 48,
     marginTop: 40,
   },
+  headerEmoji: {
+    fontSize: 54,
+    lineHeight: 64,
+  },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
@@ -184,6 +188,10 @@ const styles = StyleSheet.create({
   },
   inputIcon: {
     marginLeft: 16,
+  },
+  inputIconEmoji: {
+    fontSize: 18,
+    lineHeight: 22,
   },
   input: {
     flex: 1,

@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../lib/api';
+import { useToast } from '../context/ToastContext';
 
 
 interface Ranking {
@@ -24,6 +25,7 @@ export default function RankingsScreen() {
   const [rankings, setRankings] = useState<Ranking[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const { showToast } = useToast();
 
   useEffect(() => {
     loadRankings();
@@ -35,6 +37,7 @@ export default function RankingsScreen() {
       setRankings(response.data.rankings);
     } catch (error) {
       console.error('Error loading rankings:', error);
+      showToast('error', 'No se pudieron cargar los rankings');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -75,7 +78,7 @@ export default function RankingsScreen() {
       >
         {rankings.length === 0 ? (
           <View style={styles.emptyState}>
-            <Ionicons name="podium-outline" size={80} color="#333" />
+            <Text style={styles.emptyEmoji}>🏆</Text>
             <Text style={styles.emptyTitle}>Aún no hay rankings</Text>
             <Text style={styles.emptyDescription}>
               Los rankings se mostrarán una vez que se calculen los puntos
@@ -143,6 +146,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 48,
     paddingTop: 120,
+  },
+  emptyEmoji: {
+    fontSize: 72,
+    lineHeight: 84,
   },
   emptyTitle: {
     fontSize: 24,

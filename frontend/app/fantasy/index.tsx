@@ -132,7 +132,7 @@ export default function FantasyDashboardScreen() {
                 }}
                 activeOpacity={0.7}
               >
-                <Ionicons name="create-outline" size={24} color="#FFFFFF" />
+                <Text style={styles.primaryButtonEmoji}>✏️</Text>
                 <Text style={styles.primaryButtonText}>ARMAR ALINEACIÓN</Text>
               </TouchableOpacity>
 
@@ -142,7 +142,7 @@ export default function FantasyDashboardScreen() {
                   onPress={() => router.push('/quiniela/leagues')}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name="people-outline" size={20} color="#0047AB" />
+                  <Text style={styles.secondaryButtonEmoji}>👥</Text>
                   <Text style={styles.secondaryButtonText}>Mis Ligas</Text>
                 </TouchableOpacity>
 
@@ -151,7 +151,7 @@ export default function FantasyDashboardScreen() {
                   onPress={() => router.push('/fantasy/rankings')}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name="trophy-outline" size={20} color="#0047AB" />
+                  <Text style={styles.secondaryButtonEmoji}>🏆</Text>
                   <Text style={styles.secondaryButtonText}>Rankings</Text>
                 </TouchableOpacity>
 
@@ -160,7 +160,7 @@ export default function FantasyDashboardScreen() {
                   onPress={() => router.push('/fantasy/create-team')}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name="pencil-outline" size={20} color="#0047AB" />
+                  <Text style={styles.secondaryButtonEmoji}>✏️</Text>
                   <Text style={styles.secondaryButtonText}>Editar</Text>
                 </TouchableOpacity>
               </View>
@@ -178,7 +178,7 @@ export default function FantasyDashboardScreen() {
                 onPress={handleCreateTeam}
                 activeOpacity={0.7}
               >
-                <Ionicons name="add-circle-outline" size={24} color="#FFFFFF" />
+                <Text style={styles.primaryButtonEmoji}>➕</Text>
                 <Text style={styles.primaryButtonText}>CREAR MI EQUIPO</Text>
               </TouchableOpacity>
             </View>
@@ -334,6 +334,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     letterSpacing: 1,
   },
+  primaryButtonEmoji: {
+    fontSize: 20,
+    lineHeight: 24,
+  },
   quickActions: {
     flexDirection: 'row',
     gap: 12,
@@ -355,6 +359,10 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
+  },
+  secondaryButtonEmoji: {
+    fontSize: 17,
+    lineHeight: 20,
   },
   infoBox: {
     flexDirection: 'row',

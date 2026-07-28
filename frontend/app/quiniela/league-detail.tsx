@@ -80,8 +80,11 @@ export default function LeagueDetailScreen() {
       if (response.data.jornada?.id) {
         await loadJornadaRankings(response.data.jornada.id);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading jornada:', error);
+      if (error.response?.status !== 401) {
+        showToast('error', 'No se pudo cargar la jornada actual');
+      }
     }
   };
 
@@ -107,8 +110,11 @@ export default function LeagueDetailScreen() {
         `/api/leagues/${leagueId}/rankings/jornada/${jornadaId}`
       );
       setJornadaRankings(response.data.rankings);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading jornada rankings:', error);
+      if (error.response?.status !== 401) {
+        showToast('error', 'No se pudo cargar el ranking de la jornada');
+      }
     }
   };
 
@@ -297,7 +303,7 @@ export default function LeagueDetailScreen() {
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>{league?.name}</Text>
         <TouchableOpacity onPress={shareLeague} style={styles.shareButton}>
-          <Ionicons name="share-outline" size={24} color="#FFFFFF" />
+          <Text style={styles.shareButtonEmoji}>📤</Text>
         </TouchableOpacity>
       </View>
 
@@ -332,7 +338,7 @@ export default function LeagueDetailScreen() {
               <Text style={styles.codeValue}>{league?.code}</Text>
             </View>
             <View style={styles.copyButton}>
-              <Ionicons name="copy-outline" size={20} color="#0047AB" />
+              <Text style={styles.copyButtonEmoji}>📋</Text>
               <Text style={styles.copyText}>Copiar</Text>
             </View>
           </TouchableOpacity>
@@ -410,7 +416,7 @@ export default function LeagueDetailScreen() {
                   jornadaRankings.map(renderJornadaRankingItem)
                 ) : (
                   <View style={styles.emptyRanking}>
-                    <Ionicons name="hourglass-outline" size={48} color="#333" />
+                    <Text style={styles.emptyRankingEmoji}>⏳</Text>
                     <Text style={styles.emptyText}>
                       Los puntos se calcularán al finalizar la jornada
                     </Text>
@@ -426,7 +432,7 @@ export default function LeagueDetailScreen() {
         {/* Results Button for Quiniela */}
         {!isFantasy && jornada?.status === 'finished' && (
           <TouchableOpacity style={styles.resultsButton} onPress={viewResults}>
-            <Ionicons name="grid-outline" size={20} color="#FFFFFF" />
+            <Text style={styles.resultsButtonEmoji}>⚏</Text>
             <Text style={styles.resultsButtonText}>Ver Matriz de Resultados</Text>
           </TouchableOpacity>
         )}
@@ -470,6 +476,10 @@ const styles = StyleSheet.create({
   },
   shareButton: {
     padding: 8,
+  },
+  shareButtonEmoji: {
+    fontSize: 20,
+    lineHeight: 24,
   },
   scrollView: {
     flex: 1,
@@ -544,6 +554,10 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
     gap: 6,
+  },
+  copyButtonEmoji: {
+    fontSize: 16,
+    lineHeight: 18,
   },
   copyText: {
     fontSize: 12,
@@ -782,6 +796,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 32,
   },
+  emptyRankingEmoji: {
+    fontSize: 44,
+    lineHeight: 52,
+  },
   emptyText: {
     fontSize: 14,
     color: '#666',
@@ -803,5 +821,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#FFFFFF',
+  },
+  resultsButtonEmoji: {
+    fontSize: 18,
+    lineHeight: 20,
   },
 });

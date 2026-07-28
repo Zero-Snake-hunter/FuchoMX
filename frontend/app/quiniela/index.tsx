@@ -180,8 +180,11 @@ export default function QuinielaScreen() {
     try {
       const res = await api.get('/api/quiniela/jornadas');
       setJornadasList(res.data.jornadas || []);
-    } catch (error) {
+    } catch (error: any) {
       console.log('[Quiniela] Error cargando lista de jornadas:', error);
+      if (error.response?.status !== 401) {
+        showToast('error', 'No se pudo cargar la lista de jornadas');
+      }
     }
   };
 
@@ -232,6 +235,7 @@ export default function QuinielaScreen() {
           // 404 significa que no hay picks previos (normal)
           if (error.response?.status !== 404 && error.response?.status !== 401) {
             console.log('Error loading picks:', error);
+            showToast('error', 'No se pudieron cargar tus picks guardados');
           }
         }
       }
@@ -356,7 +360,9 @@ export default function QuinielaScreen() {
         if (streakRes.status === 'fulfilled') {
           streak = streakRes.value.data.streaks?.quiniela_current;
         }
-      } catch (_) {}
+      } catch (error) {
+        console.warn('[Quiniela] No se pudieron cargar datos extra para la tarjeta de compartir:', error);
+      }
 
       setShareData({
         mode: 'result',
@@ -396,7 +402,7 @@ export default function QuinielaScreen() {
   if (!jornada) {
     return (
       <View style={styles.emptyContainer}>
-        <Ionicons name="calendar-outline" size={80} color="#333" />
+        <Text style={styles.emptyEmoji}>📅</Text>
         <Text style={styles.emptyTitle}>No hay jornada activa</Text>
         <Text style={styles.emptyText}>Vuelve pronto para participar</Text>
       </View>
@@ -491,7 +497,7 @@ export default function QuinielaScreen() {
                   onPress={() => setShareData({ ...shareData })}
                   activeOpacity={0.8}
                 >
-                  <Ionicons name="share-social-outline" size={16} color="#FFF" />
+                  <Text style={styles.shareBtnEmoji}>📤</Text>
                   <Text style={styles.shareBtnText}>Compartir resultado</Text>
                 </TouchableOpacity>
               )}
@@ -513,7 +519,7 @@ export default function QuinielaScreen() {
             style={styles.actionButton}
             onPress={() => router.push('/quiniela/leagues')}
           >
-            <Ionicons name="people-outline" size={20} color="#0047AB" />
+            <Text style={styles.actionEmoji}>👥</Text>
             <Text style={styles.actionText}>Mis Ligas</Text>
           </TouchableOpacity>
 
@@ -521,7 +527,7 @@ export default function QuinielaScreen() {
             style={styles.actionButton}
             onPress={() => router.push('/quiniela/rankings')}
           >
-            <Ionicons name="trophy-outline" size={20} color="#FFD700" />
+            <Text style={styles.actionEmoji}>🏆</Text>
             <Text style={styles.actionText}>Rankings</Text>
           </TouchableOpacity>
         </View>
@@ -654,6 +660,10 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     marginTop: 24,
   },
+  emptyEmoji: {
+    fontSize: 72,
+    lineHeight: 84,
+  },
   emptyText: {
     fontSize: 14,
     color: '#999',
@@ -743,6 +753,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
+  shareBtnEmoji: {
+    fontSize: 14,
+    lineHeight: 16,
+  },
   submittedText: {
     color: '#00A551',
     fontSize: 14,
@@ -792,6 +806,10 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
+  },
+  actionEmoji: {
+    fontSize: 17,
+    lineHeight: 20,
   },
   matchesContainer: {
     gap: 12,

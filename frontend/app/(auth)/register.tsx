@@ -85,6 +85,7 @@ export default function RegisterScreen() {
       // llenado o vencido justo en este momento; el usuario ya puede unirse
       // a mano desde Mis Ligas si hace falta.
       console.log('No se pudo unir a la liga pendiente:', error.response?.data?.detail);
+      showToast('error', error.response?.data?.detail || 'No se pudo unir a la liga automáticamente. Intenta con el código desde Mis Ligas.');
     } finally {
       await AsyncStorage.multiRemove(['pending_league_code', 'pending_league_name']);
     }
@@ -130,7 +131,7 @@ export default function RegisterScreen() {
 
         <View style={styles.form}>
           <View style={styles.inputContainer}>
-            <Ionicons name="person-outline" size={20} color="#666" style={styles.inputIcon} />
+            <Text style={[styles.inputIcon, styles.inputIconEmoji]}>👤</Text>
             <TextInput
               style={styles.input}
               placeholder="Apodo o nombre corto (máx. 20)"
@@ -143,7 +144,7 @@ export default function RegisterScreen() {
           </View>
 
           <View style={styles.inputContainer}>
-            <Ionicons name="mail-outline" size={20} color="#666" style={styles.inputIcon} />
+            <Text style={[styles.inputIcon, styles.inputIconEmoji]}>✉️</Text>
             <TextInput
               style={styles.input}
               placeholder="Correo electrónico"
@@ -157,7 +158,7 @@ export default function RegisterScreen() {
           </View>
 
           <View style={styles.inputContainer}>
-            <Ionicons name="lock-closed-outline" size={20} color="#666" style={styles.inputIcon} />
+            <Text style={[styles.inputIcon, styles.inputIconEmoji]}>🔒</Text>
             <TextInput
               style={styles.input}
               placeholder="Contraseña"
@@ -171,16 +172,12 @@ export default function RegisterScreen() {
               onPress={() => setShowPassword(!showPassword)}
               style={styles.eyeIcon}
             >
-              <Ionicons
-                name={showPassword ? 'eye-outline' : 'eye-off-outline'}
-                size={20}
-                color="#666"
-              />
+              <Text style={styles.eyeEmoji}>{showPassword ? '👁️' : '🙈'}</Text>
             </TouchableOpacity>
           </View>
 
           <View style={styles.inputContainer}>
-            <Ionicons name="lock-closed-outline" size={20} color="#666" style={styles.inputIcon} />
+            <Text style={[styles.inputIcon, styles.inputIconEmoji]}>🔒</Text>
             <TextInput
               style={styles.input}
               placeholder="Confirmar contraseña"
@@ -292,6 +289,10 @@ const styles = StyleSheet.create({
   inputIcon: {
     marginLeft: 16,
   },
+  inputIconEmoji: {
+    fontSize: 18,
+    lineHeight: 22,
+  },
   input: {
     flex: 1,
     height: 56,
@@ -301,6 +302,10 @@ const styles = StyleSheet.create({
   },
   eyeIcon: {
     padding: 16,
+  },
+  eyeEmoji: {
+    fontSize: 18,
+    lineHeight: 20,
   },
   registerButton: {
     backgroundColor: '#DC143C',

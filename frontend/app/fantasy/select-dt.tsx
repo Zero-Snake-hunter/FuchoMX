@@ -11,6 +11,7 @@ import { useRouter } from 'expo-router';
 import { useFantasy } from '../context/FantasyContext';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../lib/api';
+import { useToast } from '../context/ToastContext';
 
 
 export default function SelectDTScreen() {
@@ -18,6 +19,7 @@ export default function SelectDTScreen() {
   const { setDTTeam } = useFantasy();
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { showToast } = useToast();
 
   useEffect(() => {
     loadTeams();
@@ -29,6 +31,7 @@ export default function SelectDTScreen() {
       setTeams(response.data.teams);
     } catch (error) {
       console.error('Error loading teams:', error);
+      showToast('error', 'No se pudieron cargar los equipos');
     } finally {
       setLoading(false);
     }

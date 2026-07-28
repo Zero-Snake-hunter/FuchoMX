@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../lib/api';
+import { useToast } from '../context/ToastContext';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface BreakdownItem {
@@ -152,6 +153,7 @@ export default function FantasyResultsScreen() {
   const [data, setData] = useState<ResultsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [jornadaId, setJornadaId] = useState<string | null>(params.jornada_id ?? null);
+  const { showToast } = useToast();
 
   useEffect(() => {
     const load = async () => {
@@ -165,7 +167,9 @@ export default function FantasyResultsScreen() {
         if (!jid) return;
         const res = await api.get(`/api/fantasy/results/${jid}`);
         setData(res.data);
-      } catch {
+      } catch (error) {
+        console.error('Error loading fantasy results:', error);
+        showToast('error', 'No se pudieron cargar tus resultados');
         setData({ has_lineup: false, team_name: '', total_points: 0, players: [], processed: false });
       } finally {
         setLoading(false);
@@ -229,7 +233,7 @@ export default function FantasyResultsScreen() {
           {/* Status badge */}
           {!data.processed && (
             <View style={s.pendingBadge}>
-              <Ionicons name="time-outline" size={14} color="#FFC107" />
+              <Text style={s.pendingEmoji}>🕐</Text>
               <Text style={s.pendingText}> Jornada en curso — puntos provisionales</Text>
             </View>
           )}
@@ -279,6 +283,7 @@ const s = StyleSheet.create({
   bannerPtsSub: { color: 'rgba(255,255,255,0.75)', fontSize: 10, fontWeight: '700', letterSpacing: 1.2 },
   pendingBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1A1500', borderRadius: 8, padding: 8, marginBottom: 8, borderWidth: 1, borderColor: '#FFC10740' },
   pendingText:  { color: '#FFC107', fontSize: 12, fontWeight: '600' },
+  pendingEmoji: { fontSize: 13, lineHeight: 15 },
   section:      { gap: 6 },
   sectionHeader:{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingLeft: 10, borderLeftWidth: 3, marginBottom: 2 },
   sectionTitle: { fontSize: 12, fontWeight: '900', letterSpacing: 1.5 },

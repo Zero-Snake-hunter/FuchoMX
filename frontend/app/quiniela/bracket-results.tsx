@@ -4,14 +4,24 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../lib/api';
+import { useToast } from '../context/ToastContext';
 
 export default function BracketResultsScreen() {
   const router = useRouter();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const { showToast } = useToast();
 
   useEffect(() => {
-    api.get('/api/liguilla/bracket').then(res => setData(res.data)).catch(() => {}).finally(() => setLoading(false));
+    api.get('/api/liguilla/bracket')
+      .then(res => setData(res.data))
+      .catch((error: any) => {
+        console.error('[BracketResults] Error loading bracket:', error);
+        if (error.response?.status !== 401) {
+          showToast('error', 'No se pudo cargar tu bracket');
+        }
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   const pred = data?.my_prediction;

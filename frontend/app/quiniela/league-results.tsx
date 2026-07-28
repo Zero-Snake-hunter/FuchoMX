@@ -11,6 +11,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../lib/api';
+import { useToast } from '../context/ToastContext';
 
 const { width } = Dimensions.get('window');
 
@@ -19,6 +20,7 @@ export default function LeagueResultsScreen() {
   const { token } = useAuth();
   const [results, setResults] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const { showToast } = useToast();
 
   useEffect(() => {
     loadResults();
@@ -32,8 +34,11 @@ export default function LeagueResultsScreen() {
       );
       setResults(response.data);
       console.log('✅ [LeagueResults] Resultados cargados');
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ [LeagueResults] Error loading results:', error);
+      if (error.response?.status !== 401) {
+        showToast('error', 'No se pudieron cargar los resultados');
+      }
     } finally {
       setLoading(false);
     }
@@ -50,7 +55,7 @@ export default function LeagueResultsScreen() {
   if (!results || results.results.length === 0) {
     return (
       <View style={styles.emptyContainer}>
-        <Ionicons name="grid-outline" size={80} color="#333" />
+        <Text style={styles.emptyEmoji}>⚏</Text>
         <Text style={styles.emptyTitle}>Sin resultados</Text>
         <Text style={styles.emptyText}>
           Los resultados aparecerán cuando finalice la jornada
@@ -184,6 +189,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 48,
+  },
+  emptyEmoji: {
+    fontSize: 72,
+    lineHeight: 84,
   },
   emptyTitle: {
     fontSize: 24,

@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../lib/api';
+import { useToast } from '../context/ToastContext';
 
 
 export default function SelectPositionScreen() {
@@ -16,6 +17,7 @@ export default function SelectPositionScreen() {
   const { position, posType } = useLocalSearchParams();
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { showToast } = useToast();
 
   useEffect(() => {
     loadTeams();
@@ -27,6 +29,7 @@ export default function SelectPositionScreen() {
       setTeams(response.data.teams);
     } catch (error) {
       console.error('Error loading teams:', error);
+      showToast('error', 'No se pudieron cargar los equipos');
     } finally {
       setLoading(false);
     }

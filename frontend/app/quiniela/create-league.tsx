@@ -99,7 +99,11 @@ export default function CreateLeagueScreen() {
 
           <View style={styles.actions}>
             <TouchableOpacity style={styles.actionButton} onPress={copyCode}>
-              <Ionicons name={copied ? 'checkmark' : 'copy-outline'} size={24} color="#FFFFFF" />
+              {copied ? (
+                <Ionicons name="checkmark" size={24} color="#FFFFFF" />
+              ) : (
+                <Text style={styles.actionButtonEmoji}>📋</Text>
+              )}
               <Text style={styles.actionButtonText}>{copied ? '¡Copiado!' : 'Copiar Código'}</Text>
             </TouchableOpacity>
 
@@ -107,7 +111,7 @@ export default function CreateLeagueScreen() {
               style={[styles.actionButton, styles.actionButtonSecondary]}
               onPress={shareCode}
             >
-              <Ionicons name="share-outline" size={24} color="#FFFFFF" />
+              <Text style={styles.actionButtonEmoji}>📤</Text>
               <Text style={styles.actionButtonText}>Compartir</Text>
             </TouchableOpacity>
           </View>
@@ -337,6 +341,10 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
+  },
+  actionButtonEmoji: {
+    fontSize: 22,
+    lineHeight: 24,
   },
   continueButton: {
     backgroundColor: '#DC143C',

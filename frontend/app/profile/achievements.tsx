@@ -11,6 +11,7 @@ import { useRouter } from 'expo-router';
 import api from '../lib/api';
 import { SPONSORS } from '../config/sponsors';
 import ShareResultCard, { ShareResultData } from '../components/ShareResultCard';
+import { useToast } from '../context/ToastContext';
 
 const { width } = Dimensions.get('window');
 
@@ -157,6 +158,7 @@ export default function AchievementsScreen() {
   const [loading,setLoading]= useState(true);
   const [filter, setFilter] = useState('all');
   const [shareAchievement, setShareAchievement] = useState<ShareResultData | null>(null);
+  const { showToast } = useToast();
 
   useEffect(() => { load(); }, []);
 
@@ -164,8 +166,11 @@ export default function AchievementsScreen() {
     try {
       const res = await api.get('/api/achievements/my');
       setData(res.data);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      if (e.response?.status !== 401) {
+        showToast('error', 'No se pudieron cargar tus logros');
+      }
     } finally {
       setLoading(false);
     }

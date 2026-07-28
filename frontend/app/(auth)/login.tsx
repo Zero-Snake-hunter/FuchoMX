@@ -14,7 +14,6 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
-import { Ionicons } from '@expo/vector-icons';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -64,7 +63,7 @@ export default function LoginScreen() {
 
         <View style={styles.form}>
           <View style={styles.inputContainer}>
-            <Ionicons name="mail-outline" size={20} color="#666" style={styles.inputIcon} />
+            <Text style={[styles.inputIcon, styles.inputIconEmoji]}>✉️</Text>
             <TextInput
               style={styles.input}
               placeholder="Correo electrónico"
@@ -78,7 +77,7 @@ export default function LoginScreen() {
           </View>
 
           <View style={styles.inputContainer}>
-            <Ionicons name="lock-closed-outline" size={20} color="#666" style={styles.inputIcon} />
+            <Text style={[styles.inputIcon, styles.inputIconEmoji]}>🔒</Text>
             <TextInput
               style={styles.input}
               placeholder="Contraseña"
@@ -92,11 +91,7 @@ export default function LoginScreen() {
               onPress={() => setShowPassword(!showPassword)}
               style={styles.eyeIcon}
             >
-              <Ionicons
-                name={showPassword ? 'eye-outline' : 'eye-off-outline'}
-                size={20}
-                color="#666"
-              />
+              <Text style={styles.eyeEmoji}>{showPassword ? '👁️' : '🙈'}</Text>
             </TouchableOpacity>
           </View>
 
@@ -178,6 +173,10 @@ const styles = StyleSheet.create({
   inputIcon: {
     marginLeft: 16,
   },
+  inputIconEmoji: {
+    fontSize: 18,
+    lineHeight: 22,
+  },
   input: {
     flex: 1,
     height: 56,
@@ -187,6 +186,10 @@ const styles = StyleSheet.create({
   },
   eyeIcon: {
     padding: 16,
+  },
+  eyeEmoji: {
+    fontSize: 18,
+    lineHeight: 20,
   },
   forgotButton: {
     alignSelf: 'flex-end',

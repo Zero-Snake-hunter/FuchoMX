@@ -75,7 +75,7 @@ export default function ResetPasswordScreen() {
         </TouchableOpacity>
 
         <View style={styles.header}>
-          <Ionicons name="lock-open-outline" size={60} color="#DC143C" />
+          <Text style={styles.headerEmoji}>🔓</Text>
           <Text style={styles.title}>NUEVA CONTRASEÑA</Text>
           <Text style={styles.subtitle}>
             Elige una contraseña nueva para tu cuenta de FuchoMX
@@ -84,7 +84,7 @@ export default function ResetPasswordScreen() {
 
         <View style={styles.form}>
           <View style={styles.inputContainer}>
-            <Ionicons name="lock-closed-outline" size={20} color="#666" style={styles.inputIcon} />
+            <Text style={[styles.inputIcon, styles.inputIconEmoji]}>🔒</Text>
             <TextInput
               style={styles.input}
               placeholder="Nueva contraseña"
@@ -96,12 +96,12 @@ export default function ResetPasswordScreen() {
               autoCorrect={false}
             />
             <TouchableOpacity onPress={() => setShowNew(v => !v)} style={styles.eyeBtn}>
-              <Ionicons name={showNew ? 'eye-off-outline' : 'eye-outline'} size={20} color="#666" />
+              <Text style={styles.eyeEmoji}>{showNew ? '🙈' : '👁️'}</Text>
             </TouchableOpacity>
           </View>
 
           <View style={styles.inputContainer}>
-            <Ionicons name="lock-closed-outline" size={20} color="#666" style={styles.inputIcon} />
+            <Text style={[styles.inputIcon, styles.inputIconEmoji]}>🔒</Text>
             <TextInput
               style={styles.input}
               placeholder="Confirmar contraseña"
@@ -113,7 +113,7 @@ export default function ResetPasswordScreen() {
               autoCorrect={false}
             />
             <TouchableOpacity onPress={() => setShowConfirm(v => !v)} style={styles.eyeBtn}>
-              <Ionicons name={showConfirm ? 'eye-off-outline' : 'eye-outline'} size={20} color="#666" />
+              <Text style={styles.eyeEmoji}>{showConfirm ? '🙈' : '👁️'}</Text>
             </TouchableOpacity>
           </View>
 
@@ -161,6 +161,10 @@ const styles = StyleSheet.create({
     marginBottom: 48,
     marginTop: 40,
   },
+  headerEmoji: {
+    fontSize: 54,
+    lineHeight: 64,
+  },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
@@ -192,6 +196,10 @@ const styles = StyleSheet.create({
   inputIcon: {
     marginLeft: 16,
   },
+  inputIconEmoji: {
+    fontSize: 18,
+    lineHeight: 22,
+  },
   input: {
     flex: 1,
     height: 56,
@@ -203,6 +211,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     height: 56,
     justifyContent: 'center',
+  },
+  eyeEmoji: {
+    fontSize: 18,
+    lineHeight: 20,
   },
   resetButton: {
     backgroundColor: '#DC143C',

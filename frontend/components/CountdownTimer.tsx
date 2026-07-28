@@ -50,7 +50,7 @@ export default function CountdownTimer({ targetDate }: CountdownTimerProps) {
   return (
     <View style={styles.container}>
       <View style={styles.iconContainer}>
-        <Ionicons name="alarm-outline" size={20} color="#DC143C" />
+        <Text style={styles.alarmEmoji}>⏰</Text>
       </View>
       <View style={styles.timerContainer}>
         <Text style={styles.label}>Tiempo para enviar:</Text>
@@ -93,6 +93,10 @@ const styles = StyleSheet.create({
   },
   iconContainer: {
     marginRight: 12,
+  },
+  alarmEmoji: {
+    fontSize: 18,
+    lineHeight: 22,
   },
   timerContainer: {
     flex: 1,

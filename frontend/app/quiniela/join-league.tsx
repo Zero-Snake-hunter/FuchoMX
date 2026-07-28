@@ -58,7 +58,7 @@ export default function JoinLeagueScreen() {
     >
       <View style={styles.content}>
         <View style={styles.iconContainer}>
-          <Ionicons name="enter-outline" size={80} color="#0047AB" />
+          <Text style={styles.iconEmoji}>➡️</Text>
         </View>
 
         <Text style={styles.title}>Unirse a Liga</Text>
@@ -126,6 +126,10 @@ const styles = StyleSheet.create({
   iconContainer: {
     alignItems: 'center',
     marginBottom: 32,
+  },
+  iconEmoji: {
+    fontSize: 72,
+    lineHeight: 84,
   },
   title: {
     fontSize: 28,

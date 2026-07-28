@@ -76,13 +76,18 @@ export function FantasyProvider({ children }: { children: ReactNode }) {
       position_slot: slot,
     }));
 
-    // Usa la instancia api centralizada - el interceptor agrega el token automáticamente
-    await api.post('/api/fantasy/lineup', {
-      jornada_id: jornadaId,
-      players: playersArray,
-      dt_team_id: dtTeam?.id,
-    });
-    console.log('✅ [FantasyContext] submitLineup: Alineación enviada');
+    try {
+      // Usa la instancia api centralizada - el interceptor agrega el token automáticamente
+      await api.post('/api/fantasy/lineup', {
+        jornada_id: jornadaId,
+        players: playersArray,
+        dt_team_id: dtTeam?.id,
+      });
+      console.log('✅ [FantasyContext] submitLineup: Alineación enviada');
+    } catch (error) {
+      console.error('❌ [FantasyContext] submitLineup error:', error);
+      throw error;
+    }
   };
 
   const clearLineup = () => {

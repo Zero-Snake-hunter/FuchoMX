@@ -197,7 +197,7 @@ export default function LeaguesScreen() {
                 onPress={() => shareCode(item)}
                 activeOpacity={0.7}
               >
-                <Ionicons name="share-social-outline" size={13} color="#0047AB" />
+                <Text style={styles.shareCapacityEmoji}>📤</Text>
                 <Text style={styles.shareCapacityText}>
                   Quedan {(item.max_members ?? 25) - item.member_count} lugares
                 </Text>
@@ -343,7 +343,7 @@ export default function LeaguesScreen() {
             setShowJoinModal(true);
           }}
         >
-          <Ionicons name="enter-outline" size={20} color="#FFFFFF" />
+          <Text style={styles.actionEmoji}>➡️</Text>
           <Text style={styles.actionText}>Unirse con Código</Text>
         </TouchableOpacity>
       </View>
@@ -652,6 +652,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  actionEmoji: {
+    fontSize: 17,
+    lineHeight: 20,
+  },
   list: {
     padding: 16,
     paddingTop: 0,
@@ -735,6 +739,10 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
     color: '#0047AB',
+  },
+  shareCapacityEmoji: {
+    fontSize: 11,
+    lineHeight: 13,
   },
   capacityBarBg: {
     height: 4,

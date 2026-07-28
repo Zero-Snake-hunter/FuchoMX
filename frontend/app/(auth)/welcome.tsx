@@ -66,7 +66,7 @@ export default function WelcomeScreen() {
             activeOpacity={0.85}
           >
             <View style={[styles.buttonIconContainer, styles.secondaryIconContainer]}>
-              <Ionicons name="enter-outline" size={28} color="#0047AB" />
+              <Text style={styles.buttonIconEmoji}>➡️</Text>
             </View>
             <View style={styles.buttonTextContainer}>
               <Text style={styles.secondaryButtonTitle}>Unirme a una liga</Text>
@@ -169,6 +169,10 @@ const styles = StyleSheet.create({
   },
   secondaryIconContainer: {
     backgroundColor: 'rgba(0,71,171,0.15)',
+  },
+  buttonIconEmoji: {
+    fontSize: 24,
+    lineHeight: 28,
   },
   buttonTextContainer: {
     flex: 1,
