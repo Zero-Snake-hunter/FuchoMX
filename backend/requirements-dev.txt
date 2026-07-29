@@ -5,6 +5,7 @@ pytest==9.0.1
 pytest-asyncio==0.24.0
 iniconfig==2.3.0
 pluggy==1.6.0
+mongomock-motor==0.0.36
 
 # Linting / formatting
 black==25.11.0
