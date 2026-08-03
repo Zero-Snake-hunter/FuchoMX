@@ -195,9 +195,21 @@ async def get_match_results(jornada_id: str, db) -> dict:
     if not matches:
         return {"error": "Sin partidos en esta jornada", "updated": 0}
 
-    # Determine date range for this jornada
-    start_date = jornada.get("start_date", datetime.utcnow() - timedelta(days=7))
-    end_date = jornada.get("end_date", datetime.utcnow())
+    # Determine date range for this jornada a partir de los start_at reales
+    # de sus partidos — NO de jornada.start_date/end_date. Esos campos se
+    # cargan a mano (ver _JORNADA_DATE_FIXES en admin_migrations.py) y ya
+    # causaron que un partido quedara fuera de la ventana de consulta a
+    # 365Scores por estar un día corto (J3: end_date=2 de agosto, kickoff
+    # real del último partido=3 de agosto). ±1 día de margen absorbe además
+    # cualquier corrimiento de zona horaria en cómo 365Scores agrupa sus
+    # partidos por fecha.
+    match_start_ats = [m["start_at"] for m in matches if m.get("start_at")]
+    if match_start_ats:
+        start_date = min(match_start_ats) - timedelta(days=1)
+        end_date = max(match_start_ats) + timedelta(days=1)
+    else:
+        start_date = jornada.get("start_date", datetime.utcnow() - timedelta(days=7))
+        end_date = jornada.get("end_date", datetime.utcnow())
 
     # ── Paso 1: Obtener resultados de 365Scores ────────────────────────────
     ext_games = await _fetch_365scores(start_date, end_date)

@@ -29,6 +29,7 @@ from dependencies import get_admin_user
 from fantasy_scoring import calculate_fantasy_points
 from jornada_processor import _process_jornada_core
 from models import WCMatchStatsRequest
+from services.scores_service import get_match_results
 from services.world_cup_stats_service import get_wc_match_stats
 from real_liga_mx_data import (
     CLAUSURA_2026_DATES,
@@ -1094,7 +1095,13 @@ async def fix_active_jornada(current_user: dict = Depends(get_admin_user)):
 # día del último partido — mismo criterio que ya usan liguilla.py y
 # apertura_2026_data.py en otras jornadas.
 _JORNADA_DATE_FIXES = {
-    3:  (datetime(2026, 7, 31), datetime(2026, 8, 2, 23, 59, 59)),
+    # end_date corregido a 3 de agosto (no 2) — el último partido de J3
+    # (Toluca vs Necaxa) tiene kickoff real 2026-08-03 01:00 UTC, un día
+    # después de lo que tenía este fix. Con el end_date corto, get_match_results()
+    # nunca incluía ese día en la consulta a 365Scores y el partido quedaba
+    # sin sincronizar aunque ya hubiera terminado (ver el fix de raíz en
+    # scores_service.py, que ahora ni depende de este campo).
+    3:  (datetime(2026, 7, 31), datetime(2026, 8, 3, 23, 59, 59)),
     4:  (datetime(2026, 8, 15), datetime(2026, 8, 17, 23, 59, 59)),
     5:  (datetime(2026, 8, 21), datetime(2026, 8, 23, 23, 59, 59)),
     6:  (datetime(2026, 8, 28), datetime(2026, 8, 30, 23, 59, 59)),
@@ -1511,5 +1518,52 @@ async def fix_jornada3_quiniela(current_user: dict = Depends(get_admin_user)):
         "jornada_id": str(jornada_id),
         "invalid_entries_deleted": len(bad_entries),
         "users_reverted": reverted_by_user,
+        "reprocess_result": proc_result,
+    }
+
+
+# Temporal — puntual para J3 (Apertura 2026). Toluca vs Necaxa se quedó sin
+# sincronizar porque _JORNADA_DATE_FIXES[3] tenía el end_date un día corto
+# (ver el fix de raíz arriba en scores_service.get_match_results, que ya no
+# depende de ese campo). Con la fecha corregida y el fix de raíz, esto
+# vuelve a llamar a las mismas funciones normales de siempre — no hay lógica
+# nueva, solo fuerza que corran de nuevo para J3 ahora que sí van a
+# encontrar el resultado real de ese partido.
+@router.post("/admin/fix-jornada3-toluca-necaxa")
+async def fix_jornada3_toluca_necaxa(current_user: dict = Depends(get_admin_user)):
+    """
+    1. Vuelve a llamar get_match_results(jornada_id) para J3 — con el
+       end_date corregido (y el fix de raíz que usa start_at real de los
+       matches), esta vez sí encuentra y sincroniza Toluca vs Necaxa
+       (status=finished + marcador real).
+    2. Resetea processed=False y corre _process_jornada_core de nuevo para
+       que los puntos de quiniela reflejen el resultado real de ese
+       partido para quien lo haya seleccionado — sin esto, el resultado
+       quedaría sincronizado en el match pero invisible en los puntos.
+    """
+    jornada = await db.jornadas.find_one(
+        {"competition": "liga_mx", "week_number": 3, "type": {"$ne": "liguilla"}}
+    )
+    if not jornada:
+        raise HTTPException(status_code=404, detail="Jornada 3 no encontrada")
+
+    jornada_id = jornada["_id"]
+
+    scores_result = await get_match_results(str(jornada_id), db)
+
+    await db.jornadas.update_one(
+        {"_id": jornada_id},
+        {"$set": {"processed": False}, "$unset": {"processed_at": ""}},
+    )
+    proc_result = await _process_jornada_core(str(jornada_id))
+
+    logger.info(
+        f"fix-jornada3-toluca-necaxa: scores matches_not_found={scores_result.get('matches_not_found')}, "
+        f"reprocesado quiniela={proc_result.get('quiniela_updated')} usuarios"
+    )
+    return {
+        "message": "✅ J3 re-sincronizada — resultado real de Toluca vs Necaxa aplicado y puntos recalculados",
+        "jornada_id": str(jornada_id),
+        "scores_result": scores_result,
         "reprocess_result": proc_result,
     }
