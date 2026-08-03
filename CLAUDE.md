@@ -25,7 +25,7 @@ digital en Aguascalientes, México. Trabajo con múltiples proyectos simultáneo
 App de Fantasy y Quiniela de Liga MX. 100% social, sin apuestas ni dinero.
 - **Repo:** `Zero-Snake-hunter/FuchoMX`
 - **Stack:** React Native (frontend) + FastAPI (backend) + MongoDB
-- **Deploy:** Railway
+- **Deploy:** Render (el repo tiene `railway.json`/`Procfile` viejos de cuando corría en Railway — ya no se usan)
 - **Módulos principales:**
   - FuchoQuiniela — predicción de resultados por jornada
   - FuchoOnce — fantasy lineup semanal
@@ -109,8 +109,10 @@ Agencia de marketing digital para PyMEs en Aguascalientes.
 - **OpenClaw:** puerto 18789 (bot de Telegram + WhatsApp)
 - **Drive montado:** `/mnt/g/Mi unidad/`
 
-### Railway
+### Render
 - FuchoMX API (FastAPI)
+
+### Railway
 - Árbol de Sefirot (Node.js)
 - n8n (pendiente instalar)
 
@@ -156,7 +158,7 @@ gh issue create --repo Zero-Snake-hunter/FuchoMX --title "título" --body "descr
 
 # Push y deploy
 git add . && git commit -m "feat: descripción" && git push
-# Railway despliega automáticamente
+# Render despliega automáticamente
 ```
 
 ### Árbol de Sefirot
@@ -169,7 +171,7 @@ gh repo clone Zero-Snake-hunter/-arbol-de-Sefirot
 ## 🔴 Reglas críticas
 
 - **NUNCA** hacer push a main sin revisar que no hay jornadas activas en FuchoMX
-- **NUNCA** modificar variables de entorno en Railway sin confirmación
+- **NUNCA** modificar variables de entorno en Render (FuchoMX) o Railway (Árbol de Sefirot) sin confirmación
 - **NUNCA** borrar archivos — mover a carpeta backup o usar git
 - **NUNCA** enviar correos o mensajes sin confirmación explícita de Jorge
 - **NUNCA** commitear credenciales, tokens o contraseñas
@@ -179,7 +181,7 @@ gh repo clone Zero-Snake-hunter/-arbol-de-Sefirot
 
 ## 📧 Credenciales y accesos (referencias, no valores)
 
-- API Keys en Railway → variables de entorno del proyecto
+- API Keys en Render (FuchoMX) / Railway (Árbol de Sefirot) → variables de entorno del proyecto
 - Anthropic API Key → variable `ANTHROPIC_API_KEY`
 - GitHub token → `gh auth status` para verificar
 - Hostinger SMTP → `/home/jorge/send_email.py` en Cortana

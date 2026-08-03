@@ -1426,30 +1426,34 @@ async def purge_invalid_penalties(current_user: dict = Depends(get_admin_user)):
 # "finished" antes de que existieran los reales del 1-3 de agosto — ver
 # purge_invalid_penalties arriba), pero quedó FUERA de esa limpieza porque
 # para el 27 de julio ya no calificaba como status="upcoming" (ya estaba
-# in_progress/is_active). Además del daño en points_log, el bug marcó
-# processed=True en la jornada, así que los puntos reales de quiniela
-# (+3 por acierto) de los 9 partidos ya jugados nunca se calcularon.
+# in_progress/is_active). Además del daño en points_log (Quiniela Y Once —
+# ambos se insertan en la misma pasada de apply_jornada_close_adjustments),
+# el bug marcó processed=True en la jornada, así que los puntos reales de
+# quiniela (+3 por acierto) de los 9 partidos ya jugados nunca se calcularon.
 _J3_REAL_START = datetime(2026, 8, 1)
-_J3_BAD_SOURCES = ["QUINIELA_PENALIZACION", "QUINIELA_BONUS_NUEVO"]
+_J3_BAD_SOURCES = [
+    "QUINIELA_PENALIZACION", "QUINIELA_BONUS_NUEVO",
+    "ONCE_PENALIZACION", "ONCE_BONUS_NUEVO",
+]
 
 
 @router.post("/admin/fix-jornada3-quiniela")
 async def fix_jornada3_quiniela(current_user: dict = Depends(get_admin_user)):
     """
     Corrige Jornada 3 (Apertura 2026):
-    1. Borra QUINIELA_PENALIZACION/QUINIELA_BONUS_NUEVO de J3 creados antes
-       del 2026-08-01 (basura del bug de cascada de J4-J12, aplicado aquí a
-       una jornada que esa limpieza no cubrió).
-    2. Revierte esos puntos de total_points de cada usuario afectado (no
-       solo el admin — corre para todos).
+    1. Borra QUINIELA_PENALIZACION/QUINIELA_BONUS_NUEVO/ONCE_PENALIZACION/
+       ONCE_BONUS_NUEVO de J3 creados antes del 2026-08-01 (basura del bug
+       de cascada de J4-J12, aplicado aquí a una jornada que esa limpieza
+       no cubrió).
+    2. Revierte esos puntos del campo correcto de cada usuario afectado
+       (total_points para Quiniela, fantasy_total_points para Once — ver
+       _SOURCE_USER_FIELD) — no solo el admin, corre para todos.
     3. Resetea processed=False en J3.
-    4. Vuelve a correr _process_jornada_core para calcular los puntos
-       reales de quiniela (+3 por acierto) de los 9 partidos ya jugados.
-
-    Nota: el reproceso en el paso 4 también vuelve a evaluar ONCE_PENALIZACION/
-    ONCE_BONUS_NUEVO (fantasy) para J3 vía apply_jornada_close_adjustments —
-    ese source no se toca aquí porque no fue parte del reporte. Si J3 tiene
-    el mismo daño de cascada en esos dos sources, van a quedar sin corregir.
+    4. Vuelve a correr _process_jornada_core, que internamente llama a
+       apply_jornada_close_adjustments (recalcula penalizaciones/bonus
+       reales de Quiniela y Once contra los 9 partidos ya jugados, ahora
+       que el guard de "todos finished" sí aplica de verdad) y calcula los
+       puntos reales de quiniela (+3 por acierto).
     """
     jornada = await db.jornadas.find_one(
         {"competition": "liga_mx", "week_number": 3, "type": {"$ne": "liguilla"}}
@@ -1469,16 +1473,19 @@ async def fix_jornada3_quiniela(current_user: dict = Depends(get_admin_user)):
     if bad_entries:
         reversals: dict = {}
         for e in bad_entries:
-            reversals[e["user_id"]] = reversals.get(e["user_id"], 0) + e.get("points", 0)
+            field = _SOURCE_USER_FIELD.get(e.get("source"), "total_points")
+            per_user = reversals.setdefault(e["user_id"], {})
+            per_user[field] = per_user.get(field, 0) + e.get("points", 0)
 
-        for uid, total in reversals.items():
-            if total:
-                await db.users.update_one({"_id": uid}, {"$inc": {"total_points": -total}})
+        for uid, fields in reversals.items():
+            inc = {f: -v for f, v in fields.items() if v != 0}
+            if inc:
+                await db.users.update_one({"_id": uid}, {"$inc": inc})
             user = await db.users.find_one({"_id": uid})
             reverted_by_user.append({
                 "user_id": str(uid),
                 "email": user.get("email") if user else None,
-                "points_reverted": total,
+                "points_reverted": fields,
             })
 
         entry_ids = [e["_id"] for e in bad_entries]

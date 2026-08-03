@@ -752,11 +752,11 @@ git commit -m "feat: register Expo push token on login via usePushNotifications 
 
 - [ ] **Step 1: Prueba de notificación de apertura**
 
-Con el backend en Railway (o local con ngrok), usar el token de admin:
+Con el backend en Render (o local con ngrok), usar el token de admin:
 
 ```bash
 # Activar jornada con reminder_hours personalizado (ej: 6h)
-curl -X POST "https://tu-backend.railway.app/api/admin/reset-jornada?week=14&reminder_hours=6" \
+curl -X POST "https://tu-backend.onrender.com/api/admin/reset-jornada?week=14&reminder_hours=6" \
   -H "Authorization: Bearer $ADMIN_TOKEN"
 ```
 
@@ -787,7 +787,7 @@ Verificar que el recordatorio solo llega a usuarios SIN picks enviados para esa 
 git push
 ```
 
-Railway despliega automáticamente con los cambios.
+Render despliega automáticamente con los cambios.
 
 ---
 
