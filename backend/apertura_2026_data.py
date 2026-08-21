@@ -409,12 +409,14 @@ APERTURA_2026_J3_J17_FIXTURES = {
         (4735729, "NEC", "LEO", datetime(2026, 8, 18, 1, 0)),
         (4735728, "PAC", "PUE", datetime(2026, 8, 18, 3, 0)),
     ],
+    # QRO-TOL y LEO-MTY re-verificados en vivo (365Scores + ESPN, 20 ago 2026)
+    # tras detectarse desfase de fecha en la extracción original.
     5: [
         (4735722, "TIG", "ATE", datetime(2026, 8, 22, 1, 0)),
         (4735726, "JUA", "AME", datetime(2026, 8, 22, 3, 0)),
-        (4735725, "QRO", "TOL", datetime(2026, 8, 22, 23, 0)),
+        (4735725, "QRO", "TOL", datetime(2026, 8, 22, 3, 10)),
         (4735724, "GDL", "TIJ", datetime(2026, 8, 22, 23, 7)),
-        (4735723, "LEO", "MTY", datetime(2026, 8, 23, 1, 0)),
+        (4735723, "LEO", "MTY", datetime(2026, 8, 22, 1, 0)),
         (4735727, "PUE", "SAN", datetime(2026, 8, 23, 1, 0)),
         (4735721, "CAZ", "ATL", datetime(2026, 8, 23, 3, 0)),
         (4735720, "ASL", "PAC", datetime(2026, 8, 23, 23, 0)),

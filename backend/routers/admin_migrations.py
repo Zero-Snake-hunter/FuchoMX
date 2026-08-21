@@ -1567,3 +1567,57 @@ async def fix_jornada3_toluca_necaxa(current_user: dict = Depends(get_admin_user
         "scores_result": scores_result,
         "reprocess_result": proc_result,
     }
+
+
+# Corrección puntual de Jornada 5 (Apertura 2026): León-Monterrey y
+# Querétaro-Toluca quedaron con start_at equivocado desde la extracción
+# original del fixture (ver APERTURA_2026_J3_J17_FIXTURES). Re-verificado
+# en vivo contra 365Scores y ESPN el 20 de agosto de 2026 — ambos son en
+# realidad viernes 21/8, no sábado 22/8. J5 todavía no se juega, así que
+# no hay puntos ni penalizaciones que revertir — solo se corrige start_at
+# por ext_id_365, igual criterio que usa load-remaining-fixtures.
+@router.post("/admin/fix-jornada5-fechas")
+async def fix_jornada5_fechas(current_user: dict = Depends(get_admin_user)):
+    """
+    Sincroniza start_at de los 9 partidos de J5 contra
+    APERTURA_2026_J3_J17_FIXTURES[5] (ya corregido), por ext_id_365.
+    Solo actualiza los documentos cuyo start_at difiera del fixture —
+    reporta antes/después de cada uno que cambió.
+    """
+    jornada = await db.jornadas.find_one(
+        {"competition": "liga_mx", "week_number": 5, "type": {"$ne": "liguilla"}}
+    )
+    if not jornada:
+        raise HTTPException(status_code=404, detail="Jornada 5 no encontrada")
+
+    week_fixtures = APERTURA_2026_J3_J17_FIXTURES.get(5, [])
+    updated = []
+    not_found = []
+
+    for game_id, home_sn, away_sn, start_at in week_fixtures:
+        match = await db.matches.find_one({
+            "jornada_id": jornada["_id"], "ext_id_365": game_id,
+        })
+        if not match:
+            not_found.append({"ext_id_365": game_id, "home": home_sn, "away": away_sn})
+            continue
+        if match.get("start_at") != start_at:
+            await db.matches.update_one(
+                {"_id": match["_id"]}, {"$set": {"start_at": start_at}},
+            )
+            updated.append({
+                "ext_id_365": game_id, "home": home_sn, "away": away_sn,
+                "before": match.get("start_at").isoformat() if match.get("start_at") else None,
+                "after": start_at.isoformat(),
+            })
+
+    logger.info(
+        f"fix-jornada5-fechas: {len(updated)} partido(s) corregidos, "
+        f"{len(not_found)} no encontrados en Mongo"
+    )
+    return {
+        "message": f"✅ Jornada 5 — {len(updated)} partido(s) corregido(s)",
+        "jornada_id": str(jornada["_id"]),
+        "updated": updated,
+        "not_found_in_db": not_found,
+    }
