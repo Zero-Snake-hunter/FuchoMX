@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { parseUtc } from '../app/lib/dateUtils';
 
 interface CountdownTimerProps {
   targetDate: string;
@@ -16,7 +17,7 @@ export default function CountdownTimer({ targetDate }: CountdownTimerProps) {
 
   useEffect(() => {
     const calculateTimeLeft = () => {
-      const difference = new Date(targetDate).getTime() - new Date().getTime();
+      const difference = parseUtc(targetDate).getTime() - new Date().getTime();
 
       if (difference > 0) {
         return {

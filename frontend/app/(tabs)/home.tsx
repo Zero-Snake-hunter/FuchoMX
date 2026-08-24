@@ -18,6 +18,7 @@ import { AchievementToast } from '../../components/AchievementToast';
 import { RulesModal } from '../../components/RulesModal';
 import { InstagramFooter } from '../../components/InstagramFooter';
 import api from '../lib/api';
+import { parseUtc } from '../lib/dateUtils';
 import { SPONSORS, getNombreTorneo } from '../config/sponsors';
 
 export default function HomeScreen() {
@@ -222,8 +223,6 @@ export default function HomeScreen() {
               21:00 hora México se guarda como "03:00" del día siguiente
               en UTC, y sin el fix aparecía fechado un día después). */}
           {(() => {
-            const parseUtc = (dateStr: string) =>
-              new Date(/[Z+-]\d{2}:?\d{2}$|Z$/.test(dateStr) ? dateStr : `${dateStr}Z`);
             const now = new Date();
             const todayMatches = jornadaMatches.filter((m) => {
               if (!m.start_at) return false;

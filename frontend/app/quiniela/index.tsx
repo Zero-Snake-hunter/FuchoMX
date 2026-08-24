@@ -543,6 +543,7 @@ export default function QuinielaScreen() {
                 selection={selections[match.id]}
                 onSelect={(selection) => handleSelection(match.id, selection)}
                 disabled={submitting}
+                userPick={savedSelections[match.id]}
               />
             ))
           ) : loadingResultados ? (

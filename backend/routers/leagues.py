@@ -39,6 +39,11 @@ async def _compute_quiniela_ranking_points(user_ids: list) -> dict:
       inmediatamente anterior a la activa (current_week - 1) — se calcula
       aparte del corte de temporada, por eso puede incluir una jornada
       anterior a LIGA_MX_SEASON_START_WEEK si estamos justo al inicio.
+    - aciertos: total de partidos acertados desde LIGA_MX_SEASON_START_WEEK,
+      derivado solo de source="QUINIELA" (points // 3, ya que cada acierto
+      vale 3 puntos fijos — ver jornada_processor.py). QUINIELA_PENALIZACION
+      y QUINIELA_BONUS_NUEVO no representan aciertos y quedan fuera de esta
+      cuenta aunque sí sumen al total_points.
 
     El filtro es SIEMPRE por el week_number de la jornada real a la que
     pertenece cada punto (resuelto vía jornada_id) — nunca por created_at
@@ -58,7 +63,7 @@ async def _compute_quiniela_ranking_points(user_ids: list) -> dict:
         current = jornadas[-1]
     previous_week = (current.get("week_number") - 1) if current else None
 
-    result = {uid: {"total_points": 0, "jornada_anterior_points": 0} for uid in user_ids}
+    result = {uid: {"total_points": 0, "jornada_anterior_points": 0, "aciertos": 0} for uid in user_ids}
     if not week_by_jornada_id:
         return result
 
@@ -84,6 +89,8 @@ async def _compute_quiniela_ranking_points(user_ids: list) -> dict:
         # Filtro real: week_number de la jornada, no la fecha del log.
         if week >= LIGA_MX_SEASON_START_WEEK:
             result[uid]["total_points"] += p.get("points", 0)
+            if p.get("source") == "QUINIELA":
+                result[uid]["aciertos"] += p.get("points", 0) // 3
         if previous_week is not None and week == previous_week:
             result[uid]["jornada_anterior_points"] += p.get("points", 0)
 
@@ -382,10 +389,11 @@ async def get_unified_league_details(
                     member_data["total_points"] = 0
             else:
                 pts = quiniela_points_by_user.get(
-                    user["_id"], {"total_points": 0, "jornada_anterior_points": 0}
+                    user["_id"], {"total_points": 0, "jornada_anterior_points": 0, "aciertos": 0}
                 )
                 member_data["total_points"] = pts["total_points"]
                 member_data["jornada_anterior_points"] = pts["jornada_anterior_points"]
+                member_data["aciertos"] = pts["aciertos"]
             members.append(member_data)
 
     members.sort(key=lambda x: x["total_points"], reverse=True)

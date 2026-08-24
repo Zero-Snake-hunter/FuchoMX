@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import es from 'date-fns/locale/es';
 import TeamShield from './TeamShield';
+import { parseUtc } from '../app/lib/dateUtils';
 
 interface Match {
   id: string;
@@ -28,13 +29,30 @@ interface MatchCardProps {
   selection?: string;
   onSelect: (selection: string) => void;
   disabled?: boolean;
+  // Pick ya guardado del usuario para este partido — se usa para mostrar
+  // ✅/❌ una vez que el partido termina, sin esperar a la vista de
+  // solo-lectura de jornadas pasadas (misma comparación que esa vista usa).
+  userPick?: string | null;
 }
 
-export default function MatchCard({ match, selection, onSelect, disabled }: MatchCardProps) {
-  const matchDate = new Date(match.start_at);
+// Deriva HOME/DRAW/AWAY del marcador — misma lógica que
+// get_jornada_resultados en el backend, replicada aquí porque
+// /jornadas/current no manda el resultado ya comparado contra el pick.
+function actualResultFromScore(homeScore: number | null, awayScore: number | null): string | null {
+  if (homeScore === null || awayScore === null) return null;
+  if (homeScore > awayScore) return 'HOME';
+  if (awayScore > homeScore) return 'AWAY';
+  return 'DRAW';
+}
+
+export default function MatchCard({ match, selection, onSelect, disabled, userPick }: MatchCardProps) {
+  const matchDate = parseUtc(match.start_at);
   const isFinished = match.status === 'finished';
   const isLive = match.status === 'live';
   const isLocked = isFinished || isLive;
+
+  const actualResult = isFinished ? actualResultFromScore(match.home_score, match.away_score) : null;
+  const correct = isFinished && userPick && actualResult ? userPick === actualResult : null;
 
   const renderOption = (option: string, label: string) => {
     const isSelected = selection === option;
@@ -129,14 +147,28 @@ export default function MatchCard({ match, selection, onSelect, disabled }: Matc
       )}
 
       {isLocked && (
-        <View style={[styles.finishedBadge, isLive && styles.liveBadge]}>
+        <View style={[
+          styles.finishedBadge,
+          isLive && styles.liveBadge,
+          correct === false && styles.finishedBadgeWrong,
+        ]}>
           <Ionicons
-            name={isLive ? 'radio-button-on' : 'checkmark-circle'}
+            name={isLive ? 'radio-button-on' : correct === false ? 'close-circle' : 'checkmark-circle'}
             size={16}
-            color={isLive ? '#DC143C' : '#00A551'}
+            color={isLive ? '#DC143C' : correct === false ? '#DC143C' : '#00A551'}
           />
-          <Text style={[styles.finishedText, isLive && styles.liveText]}>
-            {isLive ? 'En vivo — pick cerrado' : 'Finalizado'}
+          <Text style={[
+            styles.finishedText,
+            isLive && styles.liveText,
+            correct === false && styles.liveText,
+          ]}>
+            {isLive
+              ? 'En vivo — pick cerrado'
+              : correct === true
+                ? '✅ Acertaste'
+                : correct === false
+                  ? '❌ Fallaste'
+                  : 'Finalizado'}
           </Text>
         </View>
       )}
@@ -274,5 +306,8 @@ const styles = StyleSheet.create({
   },
   liveText: {
     color: '#DC143C',
+  },
+  finishedBadgeWrong: {
+    backgroundColor: '#2a0a0a',
   },
 });

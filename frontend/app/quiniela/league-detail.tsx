@@ -24,6 +24,7 @@ interface Member {
   team_name?: string;
   total_points: number;
   jornada_anterior_points?: number;
+  aciertos?: number;
   rank: number;
   joined_at: string;
 }
@@ -172,6 +173,7 @@ export default function LeagueDetailScreen() {
       <View style={styles.tableHeaderRow}>
         <Text style={[styles.tableHeaderCell, styles.colPos]}>#</Text>
         <Text style={[styles.tableHeaderCell, styles.colPlayer]}>Jugador</Text>
+        <Text style={[styles.tableHeaderCell, styles.colPts]}>Aciertos</Text>
         <Text style={[styles.tableHeaderCell, styles.colPts]}>J. ant.</Text>
         <Text style={[styles.tableHeaderCell, styles.colPts]}>Total</Text>
       </View>
@@ -186,6 +188,7 @@ export default function LeagueDetailScreen() {
             <Text style={[styles.tableCell, styles.colPlayer]} numberOfLines={1}>
               {member.display_name}{isCurrentUser ? ' (Tú)' : ''}
             </Text>
+            <Text style={[styles.tableCell, styles.colPts]}>{member.aciertos ?? 0}</Text>
             <Text style={[styles.tableCell, styles.colPts]}>{member.jornada_anterior_points ?? 0}</Text>
             <Text style={[styles.tableCell, styles.colPts, styles.tableCellTotal]}>{member.total_points}</Text>
           </View>
