@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -166,6 +166,16 @@ export default function QuinielaScreen() {
 
   const viewingCurrent = !selectedJornadaId || selectedJornadaId === jornada?.id;
 
+  // Refs con el valor más reciente de selections/savedSelections — loadJornada
+  // se invoca desde useFocusEffect con deps [], así que su closure queda fija
+  // en el primer render; leer el estado directo ahí dentro devolvería siempre
+  // el valor de esa primera vez. Los refs evitan ese problema porque su
+  // identidad no cambia entre renders y .current siempre es el valor actual.
+  const selectionsRef = useRef(selections);
+  const savedSelectionsRef = useRef(savedSelections);
+  useEffect(() => { selectionsRef.current = selections; }, [selections]);
+  useEffect(() => { savedSelectionsRef.current = savedSelections; }, [savedSelections]);
+
   // Refresca al entrar a la pantalla (no solo al montar) para detectar si la
   // jornada activa cambió mientras el usuario estaba en otra pestaña — ej.
   // cuando un admin cierra la jornada actual y activa la siguiente.
@@ -228,7 +238,22 @@ export default function QuinielaScreen() {
             picksResponse.data.selections.forEach((sel: any) => {
               existingSelections[sel.match_id] = sel.selection;
             });
-            setSelections(existingSelections);
+
+            // Si el usuario ya seleccionó (radio tocado) un pick que todavía
+            // no se mandó al servidor, no lo pisamos con lo que llega de acá
+            // — si no, un refoco de la pantalla (useFocusEffect corre en
+            // cada foco, no solo al montar) borra silenciosamente esa
+            // selección antes de que el usuario alcance a tocar GUARDAR
+            // PICKS. savedSelections sí se actualiza siempre: es la
+            // referencia contra la que se compara para saber qué es "nuevo".
+            const hasPendingLocal = (jornadaData?.matches || []).some((m: Match) =>
+              m.status === 'scheduled'
+              && selectionsRef.current[m.id]
+              && selectionsRef.current[m.id] !== savedSelectionsRef.current[m.id]
+            );
+            if (!hasPendingLocal) {
+              setSelections(existingSelections);
+            }
             setSavedSelections(existingSelections);
           }
         } catch (error: any) {
