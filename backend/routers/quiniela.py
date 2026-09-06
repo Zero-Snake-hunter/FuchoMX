@@ -4,7 +4,7 @@ from datetime import datetime
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from database import db, get_active_competition
+from database import db, get_active_competition, get_admin_user_id
 from dependencies import get_current_user
 from models import QuinielaSubmit
 
@@ -268,7 +268,9 @@ async def get_jornada_resultados(
 
 @router.get("/rankings/general")
 async def get_general_rankings():
-    users = await db.users.find().sort("total_points", -1).limit(100).to_list(100)
+    admin_id = await get_admin_user_id()
+    query = {"_id": {"$ne": admin_id}} if admin_id else {}
+    users = await db.users.find(query).sort("total_points", -1).limit(100).to_list(100)
     rankings = [
         {
             "position": idx,
@@ -291,8 +293,11 @@ async def get_jornada_rankings(jornada_id: str):
         "source": "QUINIELA"
     }).to_list(1000)
 
+    admin_id = await get_admin_user_id()
     user_points: dict = {}
     for point in points:
+        if point["user_id"] == admin_id:
+            continue
         uid = str(point["user_id"])
         user_points[uid] = user_points.get(uid, 0) + point["points"]
 

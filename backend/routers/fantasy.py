@@ -6,7 +6,7 @@ from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from achievements import award_achievement
-from database import db, get_active_competition
+from database import db, get_active_competition, get_admin_user_id
 from dependencies import get_current_user
 from fantasy_scoring import calculate_player_points
 from models import FantasyLineupSubmit, FantasyTeamCreate
@@ -25,18 +25,23 @@ async def get_fantasy_jornada_rankings(jornada_id: str):
         {"jornada_id": jornada_obj_id}
     ).sort("total_points", -1).to_list(100)
 
+    admin_id = await get_admin_user_id()
     rankings = []
-    for idx, log in enumerate(points_logs):
+    for log in points_logs:
+        if log["user_id"] == admin_id:
+            continue
         fantasy_team = await db.fantasy_teams.find_one({"_id": log["fantasy_team_id"]})
         user = await db.users.find_one({"_id": log["user_id"]})
         rankings.append({
-            "rank": idx + 1,
+            "rank": 0,
             "team_name": fantasy_team.get("name", "Unknown") if fantasy_team else "Unknown",
             "user_name": user.get("display_name", "Unknown") if user else "Unknown",
             "total_points": log["total_points"],
             "dt_points": log.get("dt_points", 0),
             "players_breakdown": log.get("players_breakdown", [])
         })
+    for idx, r in enumerate(rankings):
+        r["rank"] = idx + 1
 
     return {"rankings": rankings, "jornada_id": jornada_id}
 
@@ -54,18 +59,21 @@ async def get_fantasy_general_rankings():
     ]
     aggregated = await db.fantasy_points_log.aggregate(pipeline).to_list(100)
 
+    admin_id = await get_admin_user_id()
     rankings = []
-    for idx, item in enumerate(aggregated):
+    for item in aggregated:
         fantasy_team = await db.fantasy_teams.find_one({"_id": item["_id"]})
-        if fantasy_team:
+        if fantasy_team and fantasy_team["user_id"] != admin_id:
             user = await db.users.find_one({"_id": fantasy_team["user_id"]})
             rankings.append({
-                "rank": idx + 1,
+                "rank": 0,
                 "team_name": fantasy_team.get("name", "Unknown"),
                 "user_name": user.get("display_name", "Unknown") if user else "Unknown",
                 "total_points": item["total_points"],
                 "jornadas_played": item["jornadas_played"]
             })
+    for idx, r in enumerate(rankings):
+        r["rank"] = idx + 1
 
     return {"rankings": rankings}
 

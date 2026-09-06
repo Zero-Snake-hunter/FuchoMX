@@ -7,7 +7,7 @@ from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from achievements import award_achievement
-from database import db, get_active_competition
+from database import db, get_active_competition, get_admin_user_id
 from dependencies import get_current_user
 from models import CreateLeagueRequest, JoinLeagueRequest, MAX_MEMBERS_FREE
 
@@ -152,7 +152,11 @@ async def validate_league_code(code: str):
     if not league:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Código de liga inválido")
 
-    member_count = await db.league_members.count_documents({"league_id": league["_id"]})
+    admin_id = await get_admin_user_id()
+    count_query = {"league_id": league["_id"]}
+    if admin_id:
+        count_query["user_id"] = {"$ne": admin_id}
+    member_count = await db.league_members.count_documents(count_query)
     max_members = league.get("max_members", MAX_MEMBERS_FREE)
 
     return {
@@ -222,11 +226,15 @@ async def join_unified_league(
 @router.get("/leagues/my-leagues")
 async def get_my_unified_leagues(current_user: dict = Depends(get_current_user)):
     memberships = await db.league_members.find({"user_id": current_user["_id"]}).to_list(100)
+    admin_id = await get_admin_user_id()
     leagues = []
     for membership in memberships:
         league = await db.private_leagues.find_one({"_id": membership["league_id"]})
         if league:
-            member_count = await db.league_members.count_documents({"league_id": league["_id"]})
+            count_query = {"league_id": league["_id"]}
+            if admin_id:
+                count_query["user_id"] = {"$ne": admin_id}
+            member_count = await db.league_members.count_documents(count_query)
             max_members = league.get("max_members", MAX_MEMBERS_FREE)
             leagues.append({
                 "id": str(league["_id"]),
@@ -256,7 +264,11 @@ async def get_league_availability(
     if not league:
         raise HTTPException(status_code=404, detail="Liga no encontrada")
 
-    member_count = await db.league_members.count_documents({"league_id": league_obj_id})
+    admin_id = await get_admin_user_id()
+    count_query = {"league_id": league_obj_id}
+    if admin_id:
+        count_query["user_id"] = {"$ne": admin_id}
+    member_count = await db.league_members.count_documents(count_query)
     max_members = league.get("max_members", MAX_MEMBERS_FREE)
 
     return {
@@ -291,7 +303,8 @@ async def get_league_jornada_rankings(
 
     mode = league.get("mode", "quiniela")
     memberships = await db.league_members.find({"league_id": league_obj_id}).to_list(100)
-    member_user_ids = [m["user_id"] for m in memberships]
+    admin_id = await get_admin_user_id()
+    member_user_ids = [m["user_id"] for m in memberships if m["user_id"] != admin_id]
     rankings = []
 
     if mode == "fantasy":
@@ -355,6 +368,11 @@ async def get_unified_league_details(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No eres miembro de esta liga")
 
     memberships = await db.league_members.find({"league_id": league_obj_id}).to_list(100)
+    admin_id = await get_admin_user_id()
+    # El admin (ADMIN_EMAIL) es solo para pruebas — se excluye de rankings,
+    # listados de miembros y contadores visibles a otros usuarios, aunque
+    # siga pudiendo ser miembro/dueño real de la liga para poder probar.
+    visible_memberships = [m for m in memberships if m["user_id"] != admin_id]
     mode = league.get("mode", "quiniela")
     members = []
 
@@ -363,10 +381,10 @@ async def get_unified_league_details(
     quiniela_points_by_user = {}
     if mode != "fantasy":
         quiniela_points_by_user = await _compute_quiniela_ranking_points(
-            [m["user_id"] for m in memberships]
+            [m["user_id"] for m in visible_memberships]
         )
 
-    for membership in memberships:
+    for membership in visible_memberships:
         user = await db.users.find_one({"_id": membership["user_id"]})
         if user:
             member_data = {
@@ -456,8 +474,11 @@ async def get_league_details(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No eres miembro de esta liga")
 
     memberships = await db.league_members.find({"league_id": league_obj_id}).to_list(100)
+    admin_id = await get_admin_user_id()
     members = []
     for membership in memberships:
+        if membership["user_id"] == admin_id:
+            continue
         user = await db.users.find_one({"_id": membership["user_id"]})
         if user:
             members.append({
@@ -502,7 +523,11 @@ async def get_league_results(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Jornada no encontrada")
 
     matches = await db.matches.find({"jornada_id": jornada_obj_id}).to_list(100)
-    memberships = await db.league_members.find({"league_id": league_obj_id}).to_list(100)
+    admin_id = await get_admin_user_id()
+    memberships = [
+        m for m in await db.league_members.find({"league_id": league_obj_id}).to_list(100)
+        if m["user_id"] != admin_id
+    ]
 
     results = []
     for match in matches:
@@ -579,8 +604,11 @@ async def get_league_ranking(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No eres miembro de esta liga")
 
     memberships = await db.league_members.find({"league_id": league_obj_id}).to_list(100)
+    admin_id = await get_admin_user_id()
     rankings = []
     for membership in memberships:
+        if membership["user_id"] == admin_id:
+            continue
         user = await db.users.find_one({"_id": membership["user_id"]})
         if user:
             rankings.append({

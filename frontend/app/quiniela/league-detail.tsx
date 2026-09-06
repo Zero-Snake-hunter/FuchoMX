@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,8 @@ import {
   ActivityIndicator,
   RefreshControl,
   Share,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -53,6 +55,20 @@ export default function LeagueDetailScreen() {
   const [activeTab, setActiveTab] = useState<'jornada' | 'general'>('jornada');
   const [jornada, setJornada] = useState<any>(null);
   const [expandedPlayer, setExpandedPlayer] = useState<string | null>(null);
+
+  // Selector "Ver por jornada" del ranking de Quiniela (no aplica a Fantasy).
+  const [quinielaView, setQuinielaView] = useState<'general' | 'jornada'>('general');
+  const [showJornadaPicker, setShowJornadaPicker] = useState(false);
+  const [pastJornadas, setPastJornadas] = useState<any[]>([]);
+  const [loadingPastJornadas, setLoadingPastJornadas] = useState(false);
+  const [selectedPastJornada, setSelectedPastJornada] = useState<any>(null);
+  const [pastJornadaRanking, setPastJornadaRanking] = useState<JornadaRanking[]>([]);
+  const [loadingPastJornadaRanking, setLoadingPastJornadaRanking] = useState(false);
+
+  // Tooltip ligero con las reglas de puntos de Quiniela.
+  const [showRulesTooltip, setShowRulesTooltip] = useState(false);
+  const [tooltipPos, setTooltipPos] = useState({ top: 0, left: 0 });
+  const infoIconRef = useRef<any>(null);
 
   const mode = paramMode || league?.mode || 'quiniela';
   const isFantasy = mode === 'fantasy';
@@ -164,6 +180,58 @@ export default function LeagueDetailScreen() {
     }
   };
 
+  const toggleJornadaPicker = async () => {
+    const next = !showJornadaPicker;
+    setShowJornadaPicker(next);
+    if (next && pastJornadas.length === 0) {
+      setLoadingPastJornadas(true);
+      try {
+        const response = await api.get('/api/quiniela/jornadas');
+        const all = response.data.jornadas || [];
+        setPastJornadas(all.filter((j: any) => j.status === 'finished'));
+      } catch (error) {
+        console.error('Error loading jornadas:', error);
+        showToast('error', 'No se pudieron cargar las jornadas');
+      } finally {
+        setLoadingPastJornadas(false);
+      }
+    }
+  };
+
+  const selectPastJornada = async (j: any) => {
+    setSelectedPastJornada(j);
+    setShowJornadaPicker(false);
+    setQuinielaView('jornada');
+    setLoadingPastJornadaRanking(true);
+    try {
+      const response = await api.get(`/api/leagues/${leagueId}/rankings/jornada/${j.id}`);
+      setPastJornadaRanking(response.data.rankings || []);
+    } catch (error) {
+      console.error('Error loading past jornada ranking:', error);
+      showToast('error', 'No se pudo cargar el ranking de esa jornada');
+    } finally {
+      setLoadingPastJornadaRanking(false);
+    }
+  };
+
+  const backToGeneralRanking = () => {
+    setQuinielaView('general');
+    setSelectedPastJornada(null);
+  };
+
+  const openRulesTooltip = () => {
+    if (infoIconRef.current?.measure) {
+      infoIconRef.current.measure(
+        (_x: number, _y: number, width: number, height: number, pageX: number, pageY: number) => {
+          setTooltipPos({ top: pageY + height + 6, left: Math.max(12, pageX - 130) });
+          setShowRulesTooltip(true);
+        }
+      );
+    } else {
+      setShowRulesTooltip(true);
+    }
+  };
+
   // Tabla de ranking general de quiniela — reemplaza el toggle Jornada/General:
   // esta es la única vista de ranking de liga para quiniela ahora. La vista
   // por jornada individual (picks propios de una jornada pasada) vive en
@@ -191,6 +259,34 @@ export default function LeagueDetailScreen() {
             <Text style={[styles.tableCell, styles.colPts]}>{member.aciertos ?? 0}</Text>
             <Text style={[styles.tableCell, styles.colPts]}>{member.jornada_anterior_points ?? 0}</Text>
             <Text style={[styles.tableCell, styles.colPts, styles.tableCellTotal]}>{member.total_points}</Text>
+          </View>
+        );
+      })}
+    </View>
+  );
+
+  // Tabla de puntos de UNA jornada pasada (vista temporal del selector "Ver
+  // por jornada"), separada de renderQuinielaTable para no mezclar columnas
+  // (aquí solo hay puntos de esa semana, no aciertos/total acumulado).
+  const renderQuinielaJornadaTable = () => (
+    <View style={styles.table}>
+      <View style={styles.tableHeaderRow}>
+        <Text style={[styles.tableHeaderCell, styles.colPos]}>#</Text>
+        <Text style={[styles.tableHeaderCell, styles.colPlayer]}>Jugador</Text>
+        <Text style={[styles.tableHeaderCell, styles.colPts]}>Puntos</Text>
+      </View>
+      {pastJornadaRanking.map((r) => {
+        const isCurrentUser = r.user_id === user?.id;
+        return (
+          <View
+            key={r.user_id}
+            style={[styles.tableRow, isCurrentUser && styles.tableRowHighlight]}
+          >
+            <Text style={[styles.tableCell, styles.colPos]}>{getRankIcon(r.rank)}</Text>
+            <Text style={[styles.tableCell, styles.colPlayer]} numberOfLines={1}>
+              {r.display_name}{isCurrentUser ? ' (Tú)' : ''}
+            </Text>
+            <Text style={[styles.tableCell, styles.colPts, styles.tableCellTotal]}>{r.jornada_points}</Text>
           </View>
         );
       })}
@@ -406,8 +502,60 @@ export default function LeagueDetailScreen() {
         <View style={styles.rankingContainer}>
           {!isFantasy ? (
             <>
-              <Text style={styles.rankingTitle}>🏆 Ranking General</Text>
-              {renderQuinielaTable()}
+              <View style={styles.rankingTitleRow}>
+                <Text style={styles.rankingTitle}>🏆 Ranking General</Text>
+                <TouchableOpacity
+                  ref={infoIconRef}
+                  onPress={openRulesTooltip}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Text style={styles.infoIcon}>ℹ️</Text>
+                </TouchableOpacity>
+              </View>
+
+              {quinielaView === 'general' ? (
+                <>
+                  {renderQuinielaTable()}
+
+                  <TouchableOpacity style={styles.viewByJornadaLink} onPress={toggleJornadaPicker}>
+                    <Text style={styles.viewByJornadaLinkText}>
+                      Ver por jornada {showJornadaPicker ? '▴' : '▾'}
+                    </Text>
+                  </TouchableOpacity>
+
+                  {showJornadaPicker && (
+                    <View style={styles.jornadaPicker}>
+                      {loadingPastJornadas ? (
+                        <ActivityIndicator size="small" color="#DC143C" />
+                      ) : pastJornadas.length === 0 ? (
+                        <Text style={styles.jornadaPickerEmpty}>No hay jornadas anteriores</Text>
+                      ) : (
+                        pastJornadas.map((j) => (
+                          <TouchableOpacity
+                            key={j.id}
+                            style={styles.jornadaPickerItem}
+                            onPress={() => selectPastJornada(j)}
+                          >
+                            <Text style={styles.jornadaPickerItemText}>Jornada {j.week_number}</Text>
+                          </TouchableOpacity>
+                        ))
+                      )}
+                    </View>
+                  )}
+                </>
+              ) : (
+                <>
+                  {loadingPastJornadaRanking ? (
+                    <ActivityIndicator size="small" color="#DC143C" style={{ marginVertical: 24 }} />
+                  ) : (
+                    renderQuinielaJornadaTable()
+                  )}
+
+                  <TouchableOpacity style={styles.backToGeneralButton} onPress={backToGeneralRanking}>
+                    <Text style={styles.backToGeneralButtonText}>← Volver al ranking general</Text>
+                  </TouchableOpacity>
+                </>
+              )}
             </>
           ) : (
             <>
@@ -442,6 +590,21 @@ export default function LeagueDetailScreen() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* Tooltip ligero de reglas — Modal transparente solo para poder
+          cerrarlo al tocar fuera, no es un modal completo */}
+      <Modal
+        transparent
+        visible={showRulesTooltip}
+        animationType="fade"
+        onRequestClose={() => setShowRulesTooltip(false)}
+      >
+        <Pressable style={StyleSheet.absoluteFill} onPress={() => setShowRulesTooltip(false)}>
+          <View style={[styles.tooltipBox, { top: tooltipPos.top, left: tooltipPos.left }]}>
+            <Text style={styles.tooltipText}>✅ Acierto = +1 pt · ❌ Sin selección = -1 pt</Text>
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -638,7 +801,72 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#FFFFFF',
+  },
+  rankingTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     marginBottom: 12,
+  },
+  infoIcon: {
+    fontSize: 14,
+  },
+  tooltipBox: {
+    position: 'absolute',
+    maxWidth: 260,
+    backgroundColor: '#1a1a1a',
+    borderWidth: 1,
+    borderColor: '#333',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  tooltipText: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    lineHeight: 18,
+  },
+  viewByJornadaLink: {
+    alignSelf: 'center',
+    paddingVertical: 12,
+  },
+  viewByJornadaLinkText: {
+    fontSize: 13,
+    color: '#999',
+    fontWeight: '600',
+  },
+  jornadaPicker: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#333',
+    marginTop: -4,
+    marginBottom: 12,
+    padding: 8,
+  },
+  jornadaPickerItem: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+  },
+  jornadaPickerItemText: {
+    fontSize: 14,
+    color: '#FFFFFF',
+  },
+  jornadaPickerEmpty: {
+    fontSize: 13,
+    color: '#666',
+    textAlign: 'center',
+    padding: 12,
+  },
+  backToGeneralButton: {
+    alignSelf: 'center',
+    paddingVertical: 12,
+  },
+  backToGeneralButtonText: {
+    fontSize: 13,
+    color: '#0047AB',
+    fontWeight: '600',
   },
   table: {
     backgroundColor: '#1a1a1a',
@@ -650,8 +878,7 @@ const styles = StyleSheet.create({
   tableHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0a0a0a',
-    paddingVertical: 10,
+    paddingVertical: 8,
     paddingHorizontal: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#333',
@@ -665,16 +892,19 @@ const styles = StyleSheet.create({
   tableRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 9,
     paddingHorizontal: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#262626',
+    borderBottomColor: '#1f1f1f',
+    borderLeftWidth: 3,
+    borderLeftColor: 'transparent',
   },
   tableRowHighlight: {
-    backgroundColor: '#1a0a0a',
+    borderLeftColor: '#DC143C',
   },
   tableCell: {
     fontSize: 14,
+    lineHeight: 18,
     color: '#FFFFFF',
   },
   tableCellTotal: {
