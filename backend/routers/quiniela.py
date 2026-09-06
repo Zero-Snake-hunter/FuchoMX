@@ -4,7 +4,8 @@ from datetime import datetime
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from database import db, get_active_competition, get_admin_user_id
+from config import ADMIN_EMAIL, ADMIN_DISPLAY_NAME
+from database import db, get_active_competition
 from dependencies import get_current_user
 from models import QuinielaSubmit
 
@@ -268,14 +269,12 @@ async def get_jornada_resultados(
 
 @router.get("/rankings/general")
 async def get_general_rankings():
-    admin_id = await get_admin_user_id()
-    query = {"_id": {"$ne": admin_id}} if admin_id else {}
-    users = await db.users.find(query).sort("total_points", -1).limit(100).to_list(100)
+    users = await db.users.find().sort("total_points", -1).limit(100).to_list(100)
     rankings = [
         {
             "position": idx,
             "user_id": str(user["_id"]),
-            "display_name": user["display_name"],
+            "display_name": ADMIN_DISPLAY_NAME if user.get("email") == ADMIN_EMAIL else user["display_name"],
             "total_points": user.get("total_points", 0),
             "avatar_base64": user.get("avatar_base64")
         }
@@ -293,11 +292,8 @@ async def get_jornada_rankings(jornada_id: str):
         "source": "QUINIELA"
     }).to_list(1000)
 
-    admin_id = await get_admin_user_id()
     user_points: dict = {}
     for point in points:
-        if point["user_id"] == admin_id:
-            continue
         uid = str(point["user_id"])
         user_points[uid] = user_points.get(uid, 0) + point["points"]
 
@@ -307,7 +303,7 @@ async def get_jornada_rankings(jornada_id: str):
         if user:
             rankings.append({
                 "user_id": uid,
-                "display_name": user["display_name"],
+                "display_name": ADMIN_DISPLAY_NAME if user.get("email") == ADMIN_EMAIL else user["display_name"],
                 "points": pts,
                 "avatar_base64": user.get("avatar_base64")
             })

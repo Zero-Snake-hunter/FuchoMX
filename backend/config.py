@@ -18,6 +18,12 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 30  # 30 días
 
 ADMIN_EMAIL = "contacto@distrito.digital"
 
+# Nombre mostrado en rankings/listas de miembros en vez del display_name real
+# del admin — el admin sigue contando en puntos, penalizaciones, bonus y
+# conteos de miembros; solo se le cambia el nombre visible en pantallas
+# públicas (ver routers/leagues.py, routers/quiniela.py, routers/fantasy.py).
+ADMIN_DISPLAY_NAME = "Staff FuchoMX"
+
 # Habilita los endpoints de migración/seed de un solo uso (routers/
 # admin_migrations.py) — apagado por default para que no puedan dispararse
 # por accidente en producción normal. Ver ese archivo para el detalle.
